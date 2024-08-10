@@ -29,7 +29,12 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                     {userLoggedIn && (
                         <div className="transition-opacity duration-300">
                             <p className={`text-lg transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>Welcome,</p>
-                            <p className={`text-xl font-bold transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>{currentUser.displayName || currentUser.email}</p>
+                            <p 
+                                className={`text-xl font-bold transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}
+                                style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                            >
+                                {currentUser.displayName || currentUser.email}
+                            </p>
                         </div>
                     )}
                 </div>
@@ -73,13 +78,13 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                 <AiOutlineHome size={24} />
                                 {!isCollapsed && <span className="ml-4">Login</span>}
                             </Link>
-                            <Link
+                            {/* <Link
                                 to="/register"
                                 className="flex items-center py-3 px-4 text-base font-normal hover:bg-gray-700"
                             >
                                 <AiOutlineHome size={24} />
                                 {!isCollapsed && <span className="ml-4">Register</span>}
-                            </Link>
+                            </Link> */}
                         </>
                     )}
                 </nav>

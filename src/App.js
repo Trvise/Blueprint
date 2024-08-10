@@ -15,7 +15,7 @@ function App() {
   const routesArray = [
     { path: "*", element: <Login /> },
     { path: "/login", element: <Login /> },
-    { path: "/register", element: <Register /> },
+    // { path: "/register", element: <Register /> },
     { path: "/home", element: (<ProtectedRoute><UploadVideos /></ProtectedRoute>)},
     { path: "/videos", element: (<ProtectedRoute><VideosList /></ProtectedRoute>) },
   ];

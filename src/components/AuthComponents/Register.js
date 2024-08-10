@@ -1,27 +1,48 @@
-import React, { useState } from 'react'
-import { Navigate, Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/authContext'
-import { doCreateUserWithEmailAndPassword } from '../../firebase/auth'
+import React, { useState } from 'react';
+import { Navigate, Link} from 'react-router-dom';
+import { useAuth } from '../../contexts/authContext';
+import { doCreateUserWithEmailAndPassword } from '../../firebase/auth';
 
 const Register = () => {
+    const { userLoggedIn } = useAuth();
 
-    const navigate = useNavigate()
-
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
-    const [confirmPassword, setconfirmPassword] = useState('')
-    const [isRegistering, setIsRegistering] = useState(false)
-    const [errorMessage, setErrorMessage] = useState('')
-
-    const { userLoggedIn } = useAuth()
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isRegistering, setIsRegistering] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     const onSubmit = async (e) => {
-        e.preventDefault()
-        if(!isRegistering) {
-            setIsRegistering(true)
-            await doCreateUserWithEmailAndPassword(email, password)
+        e.preventDefault();
+        if (!isRegistering) {
+            if (password !== confirmPassword) {
+                setErrorMessage('Passwords do not match. Please try again.');
+                return;
+            }
+
+            setIsRegistering(true);
+            setErrorMessage('');  // Clear previous error messages
+
+            try {
+                await doCreateUserWithEmailAndPassword(email, password);
+            } catch (error) {
+                setErrorMessage(handleFirebaseError(error));
+                setIsRegistering(false);
+            }
         }
-    }
+    };
+
+    const handleFirebaseError = (error) => {
+        // Map Firebase error codes to user-friendly messages
+        const errorMessages = {
+            'auth/email-already-in-use': 'This email is already in use. Please use a different email.',
+            'auth/invalid-email': 'Please enter a valid email address.',
+            'auth/weak-password': 'The password is too weak. Please use a stronger password.',
+            // Add more error codes and messages as needed
+        };
+
+        return errorMessages[error.code] || 'An unexpected error occurred. Please try again.';
+    };
 
     return (
         <>
@@ -33,55 +54,50 @@ const Register = () => {
                         <div className="mt-2">
                             <h3 className="text-gray-800 text-xl font-semibold sm:text-2xl">Create a New Account</h3>
                         </div>
-
                     </div>
-                    <form
-                        onSubmit={onSubmit}
-                        className="space-y-4"
-                    >
+                    <form onSubmit={onSubmit} className="space-y-4">
                         <div>
-                            <label className="text-sm text-gray-600 font-bold">
-                                Email
-                            </label>
+                            <label className="text-sm text-gray-600 font-bold">Email</label>
                             <input
                                 type="email"
-                                autoComplete='email'
+                                autoComplete="email"
                                 required
-                                value={email} onChange={(e) => { setEmail(e.target.value) }}
+                                value={email}
+                                onChange={(e) => { setEmail(e.target.value); }}
                                 className="w-full mt-2 px-3 py-2 text-gray-500 bg-transparent outline-none border focus:indigo-600 shadow-sm rounded-lg transition duration-300"
                             />
                         </div>
 
                         <div>
-                            <label className="text-sm text-gray-600 font-bold">
-                                Password
-                            </label>
+                            <label className="text-sm text-gray-600 font-bold">Password</label>
                             <input
                                 disabled={isRegistering}
                                 type="password"
-                                autoComplete='new-password'
+                                autoComplete="new-password"
                                 required
-                                value={password} onChange={(e) => { setPassword(e.target.value) }}
+                                value={password}
+                                onChange={(e) => { setPassword(e.target.value); }}
                                 className="w-full mt-2 px-3 py-2 text-gray-500 bg-transparent outline-none border focus:border-indigo-600 shadow-sm rounded-lg transition duration-300"
                             />
                         </div>
 
                         <div>
-                            <label className="text-sm text-gray-600 font-bold">
-                                Confirm Password
-                            </label>
+                            <label className="text-sm text-gray-600 font-bold">Confirm Password</label>
                             <input
                                 disabled={isRegistering}
                                 type="password"
-                                autoComplete='off'
+                                autoComplete="off"
                                 required
-                                value={confirmPassword} onChange={(e) => { setconfirmPassword(e.target.value) }}
+                                value={confirmPassword}
+                                onChange={(e) => { setConfirmPassword(e.target.value); }}
                                 className="w-full mt-2 px-3 py-2 text-gray-500 bg-transparent outline-none border focus:border-indigo-600 shadow-sm rounded-lg transition duration-300"
                             />
                         </div>
 
                         {errorMessage && (
-                            <span className='text-red-600 font-bold'>{errorMessage}</span>
+                            <div className='text-red-600 font-bold'>
+                                {errorMessage}
+                            </div>
                         )}
 
                         <button
@@ -92,14 +108,14 @@ const Register = () => {
                             {isRegistering ? 'Signing Up...' : 'Sign Up'}
                         </button>
                         <div className="text-sm text-center">
-                            Already have an account? {'   '}
+                            Already have an account? {' '}
                             <Link to={'/login'} className="text-center text-sm hover:underline font-bold">Continue</Link>
                         </div>
                     </form>
                 </div>
             </main>
         </>
-    )
-}
+    );
+};
 
-export default Register
+export default Register;

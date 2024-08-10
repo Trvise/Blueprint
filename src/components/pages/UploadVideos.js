@@ -252,8 +252,8 @@ const UploadVideos = () => {
         </div>
       </div>
       {loading && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-4 rounded-lg">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg flex items-center">
             <svg className="animate-spin h-5 w-5 mr-3 text-gray-700" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
             </svg>
