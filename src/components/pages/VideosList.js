@@ -15,12 +15,32 @@ const ItemsList = () => {
         const data = await getDocs(itemsCollectionRef);
         setItems(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
       } catch (error) {
-        console.error('Error fetching items:', error);
+        alert(`Error fetching items: ${error.message}`);
       }
     };
 
     fetchItems();
+
+    // Load the saved state from localStorage on mount
+    const savedActiveItemId = localStorage.getItem('activeItemId');
+    const savedIsRunning = localStorage.getItem('isRunning') === 'true';
+
+    if (savedActiveItemId) {
+      setActiveItemId(savedActiveItemId);
+      setIsRunning(savedIsRunning);
+    }
   }, []);
+
+  useEffect(() => {
+    // Save the current state to localStorage whenever it changes
+    if (activeItemId) {
+      localStorage.setItem('activeItemId', activeItemId);
+    } else {
+      localStorage.removeItem('activeItemId');
+    }
+
+    localStorage.setItem('isRunning', isRunning);
+  }, [activeItemId, isRunning]);
 
   const handleSendButtonClick = async (item) => {
     if (isRunning && item.id !== activeItemId) {
@@ -38,13 +58,14 @@ const ItemsList = () => {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to stop the process');
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to stop the process');
         }
 
         setIsRunning(false);
         setActiveItemId(null);
       } catch (error) {
-        console.error('Error stopping the process:', error);
+        alert(`Error stopping the process: ${error.message}`);
       }
       return;
     }
@@ -71,7 +92,8 @@ const ItemsList = () => {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to send data');
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to send data');
         }
 
         const result = await response.json();
@@ -79,14 +101,38 @@ const ItemsList = () => {
         setIsRunning(true);
         setActiveItemId(item.id);
       } catch (error) {
-        console.error('Error sending data:', error);
+        alert(`Error sending data: ${error.message}`);
       }
     };
   };
 
+  const handleStopAllProcesses = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:8000/stop', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to stop all processes');
+      }
+
+      setIsRunning(false);
+      setActiveItemId(null);
+      localStorage.removeItem('activeItemId');
+      localStorage.removeItem('isRunning');
+      alert('All processes have been stopped successfully.');
+    } catch (error) {
+      alert(`Error stopping all processes: ${error.message}`);
+    }
+  };
+
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Items List</h1>
+      <h1 className="text-2xl font-bold mb-4 text-center">Videos List</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((item) => (
           <div key={item.id} className="border border-gray-300 rounded-lg p-4 shadow-md">
@@ -109,6 +155,14 @@ const ItemsList = () => {
           </div>
         ))}
       </div>
+        <div className="mt-8 flex justify-center">
+          <button
+            className="bg-red-600 text-white font-bold py-2 px-4 rounded hover:bg-red-700 focus:outline-none"
+            onClick={handleStopAllProcesses}
+          >
+            Stop All Processes
+          </button>
+        </div>
     </div>
   );
 };

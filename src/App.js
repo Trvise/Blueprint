@@ -4,7 +4,7 @@ import Register from "./components/AuthComponents/Register";
 import Sidebar from "./components/Layout/Sidebar";
 import UploadVideos from "./components/pages/UploadVideos";
 import VideosList from "./components/pages/VideosList";
-import { AuthProvider } from "./contexts/authContext";
+import { AuthProvider} from "./contexts/authContext";
 import { useRoutes } from "react-router-dom";
 import {ProtectedRoute} from "./components/Layout/ProtectedRoute";
 
