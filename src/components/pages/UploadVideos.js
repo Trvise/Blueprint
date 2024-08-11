@@ -101,10 +101,10 @@ const UploadVideos = () => {
         drawScrewLocations(result.screw_locations);
         setManualAnnotation(false); // Disable manual annotation if automatic detection is done
       } else {
-        console.error('Error:', response.status, response.data);
+        alert(`Error: ${response.status} - ${response.data}`);
       }
     } catch (error) {
-      console.error('Error uploading file:', error);
+      alert(`Error uploading file: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -121,7 +121,7 @@ const UploadVideos = () => {
       ctx.drawImage(img, 0, 0);
 
       locations.forEach(([x1, y1, x2, y2]) => {
-        ctx.strokeStyle = 'green';
+        ctx.strokeStyle = '#1ABC9C';  // Changed to a more vibrant green
         ctx.lineWidth = 2;
         ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
       });
@@ -209,48 +209,63 @@ const UploadVideos = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
-      <div className="text-2xl font-bold pt-14">Hello {currentUser.displayName ? currentUser.displayName : currentUser.email}, you are now logged in.</div>
-      <div className={`mt-8 ${loading ? 'opacity-50' : ''}`}>
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700">Upload Image:</label>
+    <div className="max-w-3xl mx-auto p-6 bg-white shadow-lg rounded-lg space-y-8 relative">
+      <div className="text-center">
+        <h1 className="text-3xl font-extrabold text-gray-900">Upload & Annotate Media</h1>
+        <p className="text-base text-gray-600 mt-2">
+          Upload images or videos, annotate screw locations, and add descriptions.
+        </p>
+      </div>
+  
+      <div className={`space-y-4 ${loading ? 'opacity-50' : ''}`}>
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">Upload Image</label>
           <input
             type="file"
             accept="image/*"
             onChange={handleImageChange}
-            className="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
+            className="w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-100 focus:outline-none"
           />
+          <p className="text-xs text-gray-500">Supported formats: JPEG, PNG. Max size: 5MB.</p>
         </div>
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700">Upload Video:</label>
+  
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">Upload Video</label>
           <input
             type="file"
             accept="video/*"
             onChange={handleVideoChange}
-            className="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
+            className="w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-100 focus:outline-none"
           />
+          <p className="text-xs text-gray-500">Supported formats: MP4, AVI. Max size: 50MB.</p>
         </div>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Product Description"
-          className="mb-4 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 p-2.5 focus:outline-none"
-        ></textarea>
+  
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">Product Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Enter product description..."
+            className="w-full h-20 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-100 p-2.5 focus:outline-none"
+          ></textarea>
+        </div>
+  
         <div className="flex gap-4">
           <button
             onClick={handleUpload}
-            className="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 focus:outline-none"
+            className="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none transition duration-150 ease-in-out shadow-md"
           >
             {loading ? 'Uploading...' : 'Detect Screws Automatically (Beta)'}
           </button>
           <button
             onClick={handleManualAnnotation}
-            className="w-full bg-green-500 text-white font-bold py-2 px-4 rounded hover:bg-green-700 focus:outline-none"
+            className="w-full bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 focus:outline-none transition duration-150 ease-in-out shadow-md"
           >
             Annotate Screws
           </button>
         </div>
       </div>
+  
       {loading && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-4 rounded-lg flex items-center">
@@ -261,21 +276,23 @@ const UploadVideos = () => {
           </div>
         </div>
       )}
+  
       {annotatedImage && !manualAnnotation && (
         <div className="mt-8">
-          <h2 className="text-xl font-bold">Detected Screw Locations:</h2>
-          <img src={annotatedImage} alt="Annotated" className="w-full" />
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Detected Screw Locations</h2>
+          <img src={annotatedImage} alt="Annotated" className="w-full rounded-lg border border-gray-300 shadow-md" />
           <button
             onClick={handleSubmit}
-            className="mt-4 bg-green-500 text-white font-bold py-2 px-4 rounded hover:bg-green-700 focus:outline-none"
+            className="mt-4 w-full bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 focus:outline-none transition duration-150 ease-in-out shadow-md"
           >
             Submit
           </button>
         </div>
       )}
+  
       {manualAnnotation && (
         <div className="mt-8">
-          <h2 className="text-xl font-bold">Annotate Screws Manually:</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Annotate Screws Manually</h2>
           <Annotation
             src={URL.createObjectURL(image)}
             alt="Manual Annotation"
@@ -284,7 +301,6 @@ const UploadVideos = () => {
             onChange={setAnnotation}
             onSubmit={(newAnnotation) => {
               const { geometry, data } = newAnnotation;
-              console.log(geometry);
               setAnnotations(
                 annotations.concat({
                   geometry,
@@ -296,17 +312,19 @@ const UploadVideos = () => {
               );
               setAnnotation({});
             }}
+            className="rounded-lg border border-gray-300 shadow-md"
           />
           <button
             onClick={handleSubmit}
-            className="mt-4 bg-green-500 text-white font-bold py-2 px-4 rounded hover:bg-green-700 focus:outline-none"
+            className="mt-4 w-full bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 focus:outline-none transition duration-150 ease-in-out shadow-md"
           >
             Submit
           </button>
         </div>
       )}
     </div>
-  );
+  );  
+   
 };
 
 export default UploadVideos;
