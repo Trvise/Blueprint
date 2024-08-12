@@ -14,7 +14,14 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                 {/* Toggle Button */}
                 <div className="flex items-center justify-between h-20 border-b border-gray-700 px-5">
                     {!isCollapsed && (
-                        <h1 className="text-2xl font-semibold whitespace-nowrap">VortexHub</h1>
+                        <div className="flex items-center space-x-2">
+                            <img 
+                                src="https://raw.githubusercontent.com/SegBin-ai/SegBin-ai/main/logo.png" 
+                                alt="VortexHub Logo" 
+                                className="w-12 h-12"
+                            />
+                            <h1 className="text-2xl font-semibold whitespace-nowrap">VortexHub</h1>
+                        </div>
                     )}
                     <button 
                         onClick={toggleSidebar} 
