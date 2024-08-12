@@ -18,7 +18,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                             <img 
                                 src="https://raw.githubusercontent.com/SegBin-ai/SegBin-ai/main/logo.png" 
                                 alt="VortexHub Logo" 
-                                className="w-12 h-12"
+                                className="w-14 h-14"
                             />
                             <h1 className="text-2xl font-semibold whitespace-nowrap">VortexHub</h1>
                         </div>
