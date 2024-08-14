@@ -2,14 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 import ReactPlayer from 'react-player';
+import { useAuth } from '../../contexts/authContext'; // Assuming you have an auth context
 
 const ItemsList = () => {
+  const { currentUser } = useAuth(); // Get the current user from your auth context
   const [items, setItems] = useState([]);
   const [activeItemId, setActiveItemId] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [annotatedImage, setAnnotatedImage] = useState(null);
+  const [imageCache, setImageCache] = useState({});
   const itemsCollectionRef = collection(db, "itemsData");
 
   useEffect(() => {
@@ -24,24 +27,24 @@ const ItemsList = () => {
 
     fetchItems();
 
-    const savedActiveItemId = localStorage.getItem('activeItemId');
-    const savedIsRunning = localStorage.getItem('isRunning') === 'true';
+    const savedActiveItemId = localStorage.getItem(`${currentUser.uid}_activeItemId`);
+    const savedIsRunning = localStorage.getItem(`${currentUser.uid}_isRunning`) === 'true';
 
     if (savedActiveItemId) {
       setActiveItemId(savedActiveItemId);
       setIsRunning(savedIsRunning);
     }
-  }, []);
+  }, [currentUser.uid]);
 
   useEffect(() => {
     if (activeItemId) {
-      localStorage.setItem('activeItemId', activeItemId);
+      localStorage.setItem(`${currentUser.uid}_activeItemId`, activeItemId);
     } else {
-      localStorage.removeItem('activeItemId');
+      localStorage.removeItem(`${currentUser.uid}_activeItemId`);
     }
 
-    localStorage.setItem('isRunning', isRunning);
-  }, [activeItemId, isRunning]);
+    localStorage.setItem(`${currentUser.uid}_isRunning`, isRunning);
+  }, [activeItemId, isRunning, currentUser.uid]);
 
   const handleSendButtonClick = async (item) => {
     if (isRunning && item.id !== activeItemId) {
@@ -71,7 +74,7 @@ const ItemsList = () => {
       return;
     }
 
-    let base64Image = localStorage.getItem(`imageCache_${item.id}`);
+    let base64Image = imageCache[item.id];
     if (!base64Image) {
       const imageResponse = await fetch(item.image);
       const imageBlob = await imageResponse.blob();
@@ -81,8 +84,8 @@ const ItemsList = () => {
         reader.onloadend = () => resolve(reader.result.split(',')[1]);
       });
 
-      // Cache the image data in local storage
-      localStorage.setItem(`imageCache_${item.id}`, base64Image);
+      // Cache the image data in useState
+      setImageCache((prevCache) => ({ ...prevCache, [item.id]: base64Image }));
     }
 
     const payload = {
@@ -129,8 +132,8 @@ const ItemsList = () => {
 
       setIsRunning(false);
       setActiveItemId(null);
-      localStorage.removeItem('activeItemId');
-      localStorage.removeItem('isRunning');
+      localStorage.removeItem(`${currentUser.uid}_activeItemId`);
+      localStorage.removeItem(`${currentUser.uid}_isRunning`);
       alert('All processes have been stopped successfully.');
     } catch (error) {
       alert(`Error stopping all processes: ${error.message}`);
@@ -145,7 +148,7 @@ const ItemsList = () => {
 
   const drawScrewLocations = async (imageUrl, locations, itemId) => {
     try {
-      let base64Image = localStorage.getItem(`imageCache_${itemId}`);
+      let base64Image = imageCache[itemId];
       if (!base64Image) {
         const response = await fetch(imageUrl);
         const imageBlob = await response.blob();
@@ -155,8 +158,8 @@ const ItemsList = () => {
           reader.onloadend = () => resolve(reader.result.split(',')[1]);
         });
 
-        // Cache the image data in local storage
-        localStorage.setItem(`imageCache_${itemId}`, base64Image);
+        // Cache the image data in useState
+        setImageCache((prevCache) => ({ ...prevCache, [itemId]: base64Image }));
       }
 
       const img = new Image();
