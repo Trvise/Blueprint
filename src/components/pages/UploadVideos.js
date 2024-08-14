@@ -276,7 +276,7 @@ const UploadVideos = () => {
           </div>
         </div>
       )}
-  
+      
       {annotatedImage && !manualAnnotation && (
         <div className="mt-8">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Detected Screw Locations</h2>

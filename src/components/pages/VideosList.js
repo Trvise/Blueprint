@@ -10,7 +10,6 @@ const ItemsList = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [annotatedImage, setAnnotatedImage] = useState(null);
-  const [imageCache, setImageCache] = useState({});
   const itemsCollectionRef = collection(db, "itemsData");
 
   useEffect(() => {
@@ -72,10 +71,8 @@ const ItemsList = () => {
       return;
     }
 
-    let base64Image;
-    if (imageCache[item.id]) {
-      base64Image = imageCache[item.id];
-    } else {
+    let base64Image = localStorage.getItem(`imageCache_${item.id}`);
+    if (!base64Image) {
       const imageResponse = await fetch(item.image);
       const imageBlob = await imageResponse.blob();
       const reader = new FileReader();
@@ -84,7 +81,8 @@ const ItemsList = () => {
         reader.onloadend = () => resolve(reader.result.split(',')[1]);
       });
 
-      setImageCache((prevCache) => ({ ...prevCache, [item.id]: base64Image }));
+      // Cache the image data in local storage
+      localStorage.setItem(`imageCache_${item.id}`, base64Image);
     }
 
     const payload = {
@@ -141,18 +139,28 @@ const ItemsList = () => {
 
   const handleViewAnnotationsClick = (item) => {
     setSelectedItem(item);
-    drawScrewLocations(item.image, item.screw_locations);
+    drawScrewLocations(item.image, item.screw_locations, item.id);
     setShowModal(true);
   };
 
-  const drawScrewLocations = async (imageUrl, locations) => {
+  const drawScrewLocations = async (imageUrl, locations, itemId) => {
     try {
-      const response = await fetch(imageUrl);
-      const imageBlob = await response.blob();
-      const img = new Image();
-      const url = URL.createObjectURL(imageBlob);
-      img.src = url;
+      let base64Image = localStorage.getItem(`imageCache_${itemId}`);
+      if (!base64Image) {
+        const response = await fetch(imageUrl);
+        const imageBlob = await response.blob();
+        const reader = new FileReader();
+        reader.readAsDataURL(imageBlob);
+        base64Image = await new Promise((resolve) => {
+          reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        });
 
+        // Cache the image data in local storage
+        localStorage.setItem(`imageCache_${itemId}`, base64Image);
+      }
+
+      const img = new Image();
+      img.src = `data:image/jpeg;base64,${base64Image}`;
       img.onload = () => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -167,7 +175,6 @@ const ItemsList = () => {
         });
 
         setAnnotatedImage(canvas.toDataURL());
-        URL.revokeObjectURL(url);
       };
     } catch (error) {
       console.error('Error loading image:', error);
@@ -229,25 +236,25 @@ const ItemsList = () => {
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-xl w-full mx-4 md:mx-6 lg:mx-8 max-h-full overflow-auto">
             <h2 className="text-xl font-bold mb-4 text-center text-gray-800">Screw Annotations</h2>
             <div className="relative">
-            <img
-             src={annotatedImage}
-             alt="Annotated Item"
-             className="max-w-full max-h-[70vh] object-contain mx-auto rounded-lg border border-gray-300"
-           />
+              <img
+                src={annotatedImage}
+                alt="Annotated Item"
+                className="max-w-full max-h-[70vh] object-contain mx-auto rounded-lg border border-gray-300"
+              />
             </div>
             <div className="mt-6 flex justify-center">
-            <button
-             className="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none transition duration-150 ease-in-out"
-             onClick={handleCloseModal}
-           >
-            Close
-            </button>
+              <button
+                className="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none transition duration-150 ease-in-out"
+                onClick={handleCloseModal}
+              >
+                Close
+              </button>
             </div>
-            </div>
-            </div>
-            )}
-            </div>
-          );
-    };
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default ItemsList;
