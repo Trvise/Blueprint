@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/authContext';
 import { doSignOut } from '../../firebase/auth';
-import { AiOutlineMenu, AiOutlineHome, AiOutlineVideoCamera, AiOutlineLogout, AiFillAndroid } from 'react-icons/ai';
+import { AiOutlineMenu, AiOutlineHome, AiOutlineVideoCamera, AiOutlineLogout, AiFillAndroid, AiOutlineMonitor } from 'react-icons/ai';
 
 const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     const navigate = useNavigate();
@@ -69,6 +69,13 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                 className="flex items-center py-3 px-4 text-base font-normal hover:bg-gray-700"
                             >
                                 <AiFillAndroid size={24} />
+                                {!isCollapsed && <span className="ml-4">Connect to Device</span>}
+                            </Link>
+                            <Link
+                                to="/livevideos"
+                                className="flex items-center py-3 px-4 text-base font-normal hover:bg-gray-700"
+                            >
+                                <AiOutlineMonitor size={24} />
                                 {!isCollapsed && <span className="ml-4">Connect to Device</span>}
                             </Link>
                             <button
