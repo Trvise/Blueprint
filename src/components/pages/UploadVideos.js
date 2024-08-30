@@ -213,7 +213,7 @@ const UploadVideos = () => {
       <div className="text-center">
         <h1 className="text-3xl font-extrabold text-gray-900">Upload & Annotate Media</h1>
         <p className="text-base text-gray-600 mt-2">
-          Upload images or videos, annotate screw locations, and add descriptions.
+          Upload images or videos and add descriptions.
         </p>
       </div>
   
@@ -255,13 +255,13 @@ const UploadVideos = () => {
             onClick={handleUpload}
             className="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none transition duration-150 ease-in-out shadow-md"
           >
-            {loading ? 'Uploading...' : 'Detect Screws Automatically (Beta)'}
+            {loading ? 'Uploading...' : 'Detect Steps Automatically (Beta)'}
           </button>
           <button
             onClick={handleManualAnnotation}
             className="w-full bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 focus:outline-none transition duration-150 ease-in-out shadow-md"
           >
-            Annotate Screws
+            Annotate
           </button>
         </div>
       </div>

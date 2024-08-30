@@ -5,6 +5,7 @@ import Sidebar from "./components/Layout/Sidebar";
 import UploadVideos from "./components/pages/UploadVideos";
 import VideosList from "./components/pages/VideosList";
 import DevicesList from "./components/pages/DevicesList"; // Import the DevicesList component
+import StreamingPage from "./components/pages/Streaming";
 import { AuthProvider} from "./contexts/authContext";
 import { useRoutes } from "react-router-dom";
 import {ProtectedRoute} from "./components/Layout/ProtectedRoute";
@@ -19,7 +20,8 @@ function App() {
     // { path: "/register", element: <Register /> },
     { path: "/home", element: (<ProtectedRoute><UploadVideos /></ProtectedRoute>)},
     { path: "/videos", element: (<ProtectedRoute><VideosList /></ProtectedRoute>) },
-    {path: "/devices", element: (<ProtectedRoute><DevicesList/></ProtectedRoute>)}
+    {path: "/devices", element: (<ProtectedRoute><DevicesList/></ProtectedRoute>)},
+    {path: "/streaming", element: (<ProtectedRoute><StreamingPage/></ProtectedRoute>)},
   ];
 
   const routesElement = useRoutes(routesArray);

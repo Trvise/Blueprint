@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 import ReactPlayer from 'react-player';
+import { useNavigate } from 'react-router-dom';
+import io from 'socket.io-client';
+
+const socket = io('http://127.0.0.1:8000'); // Connect to the WebSocket server
 
 const ItemsList = () => {
   const [items, setItems] = useState([]);
@@ -10,7 +14,9 @@ const ItemsList = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [annotatedImage, setAnnotatedImage] = useState(null);
-  const itemsCollectionRef = collection(db, "itemsData");
+  const canvasRef = useRef(null); // Reference to the canvas element
+  const itemsCollectionRef = collection(db, 'itemsData');
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -43,98 +49,93 @@ const ItemsList = () => {
     localStorage.setItem('isRunning', isRunning);
   }, [activeItemId, isRunning]);
 
-  const handleSendButtonClick = async (item) => {
+  // WebSocket event listeners
+  useEffect(() => {
+    socket.on('connect', () => {
+      console.log('Connected to WebSocket server');
+    });
+
+    socket.on('video_frame', (frameData) => {
+      // Convert received frame data to a Blob and create a URL
+      const blob = new Blob([frameData], { type: 'image/jpeg' });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = canvasRef.current;
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(url);
+        }
+      };
+      img.src = url;
+    });
+
+    socket.on('process_started', () => {
+      setIsRunning(true);
+    });
+
+    socket.on('process_stopped', () => {
+      setIsRunning(false);
+      setActiveItemId(null);
+    });
+
+    socket.on('process_error', (error) => {
+      alert(`Error: ${error.error}`);
+      setIsRunning(false);
+    });
+
+    return () => {
+      socket.off('connect');
+      socket.off('video_frame');
+      socket.off('process_started');
+      socket.off('process_stopped');
+      socket.off('process_error');
+    };
+  }, []);
+
+  const handleSendButtonClick = (item) => {
     if (isRunning && item.id !== activeItemId) {
       alert('Another process is running, please stop it before proceeding.');
       return;
     }
 
     if (item.id === activeItemId) {
-      try {
-        const response = await fetch('http://127.0.0.1:8000/stop', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to stop the process');
-        }
-
-        setIsRunning(false);
-        setActiveItemId(null);
-      } catch (error) {
-        alert(`Error stopping the process: ${error.message}`);
-      }
+      socket.emit('stop_process');
       return;
     }
 
     let base64Image = localStorage.getItem(`imageCache_${item.id}`);
     if (!base64Image) {
-      const imageResponse = await fetch(item.image);
-      const imageBlob = await imageResponse.blob();
-      const reader = new FileReader();
-      reader.readAsDataURL(imageBlob);
-      base64Image = await new Promise((resolve) => {
-        reader.onloadend = () => resolve(reader.result.split(',')[1]);
-      });
-
-      // Cache the image data in local storage
-      localStorage.setItem(`imageCache_${item.id}`, base64Image);
+      fetch(item.image)
+        .then((imageResponse) => imageResponse.blob())
+        .then((imageBlob) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(imageBlob);
+          reader.onloadend = () => {
+            base64Image = reader.result.split(',')[1];
+            localStorage.setItem(`imageCache_${item.id}`, base64Image);
+            startProcess(item, base64Image);
+          };
+        });
+    } else {
+      startProcess(item, base64Image);
     }
+  };
 
+  const startProcess = (item, base64Image) => {
     const payload = {
       image: base64Image,
       screw_locations: item.screw_locations,
     };
 
-    try {
-      const response = await fetch('http://127.0.0.1:8000/start', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to send data');
-      }
-
-      const result = await response.json();
-      console.log('Server response:', result);
-      setIsRunning(true);
-      setActiveItemId(item.id);
-    } catch (error) {
-      alert(`Error sending data: ${error.message}`);
-    }
+    socket.emit('start_process', payload);
+    setActiveItemId(item.id);
+    setShowModal(true);
   };
 
-  const handleStopAllProcesses = async () => {
-    try {
-      const response = await fetch('http://127.0.0.1:8000/stop', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to stop all processes');
-      }
-
-      setIsRunning(false);
-      setActiveItemId(null);
-      localStorage.removeItem('activeItemId');
-      localStorage.removeItem('isRunning');
-      alert('All processes have been stopped successfully.');
-    } catch (error) {
-      alert(`Error stopping all processes: ${error.message}`);
-    }
+  const handleStopAllProcesses = () => {
+    socket.emit('stop_process');
   };
 
   const handleViewAnnotationsClick = (item) => {
@@ -182,6 +183,9 @@ const ItemsList = () => {
   };
 
   const handleCloseModal = () => {
+    if (!annotatedImage) {
+      socket.emit('stop_process');
+    }
     setShowModal(false);
     setSelectedItem(null);
     setAnnotatedImage(null);
@@ -231,23 +235,32 @@ const ItemsList = () => {
         </button>
       </div>
 
-      {showModal && selectedItem && annotatedImage && (
+      {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 overflow-auto">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-xl w-full mx-4 md:mx-6 lg:mx-8 max-h-full overflow-auto">
-            <h2 className="text-xl font-bold mb-4 text-center text-gray-800">Screw Annotations</h2>
+            <h2 className="text-xl font-bold mb-4 text-center text-gray-800">{annotatedImage ? "Screw Annotations" : "Live View"}</h2>
             <div className="relative">
-              <img
-                src={annotatedImage}
-                alt="Annotated Item"
-                className="max-w-full max-h-[70vh] object-contain mx-auto rounded-lg border border-gray-300"
-              />
+              {annotatedImage ? (
+                <img
+                  src={annotatedImage}
+                  alt="Annotated Item"
+                  className="max-w-full max-h-[70vh] object-contain mx-auto rounded-lg border border-gray-300"
+                />
+              ) : (
+                <canvas
+                  ref={canvasRef}
+                  className="max-w-full max-h-[70vh] object-contain mx-auto rounded-lg border border-gray-300"
+                  width={640}
+                  height={480}
+                />
+              )}
             </div>
             <div className="mt-6 flex justify-center">
               <button
                 className="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none transition duration-150 ease-in-out"
                 onClick={handleCloseModal}
               >
-                Close
+                {annotatedImage ? 'Close' : 'Stop Process'}
               </button>
             </div>
           </div>
