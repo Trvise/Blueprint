@@ -64,13 +64,6 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                 <AiOutlineVideoCamera size={24} />
                                 {!isCollapsed && <span className="ml-4">Videos List</span>}
                             </Link>
-                            <Link
-                                to="/devices"
-                                className="flex items-center py-3 px-4 text-base font-normal hover:bg-gray-700"
-                            >
-                                <AiFillAndroid size={24} />
-                                {!isCollapsed && <span className="ml-4">Connect to Device</span>}
-                            </Link>
                             <button
                                 onClick={() => {
                                     doSignOut().then(() => {
