@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 
 const socket = io('http://127.0.0.1:8000'); // Connect to the WebSocket server
+//const socket = io('http://192.168.10.153:8000'); // Connect to the WebSocket server
 
 const ItemsList = () => {
   const [items, setItems] = useState([]);
