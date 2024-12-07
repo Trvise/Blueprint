@@ -26,11 +26,12 @@ const UploadVideos = () => {
   const [loading, setLoading] = useState(false);
   const [annotatedImage, setAnnotatedImage] = useState(null);
   const [manualAnnotation, setManualAnnotation] = useState(false);
-  const [imgWidth, setImgWidth] = useState(0);
-  const [imgHeight, setImgHeight] = useState(0);
+  const imageWidth = useRef(0);
+  const imageHeight = useRef(0);
   const [currentFrame, setCurrentFrame] = useState(null); // NEW: Store the captured frame for annotation
   const [frames, setFrames] = useState([]); // NEW: Store annotated frames
   const videoRef = useRef(null); // NEW: Reference for the video player
+  const [stageName, setStageName] = useState(""); // NEW: Store the stage name for the frame
 
   const itemsCollectionRef = collection(db, "itemsData");
   const maxImageSize = 640;
@@ -56,8 +57,8 @@ const UploadVideos = () => {
       const img = new Image();
       img.onload = () => {
         const { newWidth, newHeight } = getResizedDimensions(img.width, img.height, maxImageSize);
-        setImgWidth(newWidth);
-        setImgHeight(newHeight);
+        imageWidth.current = newWidth;
+        imageHeight.current = newHeight;
         Resizer.imageFileResizer(
           file,
           newWidth,
@@ -194,9 +195,6 @@ const UploadVideos = () => {
         videoUrl = await getDownloadURL(videoRef);
       }
   
-      // Resize frames, upload them, and scale annotations
-      const widthScaleFactor = imgWidth / 100;
-      const heightScaleFactor = imgHeight / 100;
   
       const uploadedFrames = await Promise.all(
         frames.map(async (frame, index) => {
@@ -205,7 +203,12 @@ const UploadVideos = () => {
           const resizedFrame = await new Promise((resolve) => {
             resizeImage(frameBlob, resolve); // Use the existing resizeImage function
           });
-  
+          
+          
+          const widthScaleFactor = imageWidth.current / 100;
+          const heightScaleFactor = imageHeight.current / 100;
+          console.log("Width scale factor:", widthScaleFactor);
+          console.log("Height scale factor:", heightScaleFactor);
           // Upload the resized frame to Firebase Storage
           const frameRef = ref(storage, `${currentUser.email}/frames/frame_${index}_${v4()}.jpg`);
           await uploadBytes(frameRef, resizedFrame);
@@ -224,12 +227,14 @@ const UploadVideos = () => {
               y1: Math.floor(annotation.geometry.y * heightScaleFactor),
               x2: Math.ceil((annotation.geometry.x + annotation.geometry.width) * widthScaleFactor),
               y2: Math.ceil((annotation.geometry.y + annotation.geometry.height) * heightScaleFactor),
+              name: annotation.data.text || "",
             };
           });
   
           allScrewLocations.push({
             frameIndex: index,
             annotations: scaledAnnotations,
+            stageName: frame.stageName,
           });
   
           return frameUrl; // Return frame URL for further processing if needed
@@ -283,18 +288,39 @@ const UploadVideos = () => {
     }
   };
 
-  // NEW: Save the frame and its annotations
+
+  // const handleSaveFrame = () => {
+  //   setFrames((prevFrames) => [
+  //     ...prevFrames,
+  //     {
+  //       frameImage: currentFrame,
+  //       annotations,
+  //     },
+  //   ]);
+  //   setCurrentFrame(null); // Clear current frame
+  //   setAnnotations([]); // Clear annotations for the frame
+  // };
+  
   const handleSaveFrame = () => {
+    if (!stageName.trim()) {
+      alert("Please enter a stage name before saving the frame.");
+      return;
+    }
+    
+    console.log("Saving frame with annotations:", annotations);
     setFrames((prevFrames) => [
       ...prevFrames,
       {
         frameImage: currentFrame,
         annotations,
+        stageName, // Store the stage name for this frame
       },
     ]);
     setCurrentFrame(null); // Clear current frame
     setAnnotations([]); // Clear annotations for the frame
+    setStageName(""); // Clear stage name for the next frame
   };
+  
 
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white shadow-lg rounded-lg space-y-8 relative">
@@ -366,6 +392,16 @@ const UploadVideos = () => {
               }}
               className="rounded-lg border border-gray-300 shadow-md"
             />
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700">Stage Name</label>
+              <input
+                type="text"
+                value={stageName}
+                onChange={(e) => setStageName(e.target.value)}
+                placeholder="Enter stage name for this frame..."
+                className="w-full text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-100 p-2.5 focus:outline-none"
+              />
+            </div>
             <button
               onClick={handleSaveFrame}
               className="mt-4 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
