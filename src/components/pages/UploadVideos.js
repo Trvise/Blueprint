@@ -288,19 +288,6 @@ const UploadVideos = () => {
     }
   };
 
-
-  // const handleSaveFrame = () => {
-  //   setFrames((prevFrames) => [
-  //     ...prevFrames,
-  //     {
-  //       frameImage: currentFrame,
-  //       annotations,
-  //     },
-  //   ]);
-  //   setCurrentFrame(null); // Clear current frame
-  //   setAnnotations([]); // Clear annotations for the frame
-  // };
-  
   const handleSaveFrame = () => {
     if (!stageName.trim()) {
       alert("Please enter a stage name before saving the frame.");
