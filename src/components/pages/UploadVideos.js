@@ -171,7 +171,7 @@ const UploadVideos = () => {
   
     setLoading(true);
     try {
-      let imageUrls = [];
+      let imgUrl = "";
       let videoUrl = "";
       let frameUrls = []; // NEW: Array to store all frame URLs
       let allScrewLocations = []; // Array to store screw locations for all frames
@@ -185,7 +185,7 @@ const UploadVideos = () => {
         const imageRef = ref(storage, `${currentUser.email}/images/${image.name + v4()}`);
         await uploadBytes(imageRef, resizedImage);
         const imageUrl = await getDownloadURL(imageRef);
-        imageUrls.push(imageUrl);
+        imgUrl = imageUrl;
       }
   
       // Upload the video (if available)
@@ -247,7 +247,9 @@ const UploadVideos = () => {
       await addDoc(itemsCollectionRef, {
         userId: currentUser.uid,
         email: currentUser.email,
-        images: imageUrls, // Array of uploaded image URLs
+        images: imgUrl, // Array of uploaded image URLs
+        originalWidth: imageWidth.current,
+        originalHeight: imageHeight.current,
         video: videoUrl, // Video URL
         frames: frameUrls, // NEW: Array of uploaded frame URLs
         screw_locations: allScrewLocations, // Array of screw locations for each frame
