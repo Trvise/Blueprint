@@ -11,7 +11,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm install --legacy-peer-deps --verbose && npm run build --verbose # FIXED LINE
+      
+      # ✅ Use Node.js 18 (matches your local version)
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'  # Speeds up future builds
+
+      # ✅ Downgrade npm to 8.19.2 (matches your local version)
+      - run: npm install -g npm@8.19.2
+
+      # ✅ Debugging: Print Node.js and npm versions
+      - run: node -v
+      - run: npm -v
+
+      # ✅ Clean install: Remove existing node_modules and lock file
+      - run: rm -rf node_modules package-lock.json && npm install --legacy-peer-deps --verbose
+
+      # ✅ Run build process with verbose output for debugging
+      - run: npm run build --verbose
+
+      # ✅ Deploy to Firebase Hosting
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
