@@ -322,7 +322,7 @@ const UploadVideos = () => {
   
       <div className={`space-y-4 ${loading ? 'opacity-50' : ''}`}>
         {/* Existing Image Upload Section */}
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700">Upload Image</label>
           <input
             type="file"
@@ -331,7 +331,7 @@ const UploadVideos = () => {
             className="w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-100 focus:outline-none"
           />
           <p className="text-xs text-gray-500">Supported formats: JPEG, PNG. Max size: 5MB.</p>
-        </div>
+        </div> */}
   
         {/* Existing Video Upload Section */}
         <div className="space-y-2">
@@ -433,7 +433,7 @@ const UploadVideos = () => {
       </div>
   
       {/* Existing Buttons */}
-      <div className="flex gap-4">
+      {/* <div className="flex gap-4">
         <button
           onClick={handleUpload}
           className="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none transition duration-150 ease-in-out shadow-md"
@@ -446,7 +446,7 @@ const UploadVideos = () => {
         >
           Annotate
         </button>
-      </div>
+      </div> */}
   
       {loading && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

@@ -3,18 +3,14 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 import ReactPlayer from 'react-player';
 import { useNavigate } from 'react-router-dom';
-import io from 'socket.io-client';
-
-const socket = io('http://127.0.0.1:8000'); // Connect to the WebSocket server
-//const socket = io('http://192.168.10.153:8000'); // Connect to the WebSocket server
 
 const ItemsList = () => {
   const [items, setItems] = useState([]);
-  const [activeItemId, setActiveItemId] = useState(null);
-  const [isRunning, setIsRunning] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [annotatedImage, setAnnotatedImage] = useState(null);
+  const [annotatedImages, setAnnotatedImages] = useState([]); // Store all annotation stages
+  const [selectedStageIndex, setSelectedStageIndex] = useState(0); // Track the current stage
+  const [stageNames, setStageNames] = useState([]); // Store stage names
   const canvasRef = useRef(null); // Reference to the canvas element
   const itemsCollectionRef = collection(db, 'itemsData');
   const navigate = useNavigate();
@@ -30,166 +26,107 @@ const ItemsList = () => {
     };
 
     fetchItems();
-
-    const savedActiveItemId = localStorage.getItem('activeItemId');
-    const savedIsRunning = localStorage.getItem('isRunning') === 'true';
-
-    if (savedActiveItemId) {
-      setActiveItemId(savedActiveItemId);
-      setIsRunning(savedIsRunning);
-    }
   }, []);
-
-  useEffect(() => {
-    if (activeItemId) {
-      localStorage.setItem('activeItemId', activeItemId);
-    } else {
-      localStorage.removeItem('activeItemId');
-    }
-
-    localStorage.setItem('isRunning', isRunning);
-  }, [activeItemId, isRunning]);
-
-  // WebSocket event listeners
-  useEffect(() => {
-    socket.on('connect', () => {
-      console.log('Connected to WebSocket server');
-    });
-
-    socket.on('video_frame', (frameData) => {
-      // Convert received frame data to a Blob and create a URL
-      const blob = new Blob([frameData], { type: 'image/jpeg' });
-      const url = URL.createObjectURL(blob);
-      const img = new Image();
-      img.onload = () => {
-        const canvas = canvasRef.current;
-        if (canvas) {
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          URL.revokeObjectURL(url);
-        }
-      };
-      img.src = url;
-    });
-
-    socket.on('process_started', () => {
-      setIsRunning(true);
-    });
-
-    socket.on('process_stopped', () => {
-      setIsRunning(false);
-      setActiveItemId(null);
-    });
-
-    socket.on('process_error', (error) => {
-      alert(`Error: ${error.error}`);
-      setIsRunning(false);
-    });
-
-    return () => {
-      socket.off('connect');
-      socket.off('video_frame');
-      socket.off('process_started');
-      socket.off('process_stopped');
-      socket.off('process_error');
-    };
-  }, []);
-
-  const handleSendButtonClick = (item) => {
-    if (isRunning && item.id !== activeItemId) {
-      alert('Another process is running, please stop it before proceeding.');
-      return;
-    }
-
-    if (item.id === activeItemId) {
-      socket.emit('stop_process');
-      return;
-    }
-
-    let base64Image = localStorage.getItem(`imageCache_${item.id}`);
-    if (!base64Image) {
-      fetch(item.image)
-        .then((imageResponse) => imageResponse.blob())
-        .then((imageBlob) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(imageBlob);
-          reader.onloadend = () => {
-            base64Image = reader.result.split(',')[1];
-            localStorage.setItem(`imageCache_${item.id}`, base64Image);
-            startProcess(item, base64Image);
-          };
-        });
-    } else {
-      startProcess(item, base64Image);
-    }
-  };
-
-  const startProcess = (item, base64Image) => {
-    const payload = {
-      image: base64Image,
-      screw_locations: item.screw_locations,
-    };
-
-    socket.emit('start_process', payload);
-    setActiveItemId(item.id);
-    setShowModal(true);
-  };
-
-  const handleStopAllProcesses = () => {
-    socket.emit('stop_process');
-  };
 
   const handleViewAnnotationsClick = (item) => {
     setSelectedItem(item);
-    drawScrewLocations(item.image, item.screw_locations, item.id);
+    setSelectedStageIndex(0); // Reset to first stage
+    generateAnnotatedImages(item.frames, item.screw_locations, item.originalWidth, item.originalHeight);
     setShowModal(true);
-  };
+  };  
 
-  const drawScrewLocations = async (imageUrl, locations, itemId) => {
+  const generateAnnotatedImages = async (frames, screwLocations, originalWidth, originalHeight) => {
     try {
-      let base64Image = localStorage.getItem(`imageCache_${itemId}`);
-      if (!base64Image) {
-        const response = await fetch(imageUrl);
-        const imageBlob = await response.blob();
-        const reader = new FileReader();
-        reader.readAsDataURL(imageBlob);
-        base64Image = await new Promise((resolve) => {
-          reader.onloadend = () => resolve(reader.result.split(',')[1]);
-        });
-
-        // Cache the image data in local storage
-        localStorage.setItem(`imageCache_${itemId}`, base64Image);
+      if (!frames || frames.length === 0) {
+        console.error("No frames found for this video.");
+        return;
       }
-
-      const img = new Image();
-      img.src = `data:image/jpeg;base64,${base64Image}`;
-      img.onload = () => {
+  
+      let annotatedFrames = [];
+      let stageNamesList = [];
+  
+      for (let i = 0; i < frames.length; i++) {
+        const imageUrl = frames[i].frameUrl;
+        const locations = screwLocations.find(stage => stage.frameIndex === i)?.annotations || [];
+        const stageName = screwLocations.find(stage => stage.frameIndex === i)?.stageName || `Stage ${i + 1}`;
+        stageNamesList.push(stageName);
+  
+        if (!imageUrl) {
+          console.warn(`Skipping frame ${i + 1} as it has no valid image URL.`);
+          continue;
+        }
+  
+        const img = new Image();
+        img.crossOrigin = "anonymous";  // ✅ FIX: Prevent CORS issue
+        img.src = imageUrl;
+  
+        await new Promise((resolve) => (img.onload = resolve));
+  
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-
-        locations.forEach(({ x1, y1, x2, y2 }) => {
+  
+        // ✅ FIX: Keep Canvas at 640x480 but scale images properly
+        canvas.width = 640;
+        canvas.height = 480;
+        ctx.drawImage(img, 0, 0, 640, 480); 
+  
+        // ✅ FIX: Compute scale factors
+        const widthScaleFactor = 640 / originalWidth;
+        const heightScaleFactor = 480 / originalHeight;
+  
+        // ✅ Draw bounding boxes with annotation names
+        locations.forEach(({ x1, y1, x2, y2, name }) => {
           ctx.strokeStyle = '#1ABC9C';
           ctx.lineWidth = 2;
-          ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-        });
+          ctx.strokeRect(
+            x1 * widthScaleFactor, 
+            y1 * heightScaleFactor, 
+            (x2 - x1) * widthScaleFactor, 
+            (y2 - y1) * heightScaleFactor
+          );
 
-        setAnnotatedImage(canvas.toDataURL());
-      };
+          // **Display annotation name**
+          ctx.fillStyle = "rgba(26, 188, 156, 0.8)"; // Semi-transparent green
+          ctx.fillRect(
+            x1 * widthScaleFactor, 
+            y1 * heightScaleFactor - 20, 
+            (x2 - x1) * widthScaleFactor, 
+            20
+          );
+
+          ctx.fillStyle = "white"; // Text color
+          ctx.font = "14px Arial";
+          ctx.fillText(name, x1 * widthScaleFactor + 5, y1 * heightScaleFactor - 5);
+        });
+  
+        annotatedFrames.push(canvas.toDataURL()); 
+      }
+  
+      setAnnotatedImages(annotatedFrames);
+      setStageNames(stageNamesList);
     } catch (error) {
-      console.error('Error loading image:', error);
+      console.error("Error generating annotated images:", error);
+    }
+  };  
+
+  const handleNextStage = () => {
+    if (selectedStageIndex < annotatedImages.length - 1) {
+      setSelectedStageIndex(selectedStageIndex + 1);
+    }
+  };
+
+  const handlePrevStage = () => {
+    if (selectedStageIndex > 0) {
+      setSelectedStageIndex(selectedStageIndex - 1);
     }
   };
 
   const handleCloseModal = () => {
-    if (!annotatedImage) {
-      socket.emit('stop_process');
-    }
     setShowModal(false);
     setSelectedItem(null);
-    setAnnotatedImage(null);
+    setAnnotatedImages([]);
+    setStageNames([]);
+    setSelectedStageIndex(0);
   };
 
   return (
@@ -202,21 +139,12 @@ const ItemsList = () => {
               {item.video ? (
                 <ReactPlayer url={item.video} controls width="100%" height="100%" className="absolute top-0 left-0 w-full h-full rounded-lg overflow-hidden" />
               ) : (
-                <img src={item.image} alt="Item" className="absolute top-0 left-0 w-full h-full object-cover rounded-lg" />
+                <img src={item.images} alt="Item" className="absolute top-0 left-0 w-full h-full object-cover rounded-lg" />
               )}
             </div>
             <p className="mt-2 text-gray-700 text-sm">{item.description}</p>
             <p className="text-gray-500 text-xs">{new Date(item.timestamp.toDate()).toLocaleString()}</p>
             <div className="mt-4 flex space-x-2">
-              <button
-                className={`flex-1 py-2 px-3 rounded-lg focus:outline-none transition duration-150 ease-in-out text-sm font-semibold ${
-                  item.id === activeItemId ? 'bg-red-500 text-white hover:bg-red-700' : 'bg-blue-500 text-white hover:bg-blue-600'
-                } ${isRunning && item.id !== activeItemId ? 'opacity-50 cursor-not-allowed' : ''}`}
-                onClick={() => handleSendButtonClick(item)}
-                disabled={isRunning && item.id !== activeItemId}
-              >
-                {item.id === activeItemId ? 'Stop Process' : 'Start Process'}
-              </button>
               <button
                 className="flex-1 py-2 px-3 rounded-lg focus:outline-none transition duration-150 ease-in-out text-sm font-semibold bg-green-500 text-white hover:bg-green-600"
                 onClick={() => handleViewAnnotationsClick(item)}
@@ -227,43 +155,52 @@ const ItemsList = () => {
           </div>
         ))}
       </div>
-      <div className="mt-8 flex justify-center">
-        <button
-          className="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 focus:outline-none transition duration-150 ease-in-out"
-          onClick={handleStopAllProcesses}
-        >
-          Stop All Processes
-        </button>
-      </div>
 
+      {/* Modal for Annotated Images */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 overflow-auto">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-xl w-full mx-4 md:mx-6 lg:mx-8 max-h-full overflow-auto">
-            <h2 className="text-xl font-bold mb-4 text-center text-gray-800">{annotatedImage ? "Screw Annotations" : "Live View"}</h2>
+            <h2 className="text-xl font-bold mb-4 text-center text-gray-800">Screw Annotations</h2>
+
+            {/* Display Stage Name */}
+            <h3 className="text-lg font-semibold text-center text-gray-700">{stageNames[selectedStageIndex]}</h3>
+
             <div className="relative">
-              {annotatedImage ? (
+              {annotatedImages.length > 0 && (
                 <img
-                  src={annotatedImage}
-                  alt="Annotated Item"
+                  src={annotatedImages[selectedStageIndex]}
+                  alt="Annotated Frame"
                   className="max-w-full max-h-[70vh] object-contain mx-auto rounded-lg border border-gray-300"
-                />
-              ) : (
-                <canvas
-                  ref={canvasRef}
-                  className="max-w-full max-h-[70vh] object-contain mx-auto rounded-lg border border-gray-300"
-                  width={640}
-                  height={480}
                 />
               )}
             </div>
-            <div className="mt-6 flex justify-center">
+
+            {/* Navigation Buttons */}
+            <div className="mt-4 flex justify-between">
               <button
-                className="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none transition duration-150 ease-in-out"
-                onClick={handleCloseModal}
+                onClick={handlePrevStage}
+                disabled={selectedStageIndex === 0}
+                className="py-2 px-4 rounded-lg bg-gray-400 text-white font-semibold cursor-not-allowed"
               >
-                {annotatedImage ? 'Close' : 'Stop Process'}
+                Previous Stage
+              </button>
+
+              <button
+                onClick={handleNextStage}
+                disabled={selectedStageIndex === annotatedImages.length - 1}
+                className="py-2 px-4 rounded-lg bg-green-500 text-white font-semibold"
+              >
+                Next Stage
               </button>
             </div>
+
+            <p className="mt-4 text-center text-gray-700">
+              Stage {selectedStageIndex + 1} of {annotatedImages.length}
+            </p>
+
+            <button onClick={handleCloseModal} className="mt-6 w-full bg-blue-500 text-white py-2 px-4 rounded-lg">
+              Close
+            </button>
           </div>
         </div>
       )}
