@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm install --legacy-peer-deps && npm run build  # FIXED LINE
+      - run: npm install --legacy-peer-deps --verbose && npm run build --verbose # FIXED LINE
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
