@@ -34,6 +34,11 @@ const UploadVideos = () => {
   const [stageName, setStageName] = useState(""); // NEW: Store the stage name for the frame
 
   const itemsCollectionRef = collection(db, "itemsData");
+  const allowedEmails = [
+    "pranav.varma1801@gmail.com",
+    "aadityav@trvise.com",
+    "ethanwm@terravortex.com"
+  ];
   const maxImageSize = 640;
 
   const handleImageChange = (e) => {
@@ -44,6 +49,10 @@ const UploadVideos = () => {
   };
 
   const handleVideoChange = (e) => {
+    if (!allowedEmails.includes(currentUser?.email)) {
+      alert("Access Denied: You are not authorized to upload videos.");
+      return;
+    }
     const file = e.target.files[0];
     if (file) {
       setVideo(file); // Store the video file

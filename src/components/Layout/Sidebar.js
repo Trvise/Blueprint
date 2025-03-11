@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/authContext';
 import { doSignOut } from '../../firebase/auth';
 import { AiOutlineMenu, AiOutlineHome, AiOutlineVideoCamera, AiOutlineLogout, AiFillAndroid } from 'react-icons/ai';
-
+import logo from '../../assets/trvise_logo.png';
 const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     const navigate = useNavigate();
     const { userLoggedIn, currentUser } = useAuth();
@@ -16,7 +16,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                     {!isCollapsed && (
                         <div className="flex items-center space-x-2">
                             <img 
-                                src="https://raw.githubusercontent.com/SegBin-ai/SegBin-ai/main/logo.png" 
+                                src={logo}
                                 alt="VortexHub Logo" 
                                 className="w-14 h-14"
                             />
@@ -99,7 +99,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                 {/* Footer */}
                 {!isCollapsed && (
                     <div className="p-4 text-center text-xs text-gray-500">
-                        &copy; 2024 VortexHub. All rights reserved.
+                        &copy; {new Date().getFullYear()} Trvise. All rights reserved.
                     </div>
                 )}
             </div>
