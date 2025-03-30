@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/authContext';
 import { auth, db, storage } from '../../firebase/firebase';
@@ -342,6 +342,42 @@ const UploadVideos = () => {
       setCurrentFrame(frameImage);
     }
   };
+  
+  // NEW: Functions to move forward and backward frame by frame
+  const moveFrameForward = () => {
+    const video = videoRef.current;
+    if (video) {
+      video.pause();
+      video.currentTime += 1/30; // Move forward approximately 1 frame (assuming 30fps)
+    }
+  };
+  
+  const moveFrameBackward = () => {
+    const video = videoRef.current;
+    if (video) {
+      video.pause();
+      video.currentTime -= 1/30; // Move backward approximately 1 frame (assuming 30fps)
+    }
+  };
+  
+  // NEW: Add keyboard event listeners
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (videoRef.current) {
+        if (e.key === 'c') {
+          moveFrameForward();
+        } else if (e.key === 'b') {
+          moveFrameBackward();
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyPress);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+    };
+  }, []);
 
   const handleSaveFrame = () => {
     if (!stageName.trim()) {
@@ -419,12 +455,31 @@ const UploadVideos = () => {
           <div>
             <h3 className="text-lg font-medium">Video {activeVideoIndex + 1}</h3>
             <video ref={videoRef} controls src={videoUrls[activeVideoIndex]} className="w-full rounded-lg shadow-md"></video>
-            <button
-              onClick={captureFrame}
-              className="mt-4 bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700"
-            >
-              Annotate Frame
-            </button>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <button
+                onClick={captureFrame}
+                className="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700"
+              >
+                Annotate Frame
+              </button>
+              <button
+                onClick={moveFrameBackward}
+                className="bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700"
+                title="Press 'b' key"
+              >
+                ◀ Frame
+              </button>
+              <button
+                onClick={moveFrameForward}
+                className="bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700"
+                title="Press 'c' key"
+              >
+                Frame ▶
+              </button>
+              <p className="text-xs text-gray-500 flex items-center ml-2">
+                Tip: Use 'b' key to go back 1 frame, 'c' key to advance 1 frame
+              </p>
+            </div>
           </div>
         )}
 
