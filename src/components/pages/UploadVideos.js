@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'; // Added useRef for video playback
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/authContext';
 import { auth, db, storage } from '../../firebase/firebase';
@@ -18,8 +18,9 @@ import Resizer from 'react-image-file-resizer';
 const UploadVideos = () => {
   const { currentUser } = useAuth();
   const [image, setImage] = useState(null);
-  const [video, setVideo] = useState(null);
-  const [videoUrl, setVideoUrl] = useState(null); // NEW: Store video URL for playback
+  const [videos, setVideos] = useState([]); // Changed to array for multiple videos
+  const [activeVideoIndex, setActiveVideoIndex] = useState(0); // NEW: Track which video is active
+  const [videoUrls, setVideoUrls] = useState([]); // Changed to array for multiple video URLs
   const [description, setDescription] = useState('');
   const [annotations, setAnnotations] = useState([]);
   const [annotation, setAnnotation] = useState({});
@@ -28,10 +29,10 @@ const UploadVideos = () => {
   const [manualAnnotation, setManualAnnotation] = useState(false);
   const imageWidth = useRef(0);
   const imageHeight = useRef(0);
-  const [currentFrame, setCurrentFrame] = useState(null); // NEW: Store the captured frame for annotation
-  const [frames, setFrames] = useState([]); // NEW: Store annotated frames
-  const videoRef = useRef(null); // NEW: Reference for the video player
-  const [stageName, setStageName] = useState(""); // NEW: Store the stage name for the frame
+  const [currentFrame, setCurrentFrame] = useState(null);
+  const [frames, setFrames] = useState([]);
+  const videoRef = useRef(null);
+  const [stageName, setStageName] = useState("");
 
   const itemsCollectionRef = collection(db, "itemsData");
   const allowedEmails = [
@@ -53,10 +54,53 @@ const UploadVideos = () => {
       alert("Access Denied: You are not authorized to upload videos.");
       return;
     }
-    const file = e.target.files[0];
-    if (file) {
-      setVideo(file); // Store the video file
-      setVideoUrl(URL.createObjectURL(file)); // NEW: Generate local URL for playback
+    
+    const files = Array.from(e.target.files); // Convert FileList to Array
+    if (files.length > 0) {
+      // Create new arrays for videos and their URLs
+      const newVideos = [...videos, ...files];
+      const newVideoUrls = [...videoUrls];
+      
+      // Generate URLs for each new video
+      files.forEach(file => {
+        newVideoUrls.push(URL.createObjectURL(file));
+      });
+      
+      setVideos(newVideos);
+      setVideoUrls(newVideoUrls);
+      
+      // If this is the first video being added, make it active
+      if (videos.length === 0) {
+        setActiveVideoIndex(0);
+      }
+    }
+  };
+
+  // NEW: Function to switch active video
+  const switchActiveVideo = (index) => {
+    setActiveVideoIndex(index);
+  };
+
+  // NEW: Function to remove a video
+  const removeVideo = (index) => {
+    const newVideos = [...videos];
+    const newVideoUrls = [...videoUrls];
+    
+    // Revoke the URL to prevent memory leaks
+    URL.revokeObjectURL(newVideoUrls[index]);
+    
+    // Remove the video and URL from the arrays
+    newVideos.splice(index, 1);
+    newVideoUrls.splice(index, 1);
+    
+    setVideos(newVideos);
+    setVideoUrls(newVideoUrls);
+    
+    // If we're removing the active video, adjust the active index
+    if (index === activeVideoIndex) {
+      setActiveVideoIndex(Math.max(0, activeVideoIndex - 1));
+    } else if (index < activeVideoIndex) {
+      setActiveVideoIndex(activeVideoIndex - 1);
     }
   };
 
@@ -97,8 +141,8 @@ const UploadVideos = () => {
   };
 
   const dataURLToBlob = (dataURL) => {
-    const byteString = atob(dataURL.split(',')[1]); // Decode base64 string
-    const mimeString = dataURL.split(',')[0].split(':')[1].split(';')[0]; // Extract MIME type
+    const byteString = atob(dataURL.split(',')[1]);
+    const mimeString = dataURL.split(',')[0].split(':')[1].split(';')[0];
     const arrayBuffer = new Uint8Array(byteString.length);
   
     for (let i = 0; i < byteString.length; i++) {
@@ -108,7 +152,6 @@ const UploadVideos = () => {
     return new Blob([arrayBuffer], { type: mimeString });
   };
   
-
   const handleUpload = async () => {
     if (!image) {
       alert("Please upload an image first.");
@@ -120,7 +163,7 @@ const UploadVideos = () => {
     formData.append('file', image);
 
     try {
-      const token = await auth.currentUser.getIdToken(true); // Get the ID token
+      const token = await auth.currentUser.getIdToken(true);
       const response = await axios.post('http://127.0.0.1:5000/detect_screws', formData, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -131,7 +174,7 @@ const UploadVideos = () => {
         const result = response.data;
         convertScrewLocationsToAnnotations(result.screw_locations);
         drawScrewLocations(result.screw_locations);
-        setManualAnnotation(false); // Disable manual annotation if automatic detection is done
+        setManualAnnotation(false);
       } else {
         alert(`Error: ${response.status} - ${response.data}`);
       }
@@ -153,7 +196,7 @@ const UploadVideos = () => {
       ctx.drawImage(img, 0, 0);
 
       locations.forEach(([x1, y1, x2, y2]) => {
-        ctx.strokeStyle = '#1ABC9C';  // Changed to a more vibrant green
+        ctx.strokeStyle = '#1ABC9C';
         ctx.lineWidth = 2;
         ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
       });
@@ -181,14 +224,14 @@ const UploadVideos = () => {
     setLoading(true);
     try {
       let imgUrl = "";
-      let videoUrl = "";
-      let frameUrls = []; // NEW: Array to store all frame URLs
-      let allScrewLocations = []; // Array to store screw locations for all frames
+      let videoUrls = []; // Changed to store multiple video URLs
+      let frameUrls = [];
+      let allScrewLocations = [];
   
       // Upload and resize the image (if available)
       if (image !== null) {
         const resizedImage = await new Promise((resolve) => {
-          resizeImage(image, resolve); // Use the existing resizeImage function
+          resizeImage(image, resolve);
         });
   
         const imageRef = ref(storage, `${currentUser.email}/images/${image.name + v4()}`);
@@ -197,39 +240,40 @@ const UploadVideos = () => {
         imgUrl = imageUrl;
       }
   
-      // Upload the video (if available)
-      if (video !== null) {
+      // Upload all videos
+      for (let i = 0; i < videos.length; i++) {
+        const video = videos[i];
         const videoRef = ref(storage, `${currentUser.email}/videos/${video.name + v4()}`);
         await uploadBytes(videoRef, video);
-        videoUrl = await getDownloadURL(videoRef);
+        const url = await getDownloadURL(videoRef);
+        videoUrls.push({
+          videoIndex: i,
+          videoUrl: url
+        });
       }
-  
   
       const uploadedFrames = await Promise.all(
         frames.map(async (frame, index) => {
-          // Resize the frame image
           const frameBlob = dataURLToBlob(frame.frameImage);
           const resizedFrame = await new Promise((resolve) => {
-            resizeImage(frameBlob, resolve); // Use the existing resizeImage function
+            resizeImage(frameBlob, resolve);
           });
-          
           
           const widthScaleFactor = imageWidth.current / 100;
           const heightScaleFactor = imageHeight.current / 100;
           console.log("Width scale factor:", widthScaleFactor);
           console.log("Height scale factor:", heightScaleFactor);
-          // Upload the resized frame to Firebase Storage
+          
           const frameRef = ref(storage, `${currentUser.email}/frames/frame_${index}_${v4()}.jpg`);
           await uploadBytes(frameRef, resizedFrame);
           const frameUrl = await getDownloadURL(frameRef);
   
-          // Add the frame URL to the array
           frameUrls.push({
             frameIndex: index,
             frameUrl: frameUrl,
-          }); // NEW: Store each frame URL
+            videoIndex: frame.videoIndex // NEW: Store which video this frame came from
+          });
   
-          // Scale annotations for this frame
           const scaledAnnotations = frame.annotations.map((annotation) => {
             return {
               x1: Math.floor(annotation.geometry.x * widthScaleFactor),
@@ -242,11 +286,12 @@ const UploadVideos = () => {
   
           allScrewLocations.push({
             frameIndex: index,
+            videoIndex: frame.videoIndex, // NEW: Store which video this frame came from
             annotations: scaledAnnotations,
             stageName: frame.stageName,
           });
   
-          return frameUrl; // Return frame URL for further processing if needed
+          return frameUrl;
         })
       );
 
@@ -256,12 +301,12 @@ const UploadVideos = () => {
       await addDoc(itemsCollectionRef, {
         userId: currentUser.uid,
         email: currentUser.email,
-        images: imgUrl, // Array of uploaded image URLs
+        images: imgUrl,
         originalWidth: imageWidth.current,
         originalHeight: imageHeight.current,
-        video: videoUrl, // Video URL
-        frames: frameUrls, // NEW: Array of uploaded frame URLs
-        screw_locations: allScrewLocations, // Array of screw locations for each frame
+        videos: videoUrls, // Changed to store multiple video URLs
+        frames: frameUrls,
+        screw_locations: allScrewLocations,
         description: description,
         timestamp: new Date(),
       });
@@ -280,12 +325,11 @@ const UploadVideos = () => {
       return;
     }
 
-    setAnnotations([]); // Clear previous annotations
+    setAnnotations([]);
     setManualAnnotation(true);
     setAnnotatedImage(null);
   };
 
-  // NEW: Capture the current frame from the video
   const captureFrame = () => {
     const video = videoRef.current;
     if (video) {
@@ -295,7 +339,7 @@ const UploadVideos = () => {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const frameImage = canvas.toDataURL("image/png");
-      setCurrentFrame(frameImage); // Store the captured frame
+      setCurrentFrame(frameImage);
     }
   };
 
@@ -311,15 +355,15 @@ const UploadVideos = () => {
       {
         frameImage: currentFrame,
         annotations,
-        stageName, // Store the stage name for this frame
+        stageName,
+        videoIndex: activeVideoIndex, // NEW: Store which video this frame came from
       },
     ]);
-    setCurrentFrame(null); // Clear current frame
-    setAnnotations([]); // Clear annotations for the frame
-    setStageName(""); // Clear stage name for the next frame
+    setCurrentFrame(null);
+    setAnnotations([]);
+    setStageName("");
   };
   
-
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white shadow-lg rounded-lg space-y-8 relative">
       <div className="text-center">
@@ -330,34 +374,51 @@ const UploadVideos = () => {
       </div>
   
       <div className={`space-y-4 ${loading ? 'opacity-50' : ''}`}>
-        {/* Existing Image Upload Section */}
-        {/* <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Upload Image</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-            className="w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-100 focus:outline-none"
-          />
-          <p className="text-xs text-gray-500">Supported formats: JPEG, PNG. Max size: 5MB.</p>
-        </div> */}
-  
-        {/* Existing Video Upload Section */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Upload Video</label>
+          <label className="block text-sm font-medium text-gray-700">Upload Videos</label>
           <input
             type="file"
             accept="video/*"
             onChange={handleVideoChange}
+            multiple // NEW: Allow multiple file selection
             className="w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-100 focus:outline-none"
           />
-          <p className="text-xs text-gray-500">Supported formats: MP4, AVI. Max size: 50MB.</p>
+          <p className="text-xs text-gray-500">Supported formats: MP4, AVI. Max size: 50MB. You can select multiple videos.</p>
         </div>
 
-        {/* NEW: Video Playback Section */}
-        {videoUrl && (
+        {/* NEW: Video Selection Section */}
+        {videos.length > 0 && (
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">Select Video to Annotate</label>
+            <div className="flex flex-wrap gap-2">
+              {videoUrls.map((url, index) => (
+                <div 
+                  key={index} 
+                  className={`relative p-1 border rounded-lg ${activeVideoIndex === index ? 'border-indigo-600 bg-indigo-50' : 'border-gray-300'}`}
+                >
+                  <button
+                    onClick={() => switchActiveVideo(index)}
+                    className="text-xs text-gray-900 focus:outline-none"
+                  >
+                    Video {index + 1}
+                  </button>
+                  <button 
+                    onClick={() => removeVideo(index)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Video Playback Section - Now shows active video */}
+        {videoUrls.length > 0 && (
           <div>
-            <video ref={videoRef} controls src={videoUrl} className="w-full rounded-lg shadow-md"></video>
+            <h3 className="text-lg font-medium">Video {activeVideoIndex + 1}</h3>
+            <video ref={videoRef} controls src={videoUrls[activeVideoIndex]} className="w-full rounded-lg shadow-md"></video>
             <button
               onClick={captureFrame}
               className="mt-4 bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700"
@@ -367,7 +428,7 @@ const UploadVideos = () => {
           </div>
         )}
 
-        {/* NEW: Frame Annotation Section */}
+        {/* Frame Annotation Section */}
         {currentFrame && (
           <div>
             <h3 className="text-xl font-semibold mt-4">Annotate Current Frame</h3>
@@ -409,19 +470,19 @@ const UploadVideos = () => {
           </div>
         )}
 
-        {/* NEW: Annotated Frames Summary */}
+        {/* Annotated Frames Summary */}
         {frames.length > 0 && (
           <div>
             <h3 className="text-xl font-semibold mt-4">Annotated Frames</h3>
             <ul className="list-disc pl-5">
               {frames.map((frame, index) => (
                 <li key={index}>
-                  Frame {index + 1}: {frame.annotations.length} annotations
+                  Frame {index + 1} (Video {frame.videoIndex + 1}): {frame.annotations.length} annotations - {frame.stageName}
                 </li>
               ))}
             </ul>
             <button
-              onClick={handleSubmit} // Call the updated handleSubmit function
+              onClick={handleSubmit}
               className="mt-4 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none transition duration-150 ease-in-out shadow-md"
             >
               Submit All Video Annotations
@@ -430,7 +491,7 @@ const UploadVideos = () => {
         )}
       </div>
   
-      {/* Existing Description Section */}
+      {/* Description Section */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">Product Description</label>
         <textarea
@@ -440,22 +501,6 @@ const UploadVideos = () => {
           className="w-full h-20 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-100 p-2.5 focus:outline-none"
         ></textarea>
       </div>
-  
-      {/* Existing Buttons */}
-      {/* <div className="flex gap-4">
-        <button
-          onClick={handleUpload}
-          className="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none transition duration-150 ease-in-out shadow-md"
-        >
-          {loading ? 'Uploading...' : 'Detect Steps Automatically (Beta)'}
-        </button>
-        <button
-          onClick={handleManualAnnotation}
-          className="w-full bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 focus:outline-none transition duration-150 ease-in-out shadow-md"
-        >
-          Annotate
-        </button>
-      </div> */}
   
       {loading && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
