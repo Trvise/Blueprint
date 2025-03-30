@@ -1,3 +1,42 @@
+# # Firebase Hosting Deployment on Merge
+# name: Deploy to Firebase Hosting on merge
+# on:
+#   push:
+#     branches:
+#       - main
+# jobs:
+#   build_and_deploy:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+
+#       # ✅ Set Node.js & npm version to match local
+#       - name: Use Node.js 20
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: 20
+#           cache: 'npm'
+
+#       - run: npm install -g npm@8.19.2  # ✅ Matches your local npm version
+
+#       # ✅ Debugging: Check installed versions
+#       - run: node -v
+#       - run: npm -v
+
+#       # ✅ Clean install to avoid conflicts
+#       - run: rm -rf node_modules package-lock.json && npm install --legacy-peer-deps
+
+#       # ✅ Prevent CI warnings from failing the build
+#       - run: CI=false npm run build --verbose
+
+#       # ✅ Deploy to Firebase Hosting
+#       - uses: FirebaseExtended/action-hosting-deploy@v0
+#         with:
+#           repoToken: ${{ secrets.GITHUB_TOKEN }}
+#           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_VORTEXLENS }}
+#           channelId: live
+#           projectId: vortexlens
+
 # Firebase Hosting Deployment on Merge
 name: Deploy to Firebase Hosting on merge
 on:
@@ -9,27 +48,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # ✅ Set Node.js & npm version to match local
-      - name: Use Node.js 18
+      # Set Node.js version to 20
+      - name: Use Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: 'npm'
-
-      - run: npm install -g npm@8.19.2  # ✅ Matches your local npm version
-
-      # ✅ Debugging: Check installed versions
+      # Debugging: Check installed versions
       - run: node -v
       - run: npm -v
-
-      # ✅ Clean install to avoid conflicts
+      # Clean install to avoid conflicts
       - run: rm -rf node_modules package-lock.json && npm install --legacy-peer-deps
-
-      # ✅ Prevent CI warnings from failing the build
+      # Prevent CI warnings from failing the build
       - run: CI=false npm run build --verbose
-
-      # ✅ Deploy to Firebase Hosting
+      # Deploy to Firebase Hosting
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
