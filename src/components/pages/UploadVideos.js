@@ -18,9 +18,9 @@ import Resizer from 'react-image-file-resizer';
 const UploadVideos = () => {
   const { currentUser } = useAuth();
   const [image, setImage] = useState(null);
-  const [videos, setVideos] = useState([]); // Changed to array for multiple videos
-  const [activeVideoIndex, setActiveVideoIndex] = useState(0); // NEW: Track which video is active
-  const [videoUrls, setVideoUrls] = useState([]); // Changed to array for multiple video URLs
+  const [videos, setVideos] = useState([]); // Array for multiple videos
+  const [activeVideoIndex, setActiveVideoIndex] = useState(0); // Track which video is active
+  const [videoUrls, setVideoUrls] = useState([]); // Array for multiple video URLs
   const [description, setDescription] = useState('');
   const [annotations, setAnnotations] = useState([]);
   const [annotation, setAnnotation] = useState({});
@@ -30,9 +30,22 @@ const UploadVideos = () => {
   const imageWidth = useRef(0);
   const imageHeight = useRef(0);
   const [currentFrame, setCurrentFrame] = useState(null);
-  const [frames, setFrames] = useState([]);
+  const [frames, setFrames] = useState([]); // Kept for backward compatibility
   const videoRef = useRef(null);
   const [stageName, setStageName] = useState("");
+  
+  // MODIFIED DATA STRUCTURE:
+  // Object to store frames grouped by stage name
+  // Format: { "stageName1": [frame1, frame2, ...], "stageName2": [...] }
+  // Each frame contains: frameImage, annotations, videoIndex
+  const [stageFrames, setStageFrames] = useState({});
+  
+  // Track current active stage for UI interactions
+  const [activeStage, setActiveStage] = useState("");
+  
+  // Maximum number of frames allowed per stage (configurable)
+  // Increase this value if you need more frames per stage
+  const MAX_FRAMES_PER_STAGE = 10;
 
   const itemsCollectionRef = collection(db, "itemsData");
   const allowedEmails = [
@@ -76,12 +89,12 @@ const UploadVideos = () => {
     }
   };
 
-  // NEW: Function to switch active video
+  // Function to switch active video
   const switchActiveVideo = (index) => {
     setActiveVideoIndex(index);
   };
 
-  // NEW: Function to remove a video
+  // Function to remove a video
   const removeVideo = (index) => {
     const newVideos = [...videos];
     const newVideoUrls = [...videoUrls];
@@ -225,8 +238,7 @@ const UploadVideos = () => {
     try {
       let imgUrl = "";
       let videoUrls = []; // Changed to store multiple video URLs
-      let frameUrls = [];
-      let allScrewLocations = [];
+      let stageData = []; // NEW: Array to store consolidated stage data
   
       // Upload and resize the image (if available)
       if (image !== null) {
@@ -252,8 +264,17 @@ const UploadVideos = () => {
         });
       }
   
-      const uploadedFrames = await Promise.all(
-        frames.map(async (frame, index) => {
+      // NEW: Process frames by stage, consolidating them into one entry per stage
+      for (const stageName of Object.keys(stageFrames)) {
+        const stageFrameList = stageFrames[stageName];
+        
+        // Arrays to store all frame URLs and all annotations for this stage
+        const stageFrameUrls = [];
+        const stageAnnotations = [];
+        const usedVideoIndices = new Set(); // Track which videos were used for this stage
+        
+        // Process all frames for this stage
+        for (const frame of stageFrameList) {
           const frameBlob = dataURLToBlob(frame.frameImage);
           const resizedFrame = await new Promise((resolve) => {
             resizeImage(frameBlob, resolve);
@@ -261,21 +282,26 @@ const UploadVideos = () => {
           
           const widthScaleFactor = imageWidth.current / 100;
           const heightScaleFactor = imageHeight.current / 100;
-          console.log("Width scale factor:", widthScaleFactor);
-          console.log("Height scale factor:", heightScaleFactor);
           
-          const frameRef = ref(storage, `${currentUser.email}/frames/frame_${index}_${v4()}.jpg`);
+          // Upload the frame image
+          const frameRef = ref(storage, `${currentUser.email}/frames/stage_${stageName}_frame_${stageFrameUrls.length}_${v4()}.jpg`);
           await uploadBytes(frameRef, resizedFrame);
           const frameUrl = await getDownloadURL(frameRef);
   
-          frameUrls.push({
-            frameIndex: index,
+          // Add frame URL to this stage's frame URLs
+          stageFrameUrls.push({
+            frameIndex: stageFrameUrls.length,
             frameUrl: frameUrl,
-            videoIndex: frame.videoIndex // NEW: Store which video this frame came from
+            videoIndex: frame.videoIndex
           });
+          
+          // Track which video this frame came from
+          usedVideoIndices.add(frame.videoIndex);
   
+          // Scale and add annotations for this frame
           const scaledAnnotations = frame.annotations.map((annotation) => {
             return {
+              frameIndex: stageFrameUrls.length - 1, // Index of the frame within this stage
               x1: Math.floor(annotation.geometry.x * widthScaleFactor),
               y1: Math.floor(annotation.geometry.y * heightScaleFactor),
               x2: Math.ceil((annotation.geometry.x + annotation.geometry.width) * widthScaleFactor),
@@ -283,37 +309,46 @@ const UploadVideos = () => {
               name: annotation.data.text || "",
             };
           });
-  
-          allScrewLocations.push({
-            frameIndex: index,
-            videoIndex: frame.videoIndex, // NEW: Store which video this frame came from
-            annotations: scaledAnnotations,
-            stageName: frame.stageName,
-          });
-  
-          return frameUrl;
-        })
-      );
+          
+          // Add all annotations for this frame to the stage annotations
+          stageAnnotations.push(...scaledAnnotations);
+        }
 
-      console.log("All screw locations:", allScrewLocations);
+        // Add the consolidated stage data to our array
+        stageData.push({
+          stageName: stageName,
+          frameUrls: stageFrameUrls,
+          annotations: stageAnnotations,
+          videoIndices: Array.from(usedVideoIndices),
+          frameCount: stageFrameUrls.length
+        });
+      }
+
+      console.log("Stage data:", stageData);
   
-      // Save metadata to Firestore
+      // Save metadata to Firestore with the consolidated stage format
       await addDoc(itemsCollectionRef, {
         userId: currentUser.uid,
         email: currentUser.email,
         images: imgUrl,
         originalWidth: imageWidth.current,
         originalHeight: imageHeight.current,
-        videos: videoUrls, // Changed to store multiple video URLs
-        frames: frameUrls,
-        screw_locations: allScrewLocations,
+        videos: videoUrls,
+        stages: stageData, // Store consolidated stage data
         description: description,
         timestamp: new Date(),
       });
   
       alert("Data uploaded successfully!");
+      
+      // Reset state after successful upload
+      setFrames([]);
+      setStageFrames({});
+      setActiveStage("");
+      
     } catch (error) {
       console.error("Error submitting data:", error);
+      alert(`Error submitting data: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -343,7 +378,7 @@ const UploadVideos = () => {
     }
   };
   
-  // NEW: Functions to move forward and backward frame by frame
+  // Functions to move forward and backward frame by frame
   const moveFrameForward = () => {
     const video = videoRef.current;
     if (video) {
@@ -360,7 +395,7 @@ const UploadVideos = () => {
     }
   };
   
-  // NEW: Add keyboard event listeners
+  // Add keyboard event listeners
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (videoRef.current) {
@@ -379,25 +414,108 @@ const UploadVideos = () => {
     };
   }, []);
 
+  // Save the current frame to a stage
   const handleSaveFrame = () => {
     if (!stageName.trim()) {
       alert("Please enter a stage name before saving the frame.");
       return;
     }
     
-    console.log("Saving frame with annotations:", annotations);
-    setFrames((prevFrames) => [
+    // Prepare the new frame data
+    // Each frame contains the image, annotations, and source video index
+    const newFrame = {
+      frameImage: currentFrame,      // The captured image data
+      annotations,                   // Array of annotation objects for this frame
+      videoIndex: activeVideoIndex   // Which video this frame was captured from
+    };
+    
+    // Update stageFrames state - our main consolidated data structure
+    setStageFrames(prevStageFrames => {
+      const newStageFrames = { ...prevStageFrames };
+      
+      // Initialize the array for this stage if it doesn't exist yet
+      if (!newStageFrames[stageName]) {
+        newStageFrames[stageName] = [];
+      }
+      
+      // Check if we've reached the maximum frames for this stage
+      if (newStageFrames[stageName].length >= MAX_FRAMES_PER_STAGE) {
+        alert(`Maximum limit of ${MAX_FRAMES_PER_STAGE} frames reached for stage "${stageName}". Please use a different stage name.`);
+        return prevStageFrames; // Return unchanged
+      }
+      
+      // Add the new frame to this stage
+      // All frames for a single stage will be processed together during submission
+      newStageFrames[stageName] = [...newStageFrames[stageName], newFrame];
+      
+      // Set the active stage for UI purposes
+      setActiveStage(stageName);
+      
+      return newStageFrames;
+    });
+    
+    // Also add to frames array for backward compatibility
+    // This array is no longer the primary data structure, but we maintain it
+    // to avoid breaking existing code that might depend on it
+    setFrames(prevFrames => [
       ...prevFrames,
       {
         frameImage: currentFrame,
         annotations,
         stageName,
-        videoIndex: activeVideoIndex, // NEW: Store which video this frame came from
-      },
+        videoIndex: activeVideoIndex
+      }
     ]);
+    
+    // Reset current annotation state
     setCurrentFrame(null);
     setAnnotations([]);
-    setStageName("");
+    
+    // NOTE: We don't reset stageName to make it easier to add multiple frames to the same stage
+    // This allows the user to quickly capture and save multiple frames for the current stage
+  };
+  
+  // Function to remove a frame from a stage
+  const removeFrameFromStage = (stageName, frameIndex) => {
+    setStageFrames(prevStageFrames => {
+      const newStageFrames = { ...prevStageFrames };
+      
+      if (newStageFrames[stageName]) {
+        // Remove the frame at the specified index
+        newStageFrames[stageName] = newStageFrames[stageName].filter((_, index) => index !== frameIndex);
+        
+        // If no frames left in this stage, remove the stage
+        if (newStageFrames[stageName].length === 0) {
+          delete newStageFrames[stageName];
+          
+          // If this was the active stage, reset active stage
+          if (activeStage === stageName) {
+            setActiveStage("");
+          }
+        }
+      }
+      
+      return newStageFrames;
+    });
+    
+    // We don't need to maintain the flat frames array anymore
+    // since we're now using the consolidated stage-based approach
+    // But we'll update it for compatibility with any existing code
+    setFrames(prevFrames => {
+      const allFrames = [];
+      
+      // Rebuild the flat array of frames from the stage structure
+      for (const stageName of Object.keys(stageFrames)) {
+        for (const frame of stageFrames[stageName]) {
+          allFrames.push({
+            ...frame,
+            stageName
+          });
+        }
+      }
+      
+      return allFrames;
+    });
   };
   
   return (
@@ -416,13 +534,13 @@ const UploadVideos = () => {
             type="file"
             accept="video/*"
             onChange={handleVideoChange}
-            multiple // NEW: Allow multiple file selection
+            multiple
             className="w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-100 focus:outline-none"
           />
           <p className="text-xs text-gray-500">Supported formats: MP4, AVI. Max size: 50MB. You can select multiple videos.</p>
         </div>
 
-        {/* NEW: Video Selection Section */}
+        {/* Video Selection Section */}
         {videos.length > 0 && (
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">Select Video to Annotate</label>
@@ -508,39 +626,109 @@ const UploadVideos = () => {
             />
             <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700">Stage Name</label>
-              <input
-                type="text"
-                value={stageName}
-                onChange={(e) => setStageName(e.target.value)}
-                placeholder="Enter stage name for this frame..."
-                className="w-full text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-100 p-2.5 focus:outline-none"
-              />
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={stageName}
+                  onChange={(e) => setStageName(e.target.value)}
+                  placeholder="Enter stage name for this frame..."
+                  className="w-full text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-100 p-2.5 focus:outline-none"
+                />
+                
+                {/* NEW: Dropdown for quick selection of existing stages */}
+                {Object.keys(stageFrames).length > 0 && (
+                  <select 
+                    className="text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-100 p-2.5 focus:outline-none"
+                    onChange={(e) => {
+                      if (e.target.value) setStageName(e.target.value);
+                    }}
+                    value=""
+                  >
+                    <option value="">Select existing stage</option>
+                    {Object.keys(stageFrames).map((name) => (
+                      <option key={name} value={name}>
+                        {name} ({stageFrames[name].length}/{MAX_FRAMES_PER_STAGE})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              
+              {/* NEW: Stage frame count indicator */}
+              {stageName && stageFrames[stageName] && (
+                <p className="text-xs text-gray-500 mt-1">
+                  This stage already has {stageFrames[stageName].length} frame(s). 
+                  Maximum allowed: {MAX_FRAMES_PER_STAGE}.
+                </p>
+              )}
             </div>
             <button
               onClick={handleSaveFrame}
               className="mt-4 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
             >
-              Finish Annotating Frame
+              Save This Frame To Stage
             </button>
           </div>
         )}
 
-        {/* Annotated Frames Summary */}
-        {frames.length > 0 && (
+        {/* Stage-Based Frame Summary with Total Count */}
+        {Object.keys(stageFrames).length > 0 && (
           <div>
-            <h3 className="text-xl font-semibold mt-4">Annotated Frames</h3>
-            <ul className="list-disc pl-5">
-              {frames.map((frame, index) => (
-                <li key={index}>
-                  Frame {index + 1} (Video {frame.videoIndex + 1}): {frame.annotations.length} annotations - {frame.stageName}
-                </li>
-              ))}
-            </ul>
+            <h3 className="text-xl font-semibold mt-4">Stages and Frames</h3>
+            
+            {Object.keys(stageFrames).map((stageName) => (
+              <div key={stageName} className="mt-3 border border-gray-200 rounded-lg p-3">
+                <h4 className="text-lg font-medium text-gray-800 flex justify-between">
+                  <span>Stage: {stageName}</span>
+                  <span className="text-blue-600 font-semibold">
+                    {stageFrames[stageName].length}/{MAX_FRAMES_PER_STAGE} frames
+                  </span>
+                </h4>
+                
+                {/* Video sources used in this stage */}
+                <div className="mt-1 text-sm text-gray-600">
+                  Videos used: {Array.from(new Set(stageFrames[stageName].map(frame => frame.videoIndex))).map(idx => idx + 1).join(', ')}
+                </div>
+                
+                {/* Frame list */}
+                <ul className="list-disc pl-5 mt-2">
+                  {stageFrames[stageName].map((frame, frameIndex) => (
+                    <li key={frameIndex} className="flex justify-between items-center">
+                      <span>
+                        Frame {frameIndex + 1} (Video {frame.videoIndex + 1}): 
+                        {frame.annotations.length} annotations
+                      </span>
+                      <button
+                        onClick={() => removeFrameFromStage(stageName, frameIndex)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                
+                {/* Total annotations count for this stage */}
+                <div className="mt-2 text-sm text-gray-700">
+                  Total annotations: {stageFrames[stageName].reduce((sum, frame) => sum + frame.annotations.length, 0)}
+                </div>
+              </div>
+            ))}
+            
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+              <div className="font-medium">Summary:</div>
+              <ul className="mt-1 text-sm">
+                <li>Total stages: {Object.keys(stageFrames).length}</li>
+                <li>Total frames: {Object.values(stageFrames).flat().length}</li>
+                <li>Total annotations: {Object.values(stageFrames).flat().reduce((sum, frame) => sum + frame.annotations.length, 0)}</li>
+              </ul>
+            </div>
+            
             <button
               onClick={handleSubmit}
-              className="mt-4 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none transition duration-150 ease-in-out shadow-md"
+              className="mt-4 w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none transition duration-150 ease-in-out shadow-md"
             >
-              Submit All Video Annotations
+              Submit All Stages ({Object.keys(stageFrames).length})
             </button>
           </div>
         )}
