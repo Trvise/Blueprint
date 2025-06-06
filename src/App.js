@@ -4,6 +4,8 @@ import Register from "./components/AuthComponents/Register";
 import Sidebar from "./components/Layout/Sidebar";
 import UploadVideos from "./components/pages/UploadVideos";
 import VideosList from "./components/pages/VideosList";
+import CreateProjectPage from "./components/pages/CreateProject";
+import ProjectStepsPage from "./components/pages/CreateSteps";
 import { AuthProvider} from "./contexts/authContext";
 import { useRoutes } from "react-router-dom";
 import {ProtectedRoute} from "./components/Layout/ProtectedRoute";
@@ -15,9 +17,11 @@ function App() {
   const routesArray = [
     { path: "*", element: <Login /> },
     { path: "/login", element: <Login /> },
-    // { path: "/register", element: <Register /> },
+    { path: "/register", element: <Register /> },
     { path: "/home", element: (<ProtectedRoute><UploadVideos /></ProtectedRoute>)},
     { path: "/videos", element: (<ProtectedRoute><VideosList /></ProtectedRoute>) },
+    {path : "/create", element: (<ProtectedRoute><CreateProjectPage /></ProtectedRoute>)},
+    {path: "/annotate", element: (<ProtectedRoute><ProjectStepsPage /></ProtectedRoute>)},
   ];
 
   const routesElement = useRoutes(routesArray);

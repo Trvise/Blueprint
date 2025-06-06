@@ -11,24 +11,81 @@ const Register = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isRegistering, setIsRegistering] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
+    const [username, setUsername] = useState('');
 
-    const onSubmit = async (e) => {
+     const onSubmit = async (e) => {
         e.preventDefault();
-        if (!isRegistering) {
-            if (password !== confirmPassword) {
-                setErrorMessage('Passwords do not match. Please try again.');
-                return;
+        setErrorMessage('');
+        setSuccessMessage('');
+
+        if (isRegistering) return;
+
+        if (password !== confirmPassword) {
+            setErrorMessage('Passwords do not match. Please try again.');
+            return;
+        }
+        if (!username.trim()) { // Basic username validation
+            setErrorMessage('Username is required.');
+            return;
+        }
+
+        setIsRegistering(true);
+
+        try {
+            // Step 1: Create user in Firebase
+            const userCredential = await doCreateUserWithEmailAndPassword(email, password);
+            const firebaseUser = userCredential.user;
+
+            // Step 2: If Firebase user creation is successful, create user in your backend
+            if (firebaseUser && firebaseUser.uid && firebaseUser.email) {
+                const backendUserData = {
+                    username: username,
+                    email: firebaseUser.email, // Use email from Firebase for consistency
+                    firebase_uid: firebaseUser.uid,
+                    is_creator: true // Set is_creator to true
+                };
+
+                console.log('Sending user data to backend:', backendUserData);
+
+                // Replace with your actual FastAPI backend URL
+                const backendApiUrl = 'http://localhost:8000/users/'; // Example URL
+
+                const response = await fetch(backendApiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(backendUserData),
+                });
+
+                const responseData = await response.json();
+
+                if (!response.ok) {
+                    // Handle backend error
+                    console.error('Backend API Error:', responseData);
+                    const backendErrorMessage = responseData.detail || `Failed to create user record in backend. Status: ${response.status}`;
+                    setErrorMessage(backendErrorMessage);
+                    setIsRegistering(false); // Allow retry
+                    return; 
+                }
+
+                console.log('Backend user created:', responseData);
+                setSuccessMessage('Registration successful! You will be redirected.');
+                // Navigation to '/home' will be handled by the userLoggedIn state change
+            } else {
+                throw new Error("Firebase user data (UID or Email) not found after registration.");
             }
 
-            setIsRegistering(true);
-            setErrorMessage('');  // Clear previous error messages
-
-            try {
-                await doCreateUserWithEmailAndPassword(email, password);
-            } catch (error) {
+        } catch (error) {
+            if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+                 setErrorMessage('Network error: Could not connect to the backend server. Please try again later.');
+            } else if (error.code) { // Firebase error
                 setErrorMessage(handleFirebaseError(error));
-                setIsRegistering(false);
+            } else { // Other errors
+                setErrorMessage(error.message || 'An unexpected error occurred. Please try again.');
             }
+            setIsRegistering(false);
         }
     };
 
@@ -69,6 +126,18 @@ const Register = () => {
                         </div>
 
                         <div>
+                            <label className="text-sm text-gray-600 font-bold">Username</label>
+                            <input
+                                type="username"
+                                autoComplete="username"
+                                required
+                                value={username}
+                                onChange={(e) => { setUsername(e.target.value); }}
+                                className="w-full mt-2 px-3 py-2 text-gray-500 bg-transparent outline-none border focus:indigo-600 shadow-sm rounded-lg transition duration-300"
+                            />
+                        </div>
+
+                        <div>
                             <label className="text-sm text-gray-600 font-bold">Password</label>
                             <input
                                 disabled={isRegistering}
@@ -97,6 +166,12 @@ const Register = () => {
                         {errorMessage && (
                             <div className='text-red-600 font-bold'>
                                 {errorMessage}
+                            </div>
+                        )}
+
+                         {successMessage && (
+                             <div role="alert" className='text-green-600 font-semibold text-sm p-3 bg-green-50 border border-green-200 rounded-md'>
+                                {successMessage}
                             </div>
                         )}
 

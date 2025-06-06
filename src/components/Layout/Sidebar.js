@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/authContext';
 import { doSignOut } from '../../firebase/auth';
-import { AiOutlineMenu, AiOutlineHome, AiOutlineVideoCamera, AiOutlineLogout, AiFillAndroid } from 'react-icons/ai';
+import { AiOutlineMenu, AiOutlineHome, AiOutlineVideoCamera, AiOutlineLogout, AiFillAndroid, AiFillTool } from 'react-icons/ai';
 import logo from '../../assets/trvise_logo.png';
 const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     const navigate = useNavigate();
@@ -64,6 +64,15 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                 <AiOutlineVideoCamera size={24} />
                                 {!isCollapsed && <span className="ml-4">Videos List</span>}
                             </Link>
+
+                            <Link
+                                to="/create"
+                                className="flex items-center py-3 px-4 text-base font-normal hover:bg-gray-700"
+                            >
+                                <AiFillTool size={24} />
+                                {!isCollapsed && <span className="ml-4">Create Project</span>}
+                            </Link>
+                            
                             <button
                                 onClick={() => {
                                     doSignOut().then(() => {
@@ -85,13 +94,13 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                 <AiOutlineHome size={24} />
                                 {!isCollapsed && <span className="ml-4">Login</span>}
                             </Link>
-                            {/* <Link
+                            <Link
                                 to="/register"
                                 className="flex items-center py-3 px-4 text-base font-normal hover:bg-gray-700"
                             >
                                 <AiOutlineHome size={24} />
                                 {!isCollapsed && <span className="ml-4">Register</span>}
-                            </Link> */}
+                            </Link>
                         </>
                     )}
                 </nav>
