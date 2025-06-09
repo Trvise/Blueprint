@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate, Link, useNavigate} from 'react-router-dom';
 import { doSignInWithEmailAndPassword, doSignInWithGoogle } from '../../firebase/auth';
 import { useAuth } from '../../contexts/authContext';
 
@@ -10,6 +10,8 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [isSigningIn, setIsSigningIn] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [isSyncing, setIsSyncing] = useState(false);
+    const navigate = useNavigate();
 
     const onSubmit = async (e) => {
         e.preventDefault();
@@ -25,15 +27,50 @@ const Login = () => {
         }
     };
 
-    const onGoogleSignIn = (e) => {
+       const onGoogleSignIn = async (e) => {
         e.preventDefault();
-        if (!isSigningIn) {
-            setIsSigningIn(true);
-            setErrorMessage('');  // Clear previous error messages
-            doSignInWithGoogle().catch((error) => {
-                setErrorMessage(handleFirebaseError(error));
-                setIsSigningIn(false);
-            });
+        if (isSigningIn) return;
+        setIsSigningIn(true);
+        setIsSyncing(true);
+        setErrorMessage('');
+
+        try {
+            // Step 1: Sign in with Google via Firebase
+            const result = await doSignInWithGoogle();
+            const firebaseUser = result.user;
+            if (firebaseUser?.uid && firebaseUser?.email) {
+                const backendUserData = {
+                    firebase_uid: firebaseUser.uid,
+                    email: firebaseUser.email,
+                    username: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+                    is_creator: true
+                };
+
+                const backendApiUrl = 'http://localhost:8000/users/'
+
+                const response = await fetch(backendApiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(backendUserData),
+                });
+
+                const responseData = await response.json();
+                if (!response.ok && response.status !== 400) {
+                    throw new Error(responseData.detail || "Failed to sync user with backend.");
+                }
+                navigate('/home'); // Redirect to home after successful sign-in
+            } else {
+                throw new Error("Could not get user details from Google Sign-In.");
+            }
+
+        } catch (error) {
+            setErrorMessage(handleFirebaseError(error));
+            setIsSigningIn(false);
+        } finally {
+            setIsSigningIn(false);
+            setIsSyncing(false); // End sync process, allowing navigation to proceed if user is logged in
         }
     };
 
@@ -46,14 +83,13 @@ const Login = () => {
             'auth/user-disabled': 'This account has been disabled.',
             // Add more error codes and messages as needed
         };
+        //console.error("Firebase error:", error);
 
         return errorMessages[error.code] || 'An unexpected error occurred. Please try again.';
     };
 
     return (
         <div>
-            {userLoggedIn && (<Navigate to={'/home'} replace={true} />)}
-
             <main className="w-full h-screen flex self-center place-content-center place-items-center">
                 <div className="w-96 text-gray-600 space-y-5 p-4 shadow-xl border rounded-xl">
                     <div className="text-center">

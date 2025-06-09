@@ -8,15 +8,15 @@ import CreateProjectPage from "./components/pages/CreateProject";
 import ProjectStepsPage from "./components/pages/CreateSteps";
 import { AuthProvider} from "./contexts/authContext";
 import { useRoutes } from "react-router-dom";
-import {ProtectedRoute} from "./components/Layout/ProtectedRoute";
+import {ProtectedRoute, ProtectedLogin} from "./components/Layout/ProtectedRoute";
 
 function App() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
 
   const routesArray = [
-    { path: "*", element: <Login /> },
-    { path: "/login", element: <Login /> },
+    { path: "*", element:  <ProtectedLogin /> },
+    { path: "/login", element: <ProtectedLogin /> },
     { path: "/register", element: <Register /> },
     { path: "/home", element: (<ProtectedRoute><UploadVideos /></ProtectedRoute>)},
     { path: "/videos", element: (<ProtectedRoute><VideosList /></ProtectedRoute>) },

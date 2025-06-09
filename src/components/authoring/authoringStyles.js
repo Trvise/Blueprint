@@ -1,0 +1,220 @@
+export const styles = {
+    pageContainer: {
+        maxWidth: '1200px', 
+        margin: '0 auto',
+        padding: '20px',
+        fontFamily: "'Inter', sans-serif", 
+        color: '#333',
+    },
+    header: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '30px',
+    },
+    pageTitle: {
+        fontSize: '1.8rem', 
+        fontWeight: 'bold',
+        color: '#2c3e50',
+    },
+    projectNameHighlight: {
+        color: '#4A90E2', 
+    },
+    backLink: {
+        fontSize: '0.9rem',
+        color: '#4A90E2',
+        textDecoration: 'none',
+        hover: { textDecoration: 'underline' }
+    },
+    errorMessage: {
+        padding: '12px',
+        backgroundColor: '#FFF0F0', 
+        border: '1px solid #FFCCCC',
+        color: '#D8000C',
+        borderRadius: '8px',
+        fontSize: '0.9rem',
+        marginBottom: '20px',
+    },
+    successMessage: {
+        padding: '12px',
+        backgroundColor: '#F0FFF0', 
+        border: '1px solid #CCFFCC',
+        color: '#008000',
+        borderRadius: '8px',
+        fontSize: '0.9rem',
+        marginBottom: '20px',
+        cursor: 'pointer',
+    },
+    gridContainer: { 
+        display: 'grid',
+        gridTemplateColumns: 'repeat(1, 1fr)', 
+        gap: '24px',
+        alignItems: 'start',
+    },
+    mainContentArea: { 
+        gridColumn: 'span 1 / span 1', 
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '24px',
+    },
+    sideBarArea: { 
+        gridColumn: 'span 1 / span 1', 
+    },
+    card: {
+        padding: '20px',
+        border: '1px solid #e2e8f0', 
+        borderRadius: '12px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+        backgroundColor: '#ffffff',
+    },
+    sectionTitle: {
+        fontSize: '1.4rem',
+        fontWeight: '600',
+        color: '#34495e',
+        marginBottom: '16px',
+        paddingBottom: '8px',
+        borderBottom: '1px solid #eee'
+    },
+    inputLabel: {
+        display: 'block',
+        fontSize: '0.875rem',
+        fontWeight: '500',
+        color: '#4a5568', 
+        marginBottom: '6px',
+    },
+    inputField: {
+        width: '100%',
+        padding: '10px 12px',
+        fontSize: '0.9rem',
+        color: '#4a5568',
+        backgroundColor: '#f8fafc', 
+        border: '1px solid #cbd5e1', 
+        borderRadius: '8px',
+        boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)',
+        transition: 'border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+        boxSizing: 'border-box', 
+    },
+    textareaField: {
+        width: '100%',
+        padding: '10px 12px',
+        fontSize: '0.9rem',
+        color: '#4a5568',
+        backgroundColor: '#f8fafc',
+        border: '1px solid #cbd5e1',
+        borderRadius: '8px',
+        boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)',
+        transition: 'border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+        minHeight: '80px',
+        boxSizing: 'border-box',
+    },
+    button: {
+        padding: '10px 18px',
+        fontSize: '0.9rem',
+        fontWeight: '600',
+        borderRadius: '8px',
+        border: 'none',
+        cursor: 'pointer',
+        transition: 'background-color 0.2s ease-in-out, transform 0.1s ease',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+    },
+    buttonPrimary: {
+        backgroundColor: '#4A90E2', 
+        color: 'white',
+    },
+    buttonSecondary: {
+        backgroundColor: '#6c757d', 
+        color: 'white',
+    },
+    buttonSecondarySm: {
+        padding: '6px 12px',
+        fontSize: '0.8rem',
+        backgroundColor: '#6c757d',
+        color: 'white',
+    },
+    buttonDisabled: {
+        backgroundColor: '#e9ecef', 
+        color: '#6c757d',
+        cursor: 'not-allowed',
+        opacity: 0.7,
+    },
+    fileInput: {
+        width: '100%',
+        fontSize: '0.9rem',
+        color: '#4a5568',
+        padding: '8px 0',
+        boxSizing: 'border-box',
+    },
+    videoPlayer: {
+        width: '100%',
+        borderRadius: '8px',
+        backgroundColor: '#000',
+        aspectRatio: '16 / 9',
+        minHeight: '300px', 
+    },
+    annotationAreaContainer: {
+        width: '100%',
+        margin: '0 auto',
+        position: 'relative', 
+        border: '1px dashed #cbd5e1',
+        padding: '10px',
+        borderRadius: '8px',
+        backgroundColor: '#f8f9fa'
+    },
+    listItem: {
+        padding: '10px 0',
+        borderBottom: '1px solid #e2e8f0',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    listItemLast: {
+        borderBottom: 'none',
+    },
+    removeButton: {
+        color: '#e53e3e', 
+        backgroundColor: 'transparent',
+        border: 'none',
+        padding: '4px 8px',
+        fontSize: '0.8rem',
+        fontWeight: 'bold',
+        cursor: 'pointer',
+    },
+    timeDisplay: {
+        fontSize: '0.8rem',
+        color: '#4a5568',
+        marginTop: '4px',
+        backgroundColor: '#e9ecef',
+        padding: '4px 8px',
+        borderRadius: '4px',
+        display: 'inline-block',
+    },
+    flexWrapGap2: {
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '8px',
+    },
+    itemsCenter: {
+        alignItems: 'center',
+    },
+    subSection: {
+        paddingTop: '16px',
+        borderTop: '1px solid #e9ecef', 
+        marginTop: '20px',
+    },
+    subSectionTitle: {
+        fontSize: '1.1rem',
+        fontWeight: '600',
+        color: '#34495e',
+        marginBottom: '12px',
+    }
+};
+
+export const getGridStyles = (isLargeScreen) => ({
+    ...styles.gridContainer,
+    gridTemplateColumns: isLargeScreen ? '2fr 1fr' : '1fr', 
+});
+
+export const getMainContentStyles = (isLargeScreen) => ({
+    ...styles.mainContentArea,
+    gridColumn: isLargeScreen ? 'span 2 / span 2' : 'span 1 / span 1',
+});
