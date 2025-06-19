@@ -2,106 +2,31 @@ import React from 'react';
 
 const ProjectOverviewTab = ({
     projectSteps,
-    projectBuyList,
-    buyListItemName,
-    setBuyListItemName,
-    buyListItemQty,
-    setBuyListItemQty,
-    buyListItemSpec,
-    setBuyListItemSpec,
-    buyListItemLink,
-    setBuyListItemLink,
-    buyListItemImageFile,
-    setBuyListItemImageFile,
-    buyListImageInputRef,
-    handleAddBuyListItem,
-    removeBuyListItem,
     formatTime,
     styles
 }) => (
     <div style={{display: 'flex', flexDirection: 'column', gap: '24px'}}>
         <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>Project Buy List</h2>
-            <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-                <div>
-                    <label style={styles.inputLabel}>Item Name <span style={{color: 'red'}}>*</span></label>
-                    <input 
-                        type="text" 
-                        value={buyListItemName} 
-                        onChange={(e) => setBuyListItemName(e.target.value)} 
-                        placeholder="e.g., M3x10mm Screw" 
-                        style={styles.inputField}
-                    />
+            <h2 style={styles.sectionTitle}>Project Overview</h2>
+            <div style={{marginBottom: '20px'}}>
+                <p style={{fontSize: '1rem', color: '#4a5568', marginBottom: '12px'}}>
+                    This is a comprehensive overview of your project steps. Review each step to ensure all details are correct before finalizing.
+                </p>
+                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px'}}>
+                    <div style={{backgroundColor: '#e3f2fd', padding: '16px', borderRadius: '8px', textAlign: 'center'}}>
+                        <div style={{fontSize: '2rem', fontWeight: 'bold', color: '#1976d2'}}>{projectSteps.length}</div>
+                        <div style={{fontSize: '0.9rem', color: '#1565c0'}}>Total Steps</div>
+                    </div>
+                    <div style={{backgroundColor: '#f3e5f5', padding: '16px', borderRadius: '8px', textAlign: 'center'}}>
+                        <div style={{fontSize: '2rem', fontWeight: 'bold', color: '#7b1fa2'}}>{projectSteps.reduce((acc, step) => acc + (step.annotations?.length || 0), 0)}</div>
+                        <div style={{fontSize: '0.9rem', color: '#6a1b9a'}}>Total Annotations</div>
+                    </div>
+                    <div style={{backgroundColor: '#e8f5e8', padding: '16px', borderRadius: '8px', textAlign: 'center'}}>
+                        <div style={{fontSize: '2rem', fontWeight: 'bold', color: '#388e3c'}}>{projectSteps.reduce((acc, step) => acc + (step.tools?.length || 0) + (step.materials?.length || 0), 0)}</div>
+                        <div style={{fontSize: '0.9rem', color: '#2e7d32'}}>Tools & Materials</div>
+                    </div>
                 </div>
-                <div>
-                    <label style={styles.inputLabel}>Quantity</label>
-                    <input 
-                        type="number" 
-                        value={buyListItemQty} 
-                        onChange={(e) => setBuyListItemQty(e.target.value)} 
-                        min="1" 
-                        style={styles.inputField}
-                    />
-                </div>
-                <div>
-                    <label style={styles.inputLabel}>Specification</label>
-                    <input 
-                        type="text" 
-                        value={buyListItemSpec} 
-                        onChange={(e) => setBuyListItemSpec(e.target.value)} 
-                        placeholder="e.g., Phillips head" 
-                        style={styles.inputField}
-                    />
-                </div>
-                <div>
-                    <label style={styles.inputLabel}>Purchase Link</label>
-                    <input 
-                        type="url" 
-                        value={buyListItemLink} 
-                        onChange={(e) => setBuyListItemLink(e.target.value)} 
-                        placeholder="https://example.com" 
-                        style={styles.inputField}
-                    />
-                </div>
-                <div>
-                    <label style={{...styles.inputLabel, fontSize: '0.8rem'}}>Item Image</label>
-                    <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={(e) => setBuyListItemImageFile(e.target.files[0])} 
-                        ref={buyListImageInputRef} 
-                        style={styles.fileInput}
-                    />
-                </div>
-                <button 
-                    onClick={handleAddBuyListItem} 
-                    style={{...styles.button, ...styles.buttonSecondary, width: '100%'}}
-                >
-                    Add to Buy List
-                </button>
             </div>
-            {projectBuyList.length > 0 && (
-                <div style={{marginTop: '20px', maxHeight: '250px', overflowY: 'auto'}}>
-                    <h3 style={{fontSize: '1rem', fontWeight: '600', color: '#34495e', marginBottom: '8px'}}>
-                        Current Items:
-                    </h3>
-                    <ul style={{listStylePosition: 'inside', paddingLeft: '0', fontSize: '0.9rem', borderTop: '1px solid #eee'}}>
-                        {projectBuyList.map((item, index) => (
-                            <li key={item.id} style={{...styles.listItem, ...(index === projectBuyList.length -1 && styles.listItemLast)}}>
-                                <div>
-                                    {item.name} (Qty: {item.quantity}) 
-                                    {item.imageFile && (
-                                        <span style={{fontSize: '0.75rem', color: '#777'}}>
-                                            ({item.imageFile.name.substring(0,10)}...)
-                                        </span>
-                                    )}
-                                </div>
-                                <button onClick={() => removeBuyListItem(item.id)} style={styles.removeButton}>X</button>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
         </div>
 
         {projectSteps.length > 0 && (

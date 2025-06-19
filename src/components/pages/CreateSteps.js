@@ -12,23 +12,16 @@ import VideoAnnotationTab from '../authoring/VideoAnnotationTab';
 import StepDetailsTab from '../authoring/StepDetailsTab';
 import MaterialsAndFilesTab from '../authoring/MaterialsAndFilesTab';
 import ProjectOverviewTab from '../authoring/ProjectOverviewTab';
+import FinalizeTab from '../authoring/FinalizeTab';
 
 // --- Style Objects ---
 const styles = {
     pageContainer: {
         display: 'flex',
-        height: '100vh',
+        height: '100%',
         fontFamily: "'Inter', sans-serif", 
         color: '#333',
         backgroundColor: '#f8fafc',
-    },
-    sidebar: {
-        width: '280px',
-        backgroundColor: '#2d3748',
-        color: 'white',
-        display: 'flex',
-        flexDirection: 'column',
-        borderRight: '1px solid #4a5568',
     },
     mainContent: {
         flex: 1,
@@ -281,35 +274,7 @@ const styles = {
         color: '#34495e',
         marginBottom: '12px',
     },
-    // Vertical tab styles
-    tabButton: {
-        display: 'flex',
-        alignItems: 'center',
-        padding: '16px 20px',
-        fontSize: '0.95rem',
-        fontWeight: '500',
-        color: '#a0aec0',
-        backgroundColor: 'transparent',
-        border: 'none',
-        borderLeft: '3px solid transparent',
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        width: '100%',
-        textAlign: 'left',
-    },
-    tabButtonActive: {
-        color: 'white',
-        backgroundColor: '#4a5568',
-        borderLeftColor: '#4A90E2',
-    },
-    tabButtonHover: {
-        backgroundColor: '#4a5568',
-        color: 'white',
-    },
-    tabIcon: {
-        marginRight: '12px',
-        fontSize: '1.2rem',
-    },
+
     // Action buttons
     actionButtons: {
         position: 'fixed',
@@ -977,91 +942,14 @@ const ProjectStepsPage = () => {
     }
 
     return (
-        <div style={styles.pageContainer}>
-            {/* Sidebar with vertical tabs */}
-            <div style={styles.sidebar}>
-                <div style={{padding: '20px', borderBottom: '1px solid #4a5568'}}>
-                    <h2 style={{color: 'white', fontSize: '1.2rem', fontWeight: '600'}}>Step Authoring</h2>
-                    <p style={{color: '#a0aec0', fontSize: '0.9rem', marginTop: '4px'}}>{projectName}</p>
-                </div>
-                
-                <nav style={{flex: 1, padding: '20px 0'}}>
-                    <button 
-                        onClick={() => setActiveTab('video')}
-                        style={{
-                            ...styles.tabButton,
-                            ...(activeTab === 'video' ? styles.tabButtonActive : {})
-                        }}
-                        onMouseEnter={(e) => !(activeTab === 'video') && (e.target.style.backgroundColor = '#4a5568')}
-                        onMouseLeave={(e) => !(activeTab === 'video') && (e.target.style.backgroundColor = 'transparent')}
-                    >
-                        <span style={styles.tabIcon}>🎬</span>
-                        Video & Annotations
-                    </button>
-                    
-                    <button 
-                        onClick={() => setActiveTab('details')}
-                        style={{
-                            ...styles.tabButton,
-                            ...(activeTab === 'details' ? styles.tabButtonActive : {})
-                        }}
-                        onMouseEnter={(e) => !(activeTab === 'details') && (e.target.style.backgroundColor = '#4a5568')}
-                        onMouseLeave={(e) => !(activeTab === 'details') && (e.target.style.backgroundColor = 'transparent')}
-                    >
-                        <span style={styles.tabIcon}>📝</span>
-                        Step Details
-                    </button>
-                    
-                    <button 
-                        onClick={() => setActiveTab('materials')}
-                        style={{
-                            ...styles.tabButton,
-                            ...(activeTab === 'materials' ? styles.tabButtonActive : {})
-                        }}
-                        onMouseEnter={(e) => !(activeTab === 'materials') && (e.target.style.backgroundColor = '#4a5568')}
-                        onMouseLeave={(e) => !(activeTab === 'materials') && (e.target.style.backgroundColor = 'transparent')}
-                    >
-                        <span style={styles.tabIcon}>🔧</span>
-                        Tools & Materials
-                    </button>
-                    
-                    <button 
-                        onClick={() => setActiveTab('overview')}
-                        style={{
-                            ...styles.tabButton,
-                            ...(activeTab === 'overview' ? styles.tabButtonActive : {})
-                        }}
-                        onMouseEnter={(e) => !(activeTab === 'overview') && (e.target.style.backgroundColor = '#4a5568')}
-                        onMouseLeave={(e) => !(activeTab === 'overview') && (e.target.style.backgroundColor = 'transparent')}
-                    >
-                        <span style={styles.tabIcon}>📋</span>
-                        Project Overview
-                    </button>
-                </nav>
-                
-                <div style={{padding: '20px', borderTop: '1px solid #4a5568'}}>
-                    <button 
-                        onClick={() => navigate('/')} 
-                        style={{
-                            ...styles.button,
-                            ...styles.buttonSecondary,
-                            width: '100%',
-                            backgroundColor: '#4a5568',
-                            color: 'white'
-                        }}
-                    >
-                        ← Back to Home
-                    </button>
-                </div>
-            </div>
-
+        <div style={{...styles.pageContainer, padding: 0, margin: 0}}>
             {/* Main content area */}
-            <div style={styles.mainContent}>
+            <div style={{...styles.mainContent, width: '100%'}}>
                 {/* Header */}
-                <header style={styles.header}>
-                    <h1 style={styles.pageTitle}>
-                        Authoring Steps for: <span style={styles.projectNameHighlight}>{projectName || `Project ID: ${projectId}`}</span>
-                    </h1>
+            <header style={styles.header}>
+                <h1 style={styles.pageTitle}>
+                    Authoring Steps for: <span style={styles.projectNameHighlight}>{projectName || `Project ID: ${projectId}`}</span>
+                </h1>
                     <div style={{display: 'flex', gap: '12px', alignItems: 'center'}}>
                         {currentStepIndex >= 0 && (
                             <span style={{color: '#6b7280', fontSize: '0.9rem'}}>
@@ -1069,7 +957,7 @@ const ProjectStepsPage = () => {
                             </span>
                         )}
                     </div>
-                </header>
+            </header>
 
                 {/* Timeline */}
                 <div style={styles.timelineContainer}>
@@ -1085,8 +973,8 @@ const ProjectStepsPage = () => {
                             }}
                         >
                             + Add Step
-                        </button>
-                    </div>
+                                        </button>
+                                </div>
                     
                     <div style={styles.timeline}>
                         {projectSteps.map((step, index) => (
@@ -1100,18 +988,18 @@ const ProjectStepsPage = () => {
                             >
                                 <div style={{fontWeight: '600', marginBottom: '4px', color: '#2d3748'}}>
                                     Step {index + 1}
-                                </div>
+                                    </div>
                                 <div style={{fontSize: '0.8rem', color: '#6b7280', marginBottom: '4px'}}>
                                     {step.name}
                                 </div>
                                 <div style={{fontSize: '0.7rem', color: '#9ca3af'}}>
                                     Video {step.associated_video_index + 1}
-                                </div>
+                        </div>
                                 <div style={{fontSize: '0.7rem', color: '#9ca3af'}}>
                                     {formatTime(step.video_start_time_ms / 1000)} - {formatTime(step.video_end_time_ms / 1000)}
-                                </div>
                             </div>
-                        ))}
+                                    </div>
+                                ))}
                         
                         {/* Empty step card for adding new step */}
                         <div
@@ -1119,9 +1007,9 @@ const ProjectStepsPage = () => {
                             style={styles.stepCardEmpty}
                         >
                             + Add New Step
-                        </div>
-                    </div>
-                </div>
+                            </div>
+                                </div>
+                            </div>
 
                 {/* Error and success messages */}
                 {errorMessage && <div role="alert" style={styles.errorMessage}>{errorMessage}</div>}
@@ -1217,6 +1105,14 @@ const ProjectStepsPage = () => {
                         {activeTab === 'overview' && (
                             <ProjectOverviewTab 
                                 projectSteps={projectSteps}
+                                formatTime={formatTime}
+                                styles={styles}
+                            />
+                        )}
+
+                        {activeTab === 'finalize' && (
+                            <FinalizeTab 
+                                projectSteps={projectSteps}
                                 projectBuyList={projectBuyList}
                                 buyListItemName={buyListItemName}
                                 setBuyListItemName={setBuyListItemName}
@@ -1231,6 +1127,8 @@ const ProjectStepsPage = () => {
                                 buyListImageInputRef={buyListImageInputRef}
                                 handleAddBuyListItem={handleAddBuyListItem}
                                 removeBuyListItem={removeBuyListItem}
+                                handleFinishProject={handleFinishProject}
+                                isLoading={isLoading}
                                 formatTime={formatTime}
                                 styles={styles}
                             />
@@ -1238,7 +1136,7 @@ const ProjectStepsPage = () => {
                     </div>
                 </div>
             </div>
-
+            
             {/* Floating action buttons */}
             <div style={styles.actionButtons}>
                 {currentStepIndex >= 0 && (
@@ -1252,20 +1150,6 @@ const ProjectStepsPage = () => {
                         }}
                     >
                         {isStepLoading ? 'Saving...' : 'Save Step'}
-                    </button>
-                )}
-                
-                {projectSteps.length > 0 && (
-                    <button 
-                        onClick={handleFinishProject}
-                        disabled={isLoading}
-                        style={{
-                            ...styles.floatingButton,
-                            ...styles.finishButton,
-                            ...(isLoading && styles.buttonDisabled)
-                        }}
-                    >
-                        {isLoading ? 'Finalizing...' : 'Finish Project'}
                     </button>
                 )}
             </div>
