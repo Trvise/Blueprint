@@ -7,20 +7,43 @@ import { v4 as uuidv4 } from 'uuid';
 import { storage } from '../../firebase/firebase'; // Assuming firebase.js exports storage
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
+// Import Tab Components
+import VideoAnnotationTab from '../authoring/VideoAnnotationTab';
+import StepDetailsTab from '../authoring/StepDetailsTab';
+import MaterialsAndFilesTab from '../authoring/MaterialsAndFilesTab';
+import ProjectOverviewTab from '../authoring/ProjectOverviewTab';
+
 // --- Style Objects ---
 const styles = {
     pageContainer: {
-        maxWidth: '1200px', 
-        margin: '0 auto',
-        padding: '20px',
+        display: 'flex',
+        height: '100vh',
         fontFamily: "'Inter', sans-serif", 
         color: '#333',
+        backgroundColor: '#f8fafc',
+    },
+    sidebar: {
+        width: '280px',
+        backgroundColor: '#2d3748',
+        color: 'white',
+        display: 'flex',
+        flexDirection: 'column',
+        borderRight: '1px solid #4a5568',
+    },
+    mainContent: {
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
     },
     header: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '30px',
+        padding: '20px 30px',
+        backgroundColor: 'white',
+        borderBottom: '1px solid #e2e8f0',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
     },
     pageTitle: {
         fontSize: '1.8rem', 
@@ -34,7 +57,62 @@ const styles = {
         fontSize: '0.9rem',
         color: '#4A90E2',
         textDecoration: 'none',
-        hover: { textDecoration: 'underline' }
+        padding: '8px 16px',
+        borderRadius: '6px',
+        backgroundColor: '#f0f9ff',
+        transition: 'all 0.2s',
+    },
+    timelineContainer: {
+        padding: '20px 30px',
+        backgroundColor: 'white',
+        borderBottom: '1px solid #e2e8f0',
+        minHeight: '120px',
+    },
+    timeline: {
+        display: 'flex',
+        gap: '12px',
+        overflowX: 'auto',
+        padding: '10px 0',
+    },
+    stepCard: {
+        minWidth: '200px',
+        backgroundColor: '#f8fafc',
+        border: '2px solid #e2e8f0',
+        borderRadius: '8px',
+        padding: '12px',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+        position: 'relative',
+    },
+    stepCardActive: {
+        borderColor: '#4A90E2',
+        backgroundColor: '#e3f2fd',
+        boxShadow: '0 4px 12px rgba(74, 144, 226, 0.15)',
+    },
+    stepCardEmpty: {
+        minWidth: '200px',
+        backgroundColor: '#f1f5f9',
+        border: '2px dashed #cbd5e1',
+        borderRadius: '8px',
+        padding: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#64748b',
+        fontSize: '0.9rem',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+    },
+    contentArea: {
+        flex: 1,
+        display: 'flex',
+        overflow: 'hidden',
+    },
+    tabContent: {
+        flex: 1,
+        padding: '30px',
+        overflowY: 'auto',
+        backgroundColor: 'white',
     },
     errorMessage: {
         padding: '12px',
@@ -55,27 +133,13 @@ const styles = {
         marginBottom: '20px',
         cursor: 'pointer',
     },
-    gridContainer: { 
-        display: 'grid',
-        gridTemplateColumns: 'repeat(1, 1fr)', 
-        gap: '24px',
-        alignItems: 'start',
-    },
-    mainContentArea: { 
-        gridColumn: 'span 1 / span 1', 
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '24px',
-    },
-    sideBarArea: { 
-        gridColumn: 'span 1 / span 1', 
-    },
     card: {
         padding: '20px',
         border: '1px solid #e2e8f0', 
         borderRadius: '12px',
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
         backgroundColor: '#ffffff',
+        marginBottom: '20px',
     },
     sectionTitle: {
         fontSize: '1.4rem',
@@ -216,7 +280,63 @@ const styles = {
         fontWeight: '600',
         color: '#34495e',
         marginBottom: '12px',
-    }
+    },
+    // Vertical tab styles
+    tabButton: {
+        display: 'flex',
+        alignItems: 'center',
+        padding: '16px 20px',
+        fontSize: '0.95rem',
+        fontWeight: '500',
+        color: '#a0aec0',
+        backgroundColor: 'transparent',
+        border: 'none',
+        borderLeft: '3px solid transparent',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+        width: '100%',
+        textAlign: 'left',
+    },
+    tabButtonActive: {
+        color: 'white',
+        backgroundColor: '#4a5568',
+        borderLeftColor: '#4A90E2',
+    },
+    tabButtonHover: {
+        backgroundColor: '#4a5568',
+        color: 'white',
+    },
+    tabIcon: {
+        marginRight: '12px',
+        fontSize: '1.2rem',
+    },
+    // Action buttons
+    actionButtons: {
+        position: 'fixed',
+        bottom: '20px',
+        right: '20px',
+        display: 'flex',
+        gap: '12px',
+        zIndex: 1000,
+    },
+    floatingButton: {
+        padding: '12px 24px',
+        fontSize: '1rem',
+        fontWeight: '600',
+        borderRadius: '50px',
+        border: 'none',
+        cursor: 'pointer',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        transition: 'all 0.2s',
+    },
+    saveButton: {
+        backgroundColor: '#4A90E2',
+        color: 'white',
+    },
+    finishButton: {
+        backgroundColor: '#27ae60',
+        color: 'white',
+    },
 };
 
 const getGridStyles = (isLargeScreen) => ({
@@ -229,15 +349,24 @@ const getMainContentStyles = (isLargeScreen) => ({
     gridColumn: isLargeScreen ? 'span 2 / span 2' : 'span 1 / span 1',
 });
 
-
 const ProjectStepsPage = () => {
     const location = useLocation();
     const projectId  = location.state.projectId
     
     const navigate = useNavigate();
     const { currentUser } = useAuth();
+    const [activeTab, setActiveTab] = useState('video');
+    const [currentStepIndex, setCurrentStepIndex] = useState(-1); // -1 means no step selected
 
     const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth >= 1024);
+
+    // Expose setActiveTab globally for sidebar navigation
+    useEffect(() => {
+        window.setActiveTab = setActiveTab;
+        return () => {
+            delete window.setActiveTab;
+        };
+    }, []);
 
     useEffect(() => {
         const handleResize = () => setIsLargeScreen(window.innerWidth >= 1024);
@@ -300,6 +429,65 @@ const ProjectStepsPage = () => {
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
 
+    // Function to load step data for editing
+    const loadStepForEditing = (step, index) => {
+        setCurrentStepIndex(index);
+        setCurrentStepName(step.name || '');
+        setCurrentStepDescription(step.description || '');
+        setCurrentStepStartTime(step.video_start_time_ms ? step.video_start_time_ms / 1000 : null);
+        setCurrentStepEndTime(step.video_end_time_ms ? step.video_end_time_ms / 1000 : null);
+        setCurrentCautionaryNotes(step.cautionary_notes || '');
+        setCurrentBestPracticeNotes(step.best_practice_notes || '');
+        setCurrentStepAnnotations(step.annotations || []);
+        setCurrentStepTools(step.tools || []);
+        setCurrentStepMaterials(step.materials || []);
+        setCurrentStepSupFiles(step.supplementary_files || []);
+        setCurrentStepValidationQuestion(step.validation_metric?.question || '');
+        setCurrentStepValidationAnswer(step.validation_metric?.expected_answer || '');
+        setCurrentStepResultImageFile(step.result_image_file_info ? new File([], step.result_image_file_info.name) : null);
+        
+        // Set active video if different
+        if (step.associated_video_index !== undefined && step.associated_video_index !== activeVideoIndex) {
+            handleVideoSelection(step.associated_video_index);
+        }
+    };
+
+    // Function to clear current step form
+    const clearCurrentStepForm = () => {
+        setCurrentStepIndex(-1);
+        setCurrentStepName('');
+        setCurrentStepDescription('');
+        setCurrentStepStartTime(null);
+        setCurrentStepEndTime(null);
+        setCurrentCautionaryNotes('');
+        setCurrentBestPracticeNotes('');
+        setCurrentStepAnnotations([]);
+        setCurrentStepTools([]);
+        setCurrentStepMaterials([]);
+        setCurrentStepSupFiles([]);
+        setCurrentStepSupFileName('');
+        setCurrentStepValidationQuestion('');
+        setCurrentStepValidationAnswer('');
+        setCurrentStepResultImageFile(null);
+        setFrameForAnnotation(null);
+        setCurrentAnnotationTool({});
+    };
+
+    // Function to delete a step
+    const deleteStep = (index) => {
+        setProjectSteps(prev => prev.filter((_, i) => i !== index));
+        if (currentStepIndex === index) {
+            clearCurrentStepForm();
+        } else if (currentStepIndex > index) {
+            setCurrentStepIndex(prev => prev - 1);
+        }
+    };
+
+    // Function to add new step
+    const addNewStep = () => {
+        clearCurrentStepForm();
+        setCurrentStepIndex(projectSteps.length);
+    };
 
     useEffect(() => {
         if (!currentUser) {
@@ -528,8 +716,10 @@ const ProjectStepsPage = () => {
         setErrorMessage('');
         setSuccessMessage('');
 
-        const newStepData = {
-            id: `local_step_${uuidv4()}`, 
+        const stepData = {
+            id: currentStepIndex >= 0 && currentStepIndex < projectSteps.length 
+                ? projectSteps[currentStepIndex].id 
+                : `local_step_${uuidv4()}`,
             project_id: projectId, 
             name: currentStepName,
             description: currentStepDescription, 
@@ -539,7 +729,7 @@ const ProjectStepsPage = () => {
             best_practice_notes: currentBestPracticeNotes,
             associated_video_index: activeVideoIndex, 
             associated_video_path: uploadedVideos[activeVideoIndex]?.path, 
-            step_order: projectSteps.length, 
+            step_order: currentStepIndex >= 0 ? currentStepIndex : projectSteps.length, 
             annotations: [...currentStepAnnotations], 
             tools: currentStepTools.map(tool => ({ 
                 name: tool.name,
@@ -569,22 +759,22 @@ const ProjectStepsPage = () => {
             _resultImageFileObject: currentStepResultImageFile,
         };
 
-        setProjectSteps(prevSteps => [...prevSteps, newStepData]);
-        setSuccessMessage(`Step "${currentStepName}" added locally. Save project to persist changes.`);
-        console.log("Locally added step:", newStepData);
+        if (currentStepIndex >= 0 && currentStepIndex < projectSteps.length) {
+            // Update existing step
+            setProjectSteps(prevSteps => {
+                const newSteps = [...prevSteps];
+                newSteps[currentStepIndex] = stepData;
+                return newSteps;
+            });
+            setSuccessMessage(`Step "${currentStepName}" updated successfully!`);
+        } else {
+            // Add new step
+            setProjectSteps(prevSteps => [...prevSteps, stepData]);
+            setCurrentStepIndex(projectSteps.length);
+            setSuccessMessage(`Step "${currentStepName}" added successfully!`);
+        }
 
-        setCurrentStepName(''); setCurrentStepDescription('');
-        setCurrentStepStartTime(null); setCurrentStepEndTime(null);
-        setCurrentCautionaryNotes(''); setCurrentBestPracticeNotes('');
-        setFrameForAnnotation(null); setCurrentStepAnnotations([]);
-        setCurrentStepTools([]); setCurrentStepMaterials([]); 
-        setCurrentStepSupFiles([]); setCurrentStepSupFileName('');
-        if (supFileInputRef.current) supFileInputRef.current.value = null;
-        if (toolImageInputRef.current) toolImageInputRef.current.value = null;
-        if (materialImageInputRef.current) materialImageInputRef.current.value = null;
-        setCurrentStepValidationQuestion(''); setCurrentStepValidationAnswer('');
-        setCurrentStepResultImageFile(null);
-        if (resultImageInputRef.current) resultImageInputRef.current.value = null;
+        console.log("Step data:", stepData);
         setIsStepLoading(false);
     };
 
@@ -788,193 +978,297 @@ const ProjectStepsPage = () => {
 
     return (
         <div style={styles.pageContainer}>
-            <header style={styles.header}>
-                <h1 style={styles.pageTitle}>
-                    Authoring Steps for: <span style={styles.projectNameHighlight}>{projectName || `Project ID: ${projectId}`}</span>
-                </h1>
-                <button onClick={() => navigate('/')} style={styles.backLink}>Back to Home</button>
-            </header>
-
-            {errorMessage && <div role="alert" style={styles.errorMessage}>{errorMessage}</div>}
-            {successMessage && <div role="alert" style={styles.successMessage} onClick={()=>setSuccessMessage('')}>{successMessage} (click to dismiss)</div>}
-
-            <div style={getGridStyles(isLargeScreen)}>
-                <div style={getMainContentStyles(isLargeScreen)}>
-                    {uploadedVideos.length > 0 ? (
-                        <div style={styles.card}>
-                            <h2 style={styles.sectionTitle}>Project Videos</h2>
-                            {uploadedVideos.length > 1 && (
-                                <div style={{...styles.flexWrapGap2, marginBottom: '16px'}}>
-                                    {uploadedVideos.map((video, index) => (
-                                        <button key={video.path || index} onClick={() => handleVideoSelection(index)}
-                                            style={{...styles.button, ...(activeVideoIndex === index ? styles.buttonPrimary : styles.buttonSecondarySm), fontSize: '0.8rem', padding: '6px 10px'}}>
-                                            Video {index + 1}{video.name ? `: ${video.name.substring(0,20)}...` : ''}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                            {activeVideoUrl && (
-                                <div style={{marginTop: '10px'}}>
-                                    <h3 style={{fontSize: '1.1rem', fontWeight: '500', marginBottom: '8px', color: '#34495e'}}>Active: {uploadedVideos[activeVideoIndex]?.name || `Video ${activeVideoIndex + 1}`}</h3>
-                                    <video ref={videoRef} key={activeVideoUrl} controls src={activeVideoUrl} crossOrigin="anonymous"
-                                        style={styles.videoPlayer}
-                                        onLoadedMetadata={() => { if (videoRef.current) setVideoDimensions({ width: videoRef.current.videoWidth, height: videoRef.current.videoHeight }); }}
-                                        onError={(e) => { console.error("Video Error:", e); setErrorMessage(`Error loading video.`); }}
-                                    />
-                                    <div style={{...styles.flexWrapGap2, ...styles.itemsCenter, marginTop: '12px'}}>
-                                        <button onClick={() => navigateFrame('backward')} style={{...styles.button, ...styles.buttonSecondarySm}}>◀ Frame (b)</button>
-                                        <button onClick={() => navigateFrame('forward')} style={{...styles.button, ...styles.buttonSecondarySm}}>(c) Frame ▶</button>
-                                        <button onClick={captureFrameForAnnotation} style={{...styles.button, backgroundColor: '#3498db', color: 'white'}}>Annotate This Frame</button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    ) : ( <div style={{...styles.card, textAlign: 'center'}}><p>No videos available for annotation.</p></div> )}
+            {/* Sidebar with vertical tabs */}
+            <div style={styles.sidebar}>
+                <div style={{padding: '20px', borderBottom: '1px solid #4a5568'}}>
+                    <h2 style={{color: 'white', fontSize: '1.2rem', fontWeight: '600'}}>Step Authoring</h2>
+                    <p style={{color: '#a0aec0', fontSize: '0.9rem', marginTop: '4px'}}>{projectName}</p>
+                </div>
+                
+                <nav style={{flex: 1, padding: '20px 0'}}>
+                    <button 
+                        onClick={() => setActiveTab('video')}
+                        style={{
+                            ...styles.tabButton,
+                            ...(activeTab === 'video' ? styles.tabButtonActive : {})
+                        }}
+                        onMouseEnter={(e) => !(activeTab === 'video') && (e.target.style.backgroundColor = '#4a5568')}
+                        onMouseLeave={(e) => !(activeTab === 'video') && (e.target.style.backgroundColor = 'transparent')}
+                    >
+                        <span style={styles.tabIcon}>🎬</span>
+                        Video & Annotations
+                    </button>
                     
-                    {frameForAnnotation && (
-                        <div style={{...styles.card, marginTop: '24px'}}>
-                            <h2 style={styles.sectionTitle}>Annotate Frame (Time: {formatTime(frameTimestampMs / 1000)})</h2>
-                            {videoDimensions.width > 0 && <p style={{fontSize: '0.8rem', color: '#555', marginBottom: '8px'}}>Video Res: {videoDimensions.width}x{videoDimensions.height}</p>}
-                            <div style={{...styles.annotationAreaContainer, maxWidth: `${videoDimensions.width || 500}px`}}>
-                                <Annotation src={frameForAnnotation} alt="Annotation Frame"
-                                    annotations={currentStepAnnotations.filter(ann => ann.data.frame_timestamp_ms === frameTimestampMs)}
-                                    value={currentAnnotationTool} onChange={setCurrentAnnotationTool} onSubmit={handleAnnotationSubmit} />
-                            </div>
-                            <div style={{marginTop: '12px', fontSize: '0.8rem', color: '#555', maxHeight: '100px', overflowY: 'auto'}}>
-                                <h4 style={{fontWeight: '600', marginBottom: '4px'}}>Annotations on this frame:</h4>
-                                {currentStepAnnotations.filter(ann => ann.data.frame_timestamp_ms === frameTimestampMs).map(ann => (
-                                    <div key={ann.data.id} style={{padding: '2px 0', borderBottom: '1px solid #f0f0f0'}}>
-                                        <p><strong>{ann.data.text}</strong> (Type: {ann.geometry.type})</p>
-                                        <p>Coords ({ann.data.normalized_geometry.isPixelValue ? "Raw" : "Norm"}): 
-                                            X:{ann.data.normalized_geometry.x.toFixed(ann.data.normalized_geometry.isPixelValue ? 0 : 3)}, Y:{ann.data.normalized_geometry.y.toFixed(ann.data.normalized_geometry.isPixelValue ? 0 : 3)},
-                                            W:{ann.data.normalized_geometry.width.toFixed(ann.data.normalized_geometry.isPixelValue ? 0 : 3)}, H:{ann.data.normalized_geometry.height.toFixed(ann.data.normalized_geometry.isPixelValue ? 0 : 3)}
-                                        </p>
-                                    </div>
-                                ))}
-                                {currentStepAnnotations.filter(ann => ann.data.frame_timestamp_ms === frameTimestampMs).length === 0 && <p>No annotations yet for this frame.</p>}
-                            </div>
-                        </div>
-                    )}
+                    <button 
+                        onClick={() => setActiveTab('details')}
+                        style={{
+                            ...styles.tabButton,
+                            ...(activeTab === 'details' ? styles.tabButtonActive : {})
+                        }}
+                        onMouseEnter={(e) => !(activeTab === 'details') && (e.target.style.backgroundColor = '#4a5568')}
+                        onMouseLeave={(e) => !(activeTab === 'details') && (e.target.style.backgroundColor = 'transparent')}
+                    >
+                        <span style={styles.tabIcon}>📝</span>
+                        Step Details
+                    </button>
+                    
+                    <button 
+                        onClick={() => setActiveTab('materials')}
+                        style={{
+                            ...styles.tabButton,
+                            ...(activeTab === 'materials' ? styles.tabButtonActive : {})
+                        }}
+                        onMouseEnter={(e) => !(activeTab === 'materials') && (e.target.style.backgroundColor = '#4a5568')}
+                        onMouseLeave={(e) => !(activeTab === 'materials') && (e.target.style.backgroundColor = 'transparent')}
+                    >
+                        <span style={styles.tabIcon}>🔧</span>
+                        Tools & Materials
+                    </button>
+                    
+                    <button 
+                        onClick={() => setActiveTab('overview')}
+                        style={{
+                            ...styles.tabButton,
+                            ...(activeTab === 'overview' ? styles.tabButtonActive : {})
+                        }}
+                        onMouseEnter={(e) => !(activeTab === 'overview') && (e.target.style.backgroundColor = '#4a5568')}
+                        onMouseLeave={(e) => !(activeTab === 'overview') && (e.target.style.backgroundColor = 'transparent')}
+                    >
+                        <span style={styles.tabIcon}>📋</span>
+                        Project Overview
+                    </button>
+                </nav>
+                
+                <div style={{padding: '20px', borderTop: '1px solid #4a5568'}}>
+                    <button 
+                        onClick={() => navigate('/')} 
+                        style={{
+                            ...styles.button,
+                            ...styles.buttonSecondary,
+                            width: '100%',
+                            backgroundColor: '#4a5568',
+                            color: 'white'
+                        }}
+                    >
+                        ← Back to Home
+                    </button>
+                </div>
+            </div>
 
-                    {activeVideoUrl && (
-                        <div style={{...styles.card, marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '20px'}}>
-                            <h2 style={styles.sectionTitle}>Define Step Details</h2>
-                            <div><label htmlFor="stepName" style={styles.inputLabel}>Step Name <span style={{color: 'red'}}>*</span></label><input type="text" id="stepName" value={currentStepName} onChange={(e) => setCurrentStepName(e.target.value)} placeholder="e.g., Attach side panel A" style={styles.inputField}/></div>
-                            <div><label htmlFor="stepDescription" style={styles.inputLabel}>Step Description <span style={{color: 'red'}}>*</span></label><textarea id="stepDescription" value={currentStepDescription} onChange={(e) => setCurrentStepDescription(e.target.value)} rows="4" placeholder="Detailed instructions..." style={styles.textareaField}/></div>
-                            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start'}}>
-                                <div><label style={styles.inputLabel}>Video Start Time</label><button onClick={() => markTime('start')} style={{...styles.button, ...styles.buttonSecondarySm, width: '100%', backgroundColor: '#28a745'}}>Mark Start</button>{currentStepStartTime !== null && (<p style={styles.timeDisplay}>Start: {formatTime(currentStepStartTime)}</p>)}</div>
-                                <div><label style={styles.inputLabel}>Video End Time</label><button onClick={() => markTime('end')} style={{...styles.button, ...styles.buttonSecondarySm, width: '100%', backgroundColor: '#dc3545'}}>Mark End</button>{currentStepEndTime !== null && (<p style={styles.timeDisplay}>End: {formatTime(currentStepEndTime)}</p>)}</div>
-                            </div>
-                            <div><label htmlFor="cautionaryNotes" style={styles.inputLabel}>Cautionary Notes</label><textarea id="cautionaryNotes" value={currentCautionaryNotes} onChange={(e) => setCurrentCautionaryNotes(e.target.value)} rows="2" placeholder="e.g., Wear safety glasses." style={styles.textareaField}/></div>
-                            <div><label htmlFor="bestPracticeNotes" style={styles.inputLabel}>Best Practice Notes</label><textarea id="bestPracticeNotes" value={currentBestPracticeNotes} onChange={(e) => setCurrentBestPracticeNotes(e.target.value)} rows="2" placeholder="e.g., Pre-drill pilot holes." style={styles.textareaField}/></div>
+            {/* Main content area */}
+            <div style={styles.mainContent}>
+                {/* Header */}
+                <header style={styles.header}>
+                    <h1 style={styles.pageTitle}>
+                        Authoring Steps for: <span style={styles.projectNameHighlight}>{projectName || `Project ID: ${projectId}`}</span>
+                    </h1>
+                    <div style={{display: 'flex', gap: '12px', alignItems: 'center'}}>
+                        {currentStepIndex >= 0 && (
+                            <span style={{color: '#6b7280', fontSize: '0.9rem'}}>
+                                Editing Step {currentStepIndex + 1}
+                            </span>
+                        )}
+                    </div>
+                </header>
 
-                            {/* Materials for this Step */}
-                            <div style={styles.subSection}><h3 style={styles.subSectionTitle}>Materials for this Step</h3>
-                                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '8px'}}>
-                                    <input type="text" value={currentStepMaterialName} onChange={(e) => setCurrentStepMaterialName(e.target.value)} placeholder="Material Name (e.g., M3 Screw)" style={styles.inputField}/>
-                                    <input type="text" value={currentStepMaterialSpec} onChange={(e) => setCurrentStepMaterialSpec(e.target.value)} placeholder="Material Specification (e.g., 10mm)" style={styles.inputField}/>
+                {/* Timeline */}
+                <div style={styles.timelineContainer}>
+                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'}}>
+                        <h3 style={{fontSize: '1.1rem', fontWeight: '600', color: '#2d3748'}}>Project Timeline</h3>
+                        <button 
+                            onClick={addNewStep}
+                            style={{
+                                ...styles.button,
+                                ...styles.buttonPrimary,
+                                fontSize: '0.9rem',
+                                padding: '8px 16px'
+                            }}
+                        >
+                            + Add Step
+                        </button>
+                    </div>
+                    
+                    <div style={styles.timeline}>
+                        {projectSteps.map((step, index) => (
+                            <div
+                                key={step.id}
+                                onClick={() => loadStepForEditing(step, index)}
+                                style={{
+                                    ...styles.stepCard,
+                                    ...(currentStepIndex === index ? styles.stepCardActive : {})
+                                }}
+                            >
+                                <div style={{fontWeight: '600', marginBottom: '4px', color: '#2d3748'}}>
+                                    Step {index + 1}
                                 </div>
-                                <div><label style={{...styles.inputLabel, fontSize: '0.8rem'}}>Material Image (Optional)</label><input type="file" accept="image/*" onChange={(e) => setCurrentStepMaterialImageFile(e.target.files[0])} ref={materialImageInputRef} style={styles.fileInput}/></div>
-                                <button onClick={handleAddMaterialToCurrentStep} style={{...styles.button, ...styles.buttonSecondarySm, marginTop: '8px'}}>Add Material to Step</button>
-                                {currentStepMaterials.length > 0 && <div style={{marginTop: '12px'}}><h4 style={{fontSize: '0.9rem', fontWeight: '500'}}>Added Materials:</h4><ul style={{listStyle: 'disc', paddingLeft: '20px', marginTop: '4px', fontSize: '0.9rem'}}> {currentStepMaterials.map(mat => (<li key={mat.id} style={styles.listItem}><span>{mat.name} ({mat.specification || 'No spec'}) {mat.imageFile && `(${mat.imageFile.name.substring(0,15)}...)`}</span> <button onClick={() => removeMaterialFromCurrentStep(mat.id)} style={styles.removeButton}>Remove</button></li>))}</ul></div>}
-                            </div>
-
-                            {/* Tools for this Step */}
-                            <div style={styles.subSection}><h3 style={styles.subSectionTitle}>Tools for this Step</h3>
-                                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '8px'}}>
-                                    <input type="text" value={currentStepToolName} onChange={(e) => setCurrentStepToolName(e.target.value)} placeholder="Tool Name" style={styles.inputField}/>
-                                    <input type="text" value={currentStepToolSpec} onChange={(e) => setCurrentStepToolSpec(e.target.value)} placeholder="Tool Specification" style={styles.inputField}/>
+                                <div style={{fontSize: '0.8rem', color: '#6b7280', marginBottom: '4px'}}>
+                                    {step.name}
                                 </div>
-                                <div><label style={{...styles.inputLabel, fontSize: '0.8rem'}}>Tool Image (Optional)</label><input type="file" accept="image/*" onChange={(e) => setCurrentStepToolImageFile(e.target.files[0])} ref={toolImageInputRef} style={styles.fileInput}/></div>
-                                <button onClick={handleAddToolToCurrentStep} style={{...styles.button, ...styles.buttonSecondarySm, marginTop: '8px'}}>Add Tool to Step</button>
-                                {currentStepTools.length > 0 && <div style={{marginTop: '12px'}}><h4 style={{fontSize: '0.9rem', fontWeight: '500'}}>Added Tools:</h4><ul style={{listStyle: 'disc', paddingLeft: '20px', marginTop: '4px', fontSize: '0.9rem'}}> {currentStepTools.map(tool => (<li key={tool.id} style={styles.listItem}><span>{tool.name} ({tool.specification || 'No spec'}) {tool.imageFile && `(${tool.imageFile.name.substring(0,15)}...)`}</span> <button onClick={() => removeToolFromCurrentStep(tool.id)} style={styles.removeButton}>Remove</button></li>))}</ul></div>}
+                                <div style={{fontSize: '0.7rem', color: '#9ca3af'}}>
+                                    Video {step.associated_video_index + 1}
+                                </div>
+                                <div style={{fontSize: '0.7rem', color: '#9ca3af'}}>
+                                    {formatTime(step.video_start_time_ms / 1000)} - {formatTime(step.video_end_time_ms / 1000)}
+                                </div>
                             </div>
-
-                            {/* Supplementary Files for this Step */}
-                            <div style={styles.subSection}><h3 style={styles.subSectionTitle}>Supplementary Files for this Step</h3>
-                                <input type="text" value={currentStepSupFileName} onChange={(e) => setCurrentStepSupFileName(e.target.value)} placeholder="Display Name for File (optional)" style={{...styles.inputField, marginBottom: '8px'}}/>
-                                <input type="file" onChange={handleSupFileChange} ref={supFileInputRef} style={styles.fileInput}/>
-                                {currentStepSupFiles.length > 0 && <div style={{marginTop: '12px'}}><h4 style={{fontSize: '0.9rem', fontWeight: '500'}}>Added Files:</h4><ul style={{listStyle: 'disc', paddingLeft: '20px', marginTop: '4px', fontSize: '0.9rem'}}> {currentStepSupFiles.map(f => (<li key={f.id} style={styles.listItem}><span>{f.displayName} ({f.fileObject.name.substring(0,20)}...)</span> <button onClick={() => removeSupFileFromCurrentStep(f.id)} style={styles.removeButton}>Remove</button></li>))}</ul></div>}
-                            </div>
-                            
-                            {/* Step Result Image */}
-                            <div style={styles.subSection}><h3 style={styles.subSectionTitle}>Step Result Image (Optional)</h3>
-                                <input type="file" accept="image/*" onChange={handleResultImageChange} ref={resultImageInputRef} style={styles.fileInput}/>
-                                {currentStepResultImageFile && <p style={{fontSize: '0.9rem', marginTop: '4px'}}>Selected: {currentStepResultImageFile.name}</p>}
-                            </div>
-
-                            {/* Step Validation */}
-                            <div style={styles.subSection}><h3 style={styles.subSectionTitle}>Step Validation</h3>
-                                <textarea value={currentStepValidationQuestion} onChange={(e) => setCurrentStepValidationQuestion(e.target.value)} placeholder="Validation Question Prompt" rows="2" style={{...styles.textareaField, marginBottom: '8px'}}/>
-                                <input type="text" value={currentStepValidationAnswer} onChange={(e) => setCurrentStepValidationAnswer(e.target.value)} placeholder="Expected Answer/Range" style={styles.inputField}/>
-                            </div>
-                            <p style={{fontSize: '0.8rem', color: '#555', fontStyle: 'italic', marginTop: '10px'}}>Remember to capture and add any annotations for this step using the "Annotate This Frame" button above before adding the step.</p>
-                            <button onClick={handleAddStep} disabled={isStepLoading} style={{...styles.button, ...styles.buttonPrimary, width: '100%', marginTop: '24px', ...(isStepLoading && styles.buttonDisabled)}}>
-                                {isStepLoading ? "Adding Step..." : "Add This Complete Step"}
-                            </button>
+                        ))}
+                        
+                        {/* Empty step card for adding new step */}
+                        <div
+                            onClick={addNewStep}
+                            style={styles.stepCardEmpty}
+                        >
+                            + Add New Step
                         </div>
-                    )}
+                    </div>
                 </div>
 
-                <div style={styles.sideBarArea}>
-                    <div style={{...styles.card, position: 'sticky', top: '20px'}}>
-                        <h2 style={styles.sectionTitle}>Project Buy List</h2>
-                        <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-                            <div><label style={styles.inputLabel}>Item Name <span style={{color: 'red'}}>*</span></label><input type="text" value={buyListItemName} onChange={(e) => setBuyListItemName(e.target.value)} placeholder="e.g., M3x10mm Screw" style={styles.inputField}/></div>
-                            <div><label style={styles.inputLabel}>Quantity</label><input type="number" value={buyListItemQty} onChange={(e) => setBuyListItemQty(e.target.value)} min="1" style={styles.inputField}/></div>
-                            <div><label style={styles.inputLabel}>Specification</label><input type="text" value={buyListItemSpec} onChange={(e) => setBuyListItemSpec(e.target.value)} placeholder="e.g., Phillips head" style={styles.inputField}/></div>
-                            <div><label style={styles.inputLabel}>Purchase Link</label><input type="url" value={buyListItemLink} onChange={(e) => setBuyListItemLink(e.target.value)} placeholder="https://example.com" style={styles.inputField}/></div>
-                            <div><label style={{...styles.inputLabel, fontSize: '0.8rem'}}>Item Image</label><input type="file" accept="image/*" onChange={(e) => setBuyListItemImageFile(e.target.files[0])} ref={buyListImageInputRef} style={styles.fileInput}/></div>
-                            <button onClick={handleAddBuyListItem} style={{...styles.button, ...styles.buttonSecondary, width: '100%'}}>Add to Buy List</button>
-                        </div>
-                        {projectBuyList.length > 0 && (
-                            <div style={{marginTop: '20px', maxHeight: '250px', overflowY: 'auto'}}>
-                                <h3 style={{fontSize: '1rem', fontWeight: '600', color: '#34495e', marginBottom: '8px'}}>Current Items:</h3>
-                                <ul style={{listStylePosition: 'inside', paddingLeft: '0', fontSize: '0.9rem', borderTop: '1px solid #eee'}}> 
-                                    {projectBuyList.map((item, index) => (
-                                        <li key={item.id} style={{...styles.listItem, ...(index === projectBuyList.length -1 && styles.listItemLast)}}>
-                                            <div>{item.name} (Qty: {item.quantity}) {item.imageFile && <span style={{fontSize: '0.75rem', color: '#777'}}>({item.imageFile.name.substring(0,10)}...)</span>}</div> 
-                                            <button onClick={() => removeBuyListItem(item.id)} style={styles.removeButton}>X</button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
+                {/* Error and success messages */}
+                {errorMessage && <div role="alert" style={styles.errorMessage}>{errorMessage}</div>}
+                {successMessage && <div role="alert" style={styles.successMessage} onClick={()=>setSuccessMessage('')}>{successMessage} (click to dismiss)</div>}
+
+                {/* Tab content */}
+                <div style={styles.contentArea}>
+                    <div style={styles.tabContent}>
+                        {activeTab === 'video' && (
+                            <VideoAnnotationTab 
+                                uploadedVideos={uploadedVideos}
+                                activeVideoIndex={activeVideoIndex}
+                                activeVideoUrl={activeVideoUrl}
+                                videoRef={videoRef}
+                                videoDimensions={videoDimensions}
+                                handleVideoSelection={handleVideoSelection}
+                                navigateFrame={navigateFrame}
+                                captureFrameForAnnotation={captureFrameForAnnotation}
+                                frameForAnnotation={frameForAnnotation}
+                                frameTimestampMs={frameTimestampMs}
+                                currentStepAnnotations={currentStepAnnotations}
+                                currentAnnotationTool={currentAnnotationTool}
+                                setCurrentAnnotationTool={setCurrentAnnotationTool}
+                                handleAnnotationSubmit={handleAnnotationSubmit}
+                                formatTime={formatTime}
+                                currentStepStartTime={currentStepStartTime}
+                                currentStepEndTime={currentStepEndTime}
+                                markTime={markTime}
+                                styles={styles}
+                                setErrorMessage={setErrorMessage}
+                            />
+                        )}
+
+                        {activeTab === 'details' && (
+                            <StepDetailsTab 
+                                currentStepName={currentStepName}
+                                setCurrentStepName={setCurrentStepName}
+                                currentStepDescription={currentStepDescription}
+                                setCurrentStepDescription={setCurrentStepDescription}
+                                currentStepStartTime={currentStepStartTime}
+                                currentStepEndTime={currentStepEndTime}
+                                currentCautionaryNotes={currentCautionaryNotes}
+                                setCurrentCautionaryNotes={setCurrentCautionaryNotes}
+                                currentBestPracticeNotes={currentBestPracticeNotes}
+                                setBestPracticeNotes={setCurrentBestPracticeNotes}
+                                currentStepValidationQuestion={currentStepValidationQuestion}
+                                setCurrentStepValidationQuestion={setCurrentStepValidationQuestion}
+                                currentStepValidationAnswer={currentStepValidationAnswer}
+                                setCurrentStepValidationAnswer={setCurrentStepValidationAnswer}
+                                formatTime={formatTime}
+                                styles={styles}
+                            />
+                        )}
+
+                        {activeTab === 'materials' && (
+                            <MaterialsAndFilesTab 
+                                // Tools props
+                                currentStepTools={currentStepTools}
+                                currentStepToolName={currentStepToolName}
+                                setCurrentStepToolName={setCurrentStepToolName}
+                                currentStepToolSpec={currentStepToolSpec}
+                                setCurrentStepToolSpec={setCurrentStepToolSpec}
+                                currentStepToolImageFile={currentStepToolImageFile}
+                                setCurrentStepToolImageFile={setCurrentStepToolImageFile}
+                                toolImageInputRef={toolImageInputRef}
+                                handleAddToolToCurrentStep={handleAddToolToCurrentStep}
+                                removeToolFromCurrentStep={removeToolFromCurrentStep}
+                                // Materials props
+                                currentStepMaterials={currentStepMaterials}
+                                currentStepMaterialName={currentStepMaterialName}
+                                setCurrentStepMaterialName={setCurrentStepMaterialName}
+                                currentStepMaterialSpec={currentStepMaterialSpec}
+                                setCurrentStepMaterialSpec={setCurrentStepMaterialSpec}
+                                currentStepMaterialImageFile={currentStepMaterialImageFile}
+                                setCurrentStepMaterialImageFile={setCurrentStepMaterialImageFile}
+                                materialImageInputRef={materialImageInputRef}
+                                handleAddMaterialToCurrentStep={handleAddMaterialToCurrentStep}
+                                removeMaterialFromCurrentStep={removeMaterialFromCurrentStep}
+                                // Files props
+                                currentStepSupFiles={currentStepSupFiles}
+                                currentStepSupFileName={currentStepSupFileName}
+                                setCurrentStepSupFileName={setCurrentStepSupFileName}
+                                supFileInputRef={supFileInputRef}
+                                currentStepResultImageFile={currentStepResultImageFile}
+                                setCurrentStepResultImageFile={setCurrentStepResultImageFile}
+                                resultImageInputRef={resultImageInputRef}
+                                handleSupFileChange={handleSupFileChange}
+                                removeSupFileFromCurrentStep={removeSupFileFromCurrentStep}
+                                styles={styles}
+                            />
+                        )}
+
+                        {activeTab === 'overview' && (
+                            <ProjectOverviewTab 
+                                projectSteps={projectSteps}
+                                projectBuyList={projectBuyList}
+                                buyListItemName={buyListItemName}
+                                setBuyListItemName={setBuyListItemName}
+                                buyListItemQty={buyListItemQty}
+                                setBuyListItemQty={setBuyListItemQty}
+                                buyListItemSpec={buyListItemSpec}
+                                setBuyListItemSpec={setBuyListItemSpec}
+                                buyListItemLink={buyListItemLink}
+                                setBuyListItemLink={setBuyListItemLink}
+                                buyListItemImageFile={buyListItemImageFile}
+                                setBuyListItemImageFile={setBuyListItemImageFile}
+                                buyListImageInputRef={buyListImageInputRef}
+                                handleAddBuyListItem={handleAddBuyListItem}
+                                removeBuyListItem={removeBuyListItem}
+                                formatTime={formatTime}
+                                styles={styles}
+                            />
                         )}
                     </div>
                 </div>
             </div>
-            
-            {projectSteps.length > 0 && (
-                <div style={{...styles.card, marginTop: '30px'}}>
-                    <h2 style={styles.sectionTitle}>Defined Project Steps ({projectSteps.length})</h2>
-                    <ul style={{listStyle: 'none', padding: 0}}>
-                        {projectSteps.map((step, index) => (
-                            <li key={step.id || index} style={{padding: '15px 0', borderBottom: '1px solid #eee', ...(index === projectSteps.length -1 && {borderBottom: 'none'})}}>
-                                <h3 style={{fontSize: '1.2rem', fontWeight: '600', color: '#2c3e50'}}>{index + 1}. {step.name} (Video {step.associated_video_index + 1})</h3>
-                                <p style={{fontSize: '0.9rem', color: '#555', marginTop: '4px', whiteSpace: 'pre-wrap'}}>{step.description}</p>
-                                {step.cautionary_notes && <p style={{fontSize: '0.85rem', color: '#e67e22', marginTop: '6px'}}><strong>Caution:</strong> {step.cautionary_notes}</p>}
-                                {step.best_practice_notes && <p style={{fontSize: '0.85rem', color: '#3498db', marginTop: '6px'}}><strong>Best Practice:</strong> {step.best_practice_notes}</p>}
-                                <p style={{fontSize: '0.8rem', color: '#7f8c8d', marginTop: '6px'}}>Video Segment: {formatTime(step.video_start_time_ms / 1000)} - {formatTime(step.video_end_time_ms / 1000)}</p>
-                                {step.annotations?.length > 0 && <details style={{fontSize: '0.85rem', marginTop: '6px'}}><summary style={{color: '#8e44ad', cursor: 'pointer', fontWeight:'500'}}>Annotations ({step.annotations.length})</summary><ul style={{listStyle: 'disc', paddingLeft: '20px', marginTop: '4px'}}>{step.annotations.map(ann => (<li key={ann.data.id}>{ann.data.text} at {formatTime(ann.data.frame_timestamp_ms / 1000)}</li>))}</ul></details>}
-                                {step.materials?.length > 0 && <details style={{fontSize: '0.85rem', marginTop: '6px'}}><summary style={{color: '#d35400', cursor: 'pointer', fontWeight:'500'}}>Materials ({step.materials.length})</summary><ul style={{listStyle: 'disc', paddingLeft: '20px', marginTop: '4px'}}>{step.materials.map(mat => (<li key={mat.id}>{mat.name} {mat.imageFile && `(${mat.imageFile.name.substring(0,15)}...)`}</li>))}</ul></details>}
-                                {step.tools?.length > 0 && <details style={{fontSize: '0.85rem', marginTop: '6px'}}><summary style={{color: '#16a085', cursor: 'pointer', fontWeight:'500'}}>Tools ({step.tools.length})</summary><ul style={{listStyle: 'disc', paddingLeft: '20px', marginTop: '4px'}}>{step.tools.map(tool => (<li key={tool.id}>{tool.name} {tool.imageFile && `(${tool.imageFile.name.substring(0,15)}...)`}</li>))}</ul></details>}
-                                {step.supplementary_files?.length > 0 && <details style={{fontSize: '0.85rem', marginTop: '6px'}}><summary style={{color: '#2980b9', cursor: 'pointer', fontWeight:'500'}}>Files ({step.supplementary_files.length})</summary><ul style={{listStyle: 'disc', paddingLeft: '20px', marginTop: '4px'}}>{step.supplementary_files.map(f => (<li key={f.id}>{f.displayName}</li>))}</ul></details>}
-                                {step.result_image_file_info && <p style={{fontSize: '0.85rem', color: '#7f8c8d', marginTop: '6px'}}><strong>Result Image:</strong> {step.result_image_file_info.name}</p>}
-                                {step.validation_metric?.question && <p style={{fontSize: '0.85rem', color: '#27ae60', marginTop: '6px'}}><strong>Validation:</strong> {step.validation_metric.question}</p>}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
-            
-            {projectSteps.length > 0 && (
-                 <button 
-                    onClick={handleFinishProject}
-                    disabled={isLoading}
-                    style={{...styles.button, ...styles.buttonPrimary, backgroundColor: '#27ae60', width: '100%', marginTop: '30px', padding: '15px', fontSize: '1.1rem', textTransform: 'uppercase', ...(isLoading && styles.buttonDisabled)}}>
-                    {isLoading ? 'Finalizing Project...' : "Finish Project & Save All Data"}
-                </button>
-            )}
+
+            {/* Floating action buttons */}
+            <div style={styles.actionButtons}>
+                {currentStepIndex >= 0 && (
+                    <button 
+                        onClick={handleAddStep}
+                        disabled={isStepLoading}
+                        style={{
+                            ...styles.floatingButton,
+                            ...styles.saveButton,
+                            ...(isStepLoading && styles.buttonDisabled)
+                        }}
+                    >
+                        {isStepLoading ? 'Saving...' : 'Save Step'}
+                    </button>
+                )}
+                
+                {projectSteps.length > 0 && (
+                    <button 
+                        onClick={handleFinishProject}
+                        disabled={isLoading}
+                        style={{
+                            ...styles.floatingButton,
+                            ...styles.finishButton,
+                            ...(isLoading && styles.buttonDisabled)
+                        }}
+                    >
+                        {isLoading ? 'Finalizing...' : 'Finish Project'}
+                    </button>
+                )}
+            </div>
         </div>
     );
 };

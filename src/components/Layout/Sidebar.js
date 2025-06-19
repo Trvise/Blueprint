@@ -1,12 +1,17 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/authContext';
 import { doSignOut } from '../../firebase/auth';
-import { AiOutlineMenu, AiOutlineHome, AiOutlineVideoCamera, AiOutlineLogout, AiFillAndroid, AiFillTool } from 'react-icons/ai';
+import { AiOutlineMenu, AiOutlineHome, AiOutlineVideoCamera, AiOutlineLogout, AiFillAndroid, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineFileText, AiOutlineTool, AiOutlineEye } from 'react-icons/ai';
 import logo from '../../assets/trvise_logo.png';
+
 const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { userLoggedIn, currentUser } = useAuth();
+
+    // Check if we're on the CreateSteps page
+    const isCreateStepsPage = location.pathname.includes('/create-steps') || location.pathname.includes('/steps');
 
     return (
         <div className={`h-screen bg-gray-800 text-white fixed top-0 transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'}`}>
@@ -72,6 +77,67 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                 <AiFillTool size={24} />
                                 {!isCollapsed && <span className="ml-4">Create Project</span>}
                             </Link>
+
+                            {/* CreateSteps Tab Navigation - Only show when on CreateSteps page */}
+                            {isCreateStepsPage && (
+                                <div className="border-t border-gray-700 mt-4 pt-4">
+                                    <div className={`px-4 py-2 text-xs font-semibold text-gray-400 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
+                                        STEP AUTHORING
+                                    </div>
+                                    
+                                    <button
+                                        onClick={() => {
+                                            // Set active tab to video
+                                            if (window.setActiveTab) {
+                                                window.setActiveTab('video');
+                                            }
+                                        }}
+                                        className="flex items-center py-2 px-4 text-sm font-normal hover:bg-gray-700 w-full text-left"
+                                    >
+                                        <AiOutlineVideo size={20} />
+                                        {!isCollapsed && <span className="ml-3">Video & Annotations</span>}
+                                    </button>
+                                    
+                                    <button
+                                        onClick={() => {
+                                            // Set active tab to details
+                                            if (window.setActiveTab) {
+                                                window.setActiveTab('details');
+                                            }
+                                        }}
+                                        className="flex items-center py-2 px-4 text-sm font-normal hover:bg-gray-700 w-full text-left"
+                                    >
+                                        <AiOutlineFileText size={20} />
+                                        {!isCollapsed && <span className="ml-3">Step Details</span>}
+                                    </button>
+                                    
+                                    <button
+                                        onClick={() => {
+                                            // Set active tab to materials
+                                            if (window.setActiveTab) {
+                                                window.setActiveTab('materials');
+                                            }
+                                        }}
+                                        className="flex items-center py-2 px-4 text-sm font-normal hover:bg-gray-700 w-full text-left"
+                                    >
+                                        <AiOutlineTool size={20} />
+                                        {!isCollapsed && <span className="ml-3">Materials & Files</span>}
+                                    </button>
+                                    
+                                    <button
+                                        onClick={() => {
+                                            // Set active tab to overview
+                                            if (window.setActiveTab) {
+                                                window.setActiveTab('overview');
+                                            }
+                                        }}
+                                        className="flex items-center py-2 px-4 text-sm font-normal hover:bg-gray-700 w-full text-left"
+                                    >
+                                        <AiOutlineEye size={20} />
+                                        {!isCollapsed && <span className="ml-3">Project Overview</span>}
+                                    </button>
+                                </div>
+                            )}
                             
                             <button
                                 onClick={() => {
