@@ -1140,7 +1140,7 @@ const ProjectStepsPage = () => {
             {/* Floating action buttons */}
             <div style={styles.actionButtons}>
                 {currentStepIndex >= 0 && (
-                 <button 
+                    <button 
                         onClick={handleAddStep}
                         disabled={isStepLoading}
                         style={{
@@ -1150,8 +1150,8 @@ const ProjectStepsPage = () => {
                         }}
                     >
                         {isStepLoading ? 'Saving...' : 'Save Step'}
-                </button>
-            )}
+                    </button>
+                )}
             </div>
         </div>
     );
