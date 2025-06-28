@@ -1,3 +1,4 @@
+
 // src/pages/ProjectStepsPage.js
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
@@ -314,6 +315,25 @@ const getMainContentStyles = (isLargeScreen) => ({
     gridColumn: isLargeScreen ? 'span 2 / span 2' : 'span 1 / span 1',
 });
 
+const dataURLtoFile = (dataurl, filename) => {
+    // This function is necessary because Firebase Storage works with File/Blob objects,
+    // not base64 data URLs.
+    const arr = dataurl.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch) {
+        console.error("Invalid dataURL: mime type not found");
+        return null;
+    }
+    const mime = mimeMatch[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+};
+
 const ProjectStepsPage = () => {
     const location = useLocation();
     const projectId  = location.state.projectId
@@ -322,6 +342,7 @@ const ProjectStepsPage = () => {
     const { currentUser } = useAuth();
     const [activeTab, setActiveTab] = useState('video');
     const [currentStepIndex, setCurrentStepIndex] = useState(-1); // -1 means no step selected
+    const [capturedAnnotationFrames, setCapturedAnnotationFrames] = useState({});
 
     const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth >= 1024);
 
@@ -392,7 +413,7 @@ const ProjectStepsPage = () => {
     const [isLoading, setIsLoading] = useState(false); 
     const [isStepLoading, setIsStepLoading] = useState(false); 
     const [errorMessage, setErrorMessage] = useState('');
-    const [successMessage, setSuccessMessage] = useState('');
+    const [successMessage, setSuccessMessage] = useState(''); // Will store { [timestamp]: fileObject }
 
     // Function to load step data for editing
     const loadStepForEditing = (step, index) => {
@@ -566,11 +587,8 @@ const ProjectStepsPage = () => {
     const captureFrameForAnnotation = () => {
         if (videoRef.current) {
             const video = videoRef.current;
-            if (video.readyState < video.HAVE_METADATA) { 
-                alert("Video metadata is not loaded yet."); return;
-            }
-            if (video.videoWidth === 0 || video.videoHeight === 0) {
-                alert("Video dimensions are not available. Cannot capture frame."); return;
+            if (video.readyState < video.HAVE_METADATA || video.videoWidth === 0) { 
+                alert("Video is not ready. Please wait a moment and try again."); return;
             }
             if (!video.paused) { video.pause(); }
             const timestamp = Math.round(video.currentTime * 1000); 
@@ -578,16 +596,27 @@ const ProjectStepsPage = () => {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext("2d");
+            
             try {
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                setFrameForAnnotation(canvas.toDataURL("image/jpeg")); 
+                const dataURL = canvas.toDataURL("image/jpeg");
+                const filename = `frame_${timestamp}.jpg`;
+                const frameFile = dataURLtoFile(dataURL, filename);
+    
+                if(frameFile){
+                    // Store the file object in our state, keyed by its unique timestamp
+                    setCapturedAnnotationFrames(prev => ({ ...prev, [timestamp]: frameFile }));
+                    setSuccessMessage(`Frame captured at ${formatTime(timestamp / 1000)}.`);
+                }
+    
+                // This part remains to update the UI for annotation
+                setFrameForAnnotation(dataURL);
                 setFrameTimestampMs(timestamp);
                 setCurrentStepAnnotations([]); 
                 setCurrentAnnotationTool({});
             } catch (e) {
                 console.error("Error capturing frame:", e);
-                alert("Could not capture frame. Check CORS settings on video source if it's remote.");
-                setErrorMessage("Error capturing frame (CORS).");
+                setErrorMessage("Could not capture frame. Check browser permissions or video source.");
             }
         }
     };
@@ -769,11 +798,68 @@ const ProjectStepsPage = () => {
         }
         setIsLoading(true);
         setErrorMessage('');
-        setSuccessMessage('Finalizing project... Uploading files...');
-
+        setSuccessMessage('Finalizing project... Preparing files...');
+    
         try {
+            // --- 1. FIND AND UPLOAD THE PROJECT THUMBNAIL ---
+            // This is derived from the very first annotation made in the entire project.
+            let uploadedThumbnailInfo = null;
+            let thumbnailFileToUpload = null; 
+            // Find the first step that actually contains annotations
+            const firstStepWithAnnotation = projectSteps.find(step => step.annotations && step.annotations.length > 0);
+            
+            if (firstStepWithAnnotation) {
+                // Get the timestamp of that step's first annotation
+                const firstAnnotationTimestamp = firstStepWithAnnotation.annotations[0].data.frame_timestamp_ms;
+                // Look up the corresponding captured frame file from our state
+                thumbnailFileToUpload = capturedAnnotationFrames[firstAnnotationTimestamp];
+    
+                if (thumbnailFileToUpload) {
+                    setSuccessMessage('Uploading project thumbnail...');
+                    // Upload that specific frame to a designated 'thumbnails' folder
+                    uploadedThumbnailInfo = await uploadFileToFirebase(
+                        thumbnailFileToUpload, 
+                        `users/${currentUser.uid}/${projectId}/thumbnails`
+                    );
+                }
+            }
+    
+            // --- 2. LOOP THROUGH STEPS TO PROCESS AND UPLOAD ALL OTHER FILES ---
             const processedStepsPayload = [];
             for (const step of projectSteps) {
+                
+                // --- A. Process Annotations and Upload their Frames ---
+                const processedAnnotations = [];
+                for (const ann of step.annotations) {
+                    let uploadedFrameInfo = null;
+                    const frameTimestamp = ann.data.frame_timestamp_ms;
+                    const frameFileToUpload = capturedAnnotationFrames[frameTimestamp];
+    
+                    // If a captured frame exists for this annotation's timestamp, upload it.
+                    // We check if it's the thumbnail to avoid re-uploading the same image.
+                    if (frameFileToUpload && frameFileToUpload !== thumbnailFileToUpload) {
+                        setSuccessMessage(`Uploading frame for annotation: ${ann.data.text}...`);
+                        uploadedFrameInfo = await uploadFileToFirebase(
+                            frameFileToUpload, 
+                            `users/${currentUser.uid}/${projectId}/annotation_frames`
+                        );
+                    } else if (frameFileToUpload === thumbnailFileToUpload) {
+                        // If this frame IS the thumbnail, just reuse its upload info.
+                        uploadedFrameInfo = uploadedThumbnailInfo;
+                    }
+    
+                    // Add the uploaded frame's info to the annotation payload
+                    processedAnnotations.push({
+                        frame_timestamp_ms: frameTimestamp,
+                        annotation_type: ann.geometry.type,
+                        component_name: ann.data.text,
+                        data: ann.data.normalized_geometry,
+                        // Pass the path for the backend to create the File record
+                        frame_image_path: uploadedFrameInfo ? uploadedFrameInfo.path : null,
+                    });
+                }
+                
+                // --- B. Initialize the Step Payload for the API ---
                 const stepPayload = {
                     name: step.name,
                     description: step.description,
@@ -781,70 +867,57 @@ const ProjectStepsPage = () => {
                     video_end_time_ms: step.video_end_time_ms,
                     cautionary_notes: step.cautionary_notes,
                     best_practice_notes: step.best_practice_notes,
-                    associated_video_path: step.associated_video_path, // Path of the main video for this step
+                    associated_video_path: step.associated_video_path,
                     step_order: step.step_order,
-                    annotations: step.annotations.map(ann => ({ // Send normalized annotation data
-                        frame_timestamp_ms: ann.data.frame_timestamp_ms,
-                        annotation_type: ann.geometry.type, // Use type from geometry
-                        component_name: ann.data.text,
-                        data: ann.data.normalized_geometry // Send the normalized geometry
-                    })),
+                    annotations: processedAnnotations, // Use the newly processed annotations
                     tools: [],
                     materials: [],
                     supplementary_files: [],
                     validation_metric: step.validation_metric,
-                    result_image_url: null,
                     result_image_path: null,
                 };
-
+    
+                // --- C. Handle Uploads for Tools, Materials, etc. (existing logic) ---
+    
                 // Upload Tool Images
-                console.log("Uploading tool images for step:", step._toolImageFiles);
                 for (const toolFile of step._toolImageFiles || []) {
                     const uploaded = await uploadFileToFirebase(toolFile, `users/${currentUser.uid}/${projectId}/tools`);
                     if (uploaded) {
                         stepPayload.tools.push({
                             name: step.tools.find(t => t.image_file_name === toolFile.name)?.name || 'Unknown Tool',
                             specification: step.tools.find(t => t.image_file_name === toolFile.name)?.specification || '',
-                            image_url: uploaded.url,
                             image_path: uploaded.path,
                         });
                     }
                 }
-                 // Add tools without images
-                for (const tool of step.tools || []) {
-                    if (!tool.image_file_name && !stepPayload.tools.some(t => t.name === tool.name)) {
-                         stepPayload.tools.push({ name: tool.name, specification: tool.specification, image_url: null, image_path: null });
-                    }
+                // Add tools without images
+                for (const tool of step.tools.filter(t => !t.image_file_name)) {
+                    stepPayload.tools.push({ name: tool.name, specification: tool.specification, image_path: null });
                 }
-
-
+    
                 // Upload Material Images
                 for (const materialFile of step._materialImageFiles || []) {
-                    const uploaded = await uploadFileToFirebase(materialFile, `users/${currentUser.uid}/${projectId}/materials`);
-                    if (uploaded) {
+                     const uploaded = await uploadFileToFirebase(materialFile, `users/${currentUser.uid}/${projectId}/materials`);
+                     if (uploaded) {
                         stepPayload.materials.push({
                             name: step.materials.find(m => m.image_file_name === materialFile.name)?.name || 'Unknown Material',
                             specification: step.materials.find(m => m.image_file_name === materialFile.name)?.specification || '',
-                            image_url: uploaded.url,
-                            image_path: uploaded.path,
+                            image_path: uploaded.path
                         });
-                    }
+                     }
                 }
                 // Add materials without images
-                for (const material of step.materials || []) {
-                    if (!material.image_file_name && !stepPayload.materials.some(m => m.name === material.name)) {
-                         stepPayload.materials.push({ name: material.name, specification: material.specification, image_url: null, image_path: null });
-                    }
+                for (const material of step.materials.filter(m => !m.image_file_name)) {
+                    stepPayload.materials.push({ name: material.name, specification: material.specification, image_path: null });
                 }
-
-
+    
+    
                 // Upload Supplementary Files
                 for (const supFileObj of step._supplementaryFileObjects || []) {
                     const uploaded = await uploadFileToFirebase(supFileObj, `users/${currentUser.uid}/${projectId}/supplementary_files`);
                     if (uploaded) {
                         stepPayload.supplementary_files.push({
                             display_name: step.supplementary_files.find(sf => sf.fileName === supFileObj.name)?.displayName || supFileObj.name,
-                            file_url: uploaded.url,
                             file_path: uploaded.path,
                             original_filename: uploaded.name,
                             mime_type: uploaded.type,
@@ -852,27 +925,25 @@ const ProjectStepsPage = () => {
                         });
                     }
                 }
-
+    
                 // Upload Step Result Image
                 if (step._resultImageFileObject) {
                     const uploaded = await uploadFileToFirebase(step._resultImageFileObject, `users/${currentUser.uid}/${projectId}/result_images`);
                     if (uploaded) {
-                        stepPayload.result_image_url = uploaded.url;
                         stepPayload.result_image_path = uploaded.path;
                     }
                 }
+                
                 processedStepsPayload.push(stepPayload);
             }
-
-            // Upload Buy List Item Images
+    
+            // --- 3. Process Buy List Images ---
             const processedBuyListPayload = [];
             for (const item of projectBuyList) {
-                let itemImageUrl = null;
                 let itemImagePath = null;
                 if (item.imageFile) {
                     const uploaded = await uploadFileToFirebase(item.imageFile, `users/${currentUser.uid}/${projectId}/buy_list_images`);
                     if (uploaded) {
-                        itemImageUrl = uploaded.url;
                         itemImagePath = uploaded.path;
                     }
                 }
@@ -881,25 +952,26 @@ const ProjectStepsPage = () => {
                     quantity: item.quantity,
                     specification: item.specification,
                     purchase_link: item.purchase_link,
-                    image_url: itemImageUrl,
                     image_path: itemImagePath,
                 });
             }
-
+    
+            // --- 4. ASSEMBLE THE FINAL PAYLOAD FOR THE BACKEND ---
             const finalApiPayload = {
                 project_id: projectId,
                 project_name: projectName,
                 user_id: currentUser.uid,
+                // Add the new thumbnail path for the backend
+                thumbnail_path: uploadedThumbnailInfo ? uploadedThumbnailInfo.path : null,
                 steps: processedStepsPayload,
                 buy_list: processedBuyListPayload,
             };
-
+    
             console.log("Final API Payload to send to backend:", JSON.stringify(finalApiPayload, null, 2));
-
-            // TODO: Replace with your actual API endpoint for finalizing project steps
-            const backendApiUrl = `http://localhost:8000/upload_steps`; 
-            const token = currentUser.uid;
-
+    
+            const backendApiUrl = `http://localhost:8000/upload_steps`;
+            const token = await currentUser.getIdToken();
+    
             const response = await fetch(backendApiUrl, {
                 method: 'POST',
                 headers: {
@@ -908,7 +980,7 @@ const ProjectStepsPage = () => {
                 },
                 body: JSON.stringify(finalApiPayload),
             });
-
+    
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.detail || "Failed to save project steps to backend.");
@@ -916,10 +988,11 @@ const ProjectStepsPage = () => {
             
             const responseData = await response.json();
             console.log("Backend response from finalize_steps:", responseData);
-
+    
             setSuccessMessage("Project finalized and all data saved successfully! Redirecting...");
-            navigate(`/videos`);
-
+            // You might want a short delay before navigating
+            setTimeout(() => navigate(`/`), 2000);
+    
         } catch (error) {
             console.error("Error during project finalization:", error);
             setErrorMessage(`Finalization failed: ${error.message}`);
