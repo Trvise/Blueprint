@@ -987,16 +987,16 @@ const ProjectStepsPage = () => {
             id: uuidv4(), 
             text: libraryData?.text || `Annotation ${currentStepAnnotations.filter(a => a.data.frame_timestamp_ms === frameTimestampMs).length + 1}`, 
             frame_timestamp_ms: frameTimestampMs, 
-            normalized_geometry: (videoDimensions.width && videoDimensions.height) ? {
-                x: geometry.x / videoDimensions.width, y: geometry.y / videoDimensions.height,
-                width: geometry.width / videoDimensions.width, height: geometry.height / videoDimensions.height,
+            normalized_geometry: {
+                x: geometry.x / 100, y: geometry.y / 100,
+                width: geometry.width / 100, height: geometry.height / 100,
                 type: geometry.type 
-            } : { 
-                x: geometry.x, y: geometry.y, width: geometry.width, height: geometry.height,
-                type: geometry.type, isPixelValue: true 
             }
         };
         const annotationToAdd = { geometry: geometry, data: customDataForAnnotation };
+        console.log(annotationToAdd);
+        console.log(videoDimensions.width, videoDimensions.height);
+        console.log(geometry.x, geometry.y, geometry.width, geometry.height);
         setCurrentStepAnnotations(prev => [...prev, annotationToAdd]);
         setCurrentAnnotationTool({}); 
     };
