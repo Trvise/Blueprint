@@ -1,205 +1,118 @@
-// CreateStepsHandlers.js - Handler functions for CreateSteps component
+// CreateStepsActions.js - Step management actions for CreateSteps component
 import { v4 as uuidv4 } from 'uuid';
 import { uploadFileToFirebase } from './CreateStepsUtils';
 
-export const createStepHandlers = (
-    // State setters and dependencies
-    {
-        setActiveVideoIndex,
-        setActiveVideoUrl,
+export const createStepActions = (state) => {
+    const {
+        setCurrentStepIndex,
+        setCurrentStepName,
+        setCurrentStepDescription,
         setCurrentStepStartTime,
         setCurrentStepEndTime,
-        setFrameForAnnotation,
+        setCurrentCautionaryNotes,
+        setCurrentBestPracticeNotes,
         setCurrentStepAnnotations,
-        setVideoDimensions,
-        setErrorMessage,
-        setCurrentAnnotationTool,
         setCurrentStepTools,
-        setCurrentStepToolName,
-        setCurrentStepToolSpec,
-        setCurrentStepToolImageFile,
         setCurrentStepMaterials,
-        setCurrentStepMaterialName,
-        setCurrentStepMaterialSpec,
-        setCurrentStepMaterialImageFile,
         setCurrentStepSupFiles,
         setCurrentStepSupFileName,
+        setCurrentStepValidationQuestion,
+        setCurrentStepValidationAnswer,
         setCurrentStepResultImageFile,
-        setProjectBuyList,
-        setBuyListItemName,
-        setBuyListItemQty,
-        setBuyListItemSpec,
-        setBuyListItemLink,
-        setBuyListItemImageFile,
+        setFrameForAnnotation,
+        setCurrentAnnotationTool,
         setProjectSteps,
-        setCurrentStepIndex,
         setIsStepLoading,
+        setErrorMessage,
         setSuccessMessage,
         setIsLoading,
-        // Refs
-        toolImageInputRef,
-        materialImageInputRef,
-        supFileInputRef,
-        buyListImageInputRef,
-        videoRef,
-        // State values
-        uploadedVideos,
-        currentStepStartTime,
-        frameTimestampMs,
-        videoDimensions,
-        currentStepAnnotations,
-        currentStepTools,
-        currentStepMaterials,
-        currentStepSupFiles,
-        currentStepSupFileName,
-        currentStepToolName,
-        currentStepToolSpec,
-        currentStepToolImageFile,
-        currentStepMaterialName,
-        currentStepMaterialSpec,
-        currentStepMaterialImageFile,
-        buyListItemName,
-        buyListItemQty,
-        buyListItemSpec,
-        buyListItemLink,
-        buyListItemImageFile,
-        projectBuyList,
         projectSteps,
         currentStepIndex,
+        activeVideoIndex,
+        uploadedVideos,
         projectId,
+        projectBuyList,
         currentUser,
         navigate
-    }
-) => {
+    } = state;
 
-    const handleVideoSelection = (index) => {
-        if (uploadedVideos[index] && uploadedVideos[index].url) {
-            setActiveVideoIndex(index);
-            setActiveVideoUrl(uploadedVideos[index].url);
-            setCurrentStepStartTime(null);
-            setCurrentStepEndTime(null);
-            setFrameForAnnotation(null); 
-            setCurrentStepAnnotations([]); 
-            setVideoDimensions({ width: 0, height: 0 });
-        } else {
-            console.warn(`Video at index ${index} is missing a URL.`);
-            setErrorMessage(`Video ${index + 1} could not be loaded.`);
+    // Function to load step data for editing
+    const loadStepForEditing = (step, index) => {
+        setCurrentStepIndex(index);
+        setCurrentStepName(step.name || '');
+        setCurrentStepDescription(step.description || '');
+        setCurrentStepStartTime(step.video_start_time_ms ? step.video_start_time_ms / 1000 : null);
+        setCurrentStepEndTime(step.video_end_time_ms ? step.video_end_time_ms / 1000 : null);
+        setCurrentCautionaryNotes(step.cautionary_notes || '');
+        setCurrentBestPracticeNotes(step.best_practice_notes || '');
+        setCurrentStepAnnotations(step.annotations || []);
+        setCurrentStepTools(step.tools || []);
+        setCurrentStepMaterials(step.materials || []);
+        setCurrentStepSupFiles(step.supplementary_files || []);
+        setCurrentStepValidationQuestion(step.validation_metric?.question || '');
+        setCurrentStepValidationAnswer(step.validation_metric?.expected_answer || '');
+        setCurrentStepResultImageFile(step.result_image_file_info ? new File([], step.result_image_file_info.name) : null);
+        
+        // Set active video if different
+        if (step.associated_video_index !== undefined && step.associated_video_index !== activeVideoIndex) {
+            // handleVideoSelection(step.associated_video_index); // This would need to be passed in
         }
     };
 
-    const markTime = (type) => {
-        if (videoRef.current) {
-            const currentTime = videoRef.current.currentTime;
-            if (type === 'start') {
-                setCurrentStepStartTime(currentTime);
-            } else if (type === 'end') {
-                if (currentStepStartTime !== null && currentTime <= currentStepStartTime) {
-                    alert("End time must be after start time.");
-                    return;
-                }
-                setCurrentStepEndTime(currentTime);
-            }
+    // Function to clear current step form
+    const clearCurrentStepForm = () => {
+        setCurrentStepIndex(-1);
+        setCurrentStepName('');
+        setCurrentStepDescription('');
+        setCurrentStepStartTime(null);
+        setCurrentStepEndTime(null);
+        setCurrentCautionaryNotes('');
+        setCurrentBestPracticeNotes('');
+        setCurrentStepAnnotations([]);
+        setCurrentStepTools([]);
+        setCurrentStepMaterials([]);
+        setCurrentStepSupFiles([]);
+        setCurrentStepSupFileName('');
+        setCurrentStepValidationQuestion('');
+        setCurrentStepValidationAnswer('');
+        setCurrentStepResultImageFile(null);
+        setFrameForAnnotation(null);
+        setCurrentAnnotationTool({});
+    };
+
+    // Function to delete a step
+    const deleteStep = (index) => {
+        setProjectSteps(prev => prev.filter((_, i) => i !== index));
+        if (currentStepIndex === index) {
+            clearCurrentStepForm();
+        } else if (currentStepIndex > index) {
+            setCurrentStepIndex(prev => prev - 1);
         }
     };
 
-    const handleAnnotationSubmit = (newAnnotationFromLibrary) => {
-        const { geometry, data: libraryData } = newAnnotationFromLibrary; 
-        if (!geometry) { setErrorMessage("Annotation missing geometry."); return; }
-        const customDataForAnnotation = {
-            id: uuidv4(), 
-            text: libraryData?.text || `Annotation ${currentStepAnnotations.filter(a => a.data.frame_timestamp_ms === frameTimestampMs).length + 1}`, 
-            frame_timestamp_ms: frameTimestampMs, 
-            normalized_geometry: (videoDimensions.width && videoDimensions.height) ? {
-                x: geometry.x / videoDimensions.width, y: geometry.y / videoDimensions.height,
-                width: geometry.width / videoDimensions.width, height: geometry.height / videoDimensions.height,
-                type: geometry.type 
-            } : { 
-                x: geometry.x, y: geometry.y, width: geometry.width, height: geometry.height,
-                type: geometry.type, isPixelValue: true 
-            }
-        };
-        const annotationToAdd = { geometry: geometry, data: customDataForAnnotation };
-        setCurrentStepAnnotations(prev => [...prev, annotationToAdd]);
-        setCurrentAnnotationTool({}); 
+    // Function to add new step
+    const addNewStep = () => {
+        clearCurrentStepForm();
+        setCurrentStepIndex(projectSteps.length);
     };
 
-    const handleAddToolToCurrentStep = () => {
-        if (!currentStepToolName.trim()) { alert("Tool name is required."); return; }
-        setCurrentStepTools(prev => [...prev, { 
-            id: `tool_${uuidv4()}`, name: currentStepToolName, 
-            specification: currentStepToolSpec, imageFile: currentStepToolImageFile 
-        }]);
-        setCurrentStepToolName(''); setCurrentStepToolSpec(''); setCurrentStepToolImageFile(null);
-        if (toolImageInputRef.current) toolImageInputRef.current.value = "";
-    };
+    const handleAddStep = async (stepData) => {
+        const {
+            currentStepName,
+            currentStepDescription,
+            currentStepStartTime,
+            currentStepEndTime,
+            currentCautionaryNotes,
+            currentBestPracticeNotes,
+            currentStepAnnotations,
+            currentStepTools,
+            currentStepMaterials,
+            currentStepSupFiles,
+            currentStepValidationQuestion,
+            currentStepValidationAnswer,
+            currentStepResultImageFile
+        } = stepData;
 
-    const removeToolFromCurrentStep = (toolId) => setCurrentStepTools(prev => prev.filter(tool => tool.id !== toolId));
-
-    const handleAddMaterialToCurrentStep = () => {
-        if (!currentStepMaterialName.trim()) { alert("Material name is required."); return; }
-        setCurrentStepMaterials(prev => [...prev, { 
-            id: `material_${uuidv4()}`, name: currentStepMaterialName, 
-            specification: currentStepMaterialSpec, imageFile: currentStepMaterialImageFile 
-        }]);
-        setCurrentStepMaterialName(''); setCurrentStepMaterialSpec(''); setCurrentStepMaterialImageFile(null);
-        if (materialImageInputRef.current) materialImageInputRef.current.value = "";
-    };
-
-    const removeMaterialFromCurrentStep = (materialId) => setCurrentStepMaterials(prev => prev.filter(mat => mat.id !== materialId));
-
-    const handleSupFileChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setCurrentStepSupFiles(prev => [...prev, {
-                id: `supfile_${uuidv4()}`,
-                fileObject: file, 
-                displayName: currentStepSupFileName || file.name
-            }]);
-            setCurrentStepSupFileName(''); 
-            if (supFileInputRef.current) supFileInputRef.current.value = null; 
-        }
-    };
-
-    const removeSupFileFromCurrentStep = (fileId) => setCurrentStepSupFiles(prev => prev.filter(f => f.id !== fileId));
-
-    const handleResultImageChange = (e) => {
-        if (e.target.files && e.target.files[0]) {
-            setCurrentStepResultImageFile(e.target.files[0]);
-        } else {
-            setCurrentStepResultImageFile(null);
-        }
-    };
-
-    const handleAddBuyListItem = () => {
-        if (!buyListItemName.trim()) { alert("Item name is required for buy list."); return; }
-        setProjectBuyList(prev => [...prev, {
-            id: `buyitem_${uuidv4()}`, name: buyListItemName,
-            quantity: parseInt(buyListItemQty, 10) || 1, specification: buyListItemSpec,
-            purchase_link: buyListItemLink, imageFile: buyListItemImageFile 
-        }]);
-        setBuyListItemName(''); setBuyListItemQty(1); setBuyListItemSpec('');
-        setBuyListItemLink(''); setBuyListItemImageFile(null);
-        if (buyListImageInputRef.current) buyListImageInputRef.current.value = "";
-    };
-
-    const removeBuyListItem = (itemId) => setProjectBuyList(prev => prev.filter(item => item.id !== itemId));
-
-    const handleAddStep = async (
-        currentStepName,
-        currentStepDescription,
-        currentStepStartTime,
-        currentStepEndTime,
-        currentCautionaryNotes,
-        currentBestPracticeNotes,
-        activeVideoIndex,
-        currentStepAnnotations,
-        currentStepTools,
-        currentStepMaterials,
-        currentStepSupFiles,
-        currentStepValidationQuestion,
-        currentStepValidationAnswer,
-        currentStepResultImageFile
-    ) => {
         if (!currentStepName.trim()) { alert("Step name is required."); return; }
         if (currentStepStartTime === null || currentStepEndTime === null) { alert("Mark start/end times."); return; }
         if (currentStepEndTime <= currentStepStartTime) { alert("End time must be after start time."); return; }
@@ -208,7 +121,7 @@ export const createStepHandlers = (
         setErrorMessage('');
         setSuccessMessage('');
 
-        const stepData = {
+        const newStepData = {
             id: currentStepIndex >= 0 && currentStepIndex < projectSteps.length 
                 ? projectSteps[currentStepIndex].id 
                 : `local_step_${uuidv4()}`,
@@ -255,33 +168,92 @@ export const createStepHandlers = (
             // Update existing step
             setProjectSteps(prevSteps => {
                 const newSteps = [...prevSteps];
-                newSteps[currentStepIndex] = stepData;
+                newSteps[currentStepIndex] = newStepData;
                 return newSteps;
             });
             setSuccessMessage(`Step "${currentStepName}" updated successfully!`);
         } else {
             // Add new step
-            setProjectSteps(prevSteps => [...prevSteps, stepData]);
+            setProjectSteps(prevSteps => [...prevSteps, newStepData]);
             setCurrentStepIndex(projectSteps.length);
             setSuccessMessage(`Step "${currentStepName}" added successfully!`);
         }
 
-        console.log("Step data:", stepData);
+        console.log("Step data:", newStepData);
         setIsStepLoading(false);
     };
 
-    const handleFinishProject = async (projectName) => {
+    const handleFinishProject = async (projectName, capturedAnnotationFrames) => {
         if (!projectSteps.length) {
             alert("Please add at least one step before finishing the project.");
             return;
         }
         setIsLoading(true);
         setErrorMessage('');
-        setSuccessMessage('Finalizing project... Uploading files...');
+        setSuccessMessage('Finalizing project... Preparing files...');
 
         try {
+            // --- 1. FIND AND UPLOAD THE PROJECT THUMBNAIL ---
+            // This is derived from the very first annotation made in the entire project.
+            let uploadedThumbnailInfo = null;
+            let thumbnailFileToUpload = null; 
+            // Find the first step that actually contains annotations
+            const firstStepWithAnnotation = projectSteps.find(step => step.annotations && step.annotations.length > 0);
+            
+            if (firstStepWithAnnotation) {
+                // Get the timestamp of that step's first annotation
+                const firstAnnotationTimestamp = firstStepWithAnnotation.annotations[0].data.frame_timestamp_ms;
+                // Look up the corresponding captured frame file from our state
+                thumbnailFileToUpload = capturedAnnotationFrames[firstAnnotationTimestamp];
+
+                if (thumbnailFileToUpload) {
+                    setSuccessMessage('Uploading project thumbnail...');
+                    // Upload that specific frame to a designated 'thumbnails' folder
+                    uploadedThumbnailInfo = await uploadFileToFirebase(
+                        thumbnailFileToUpload, 
+                        `users/${currentUser.uid}/${projectId}/thumbnails`,
+                        currentUser
+                    );
+                }
+            }
+
+            // --- 2. LOOP THROUGH STEPS TO PROCESS AND UPLOAD ALL OTHER FILES ---
             const processedStepsPayload = [];
             for (const step of projectSteps) {
+                
+                // --- A. Process Annotations and Upload their Frames ---
+                const processedAnnotations = [];
+                for (const ann of step.annotations) {
+                    let uploadedFrameInfo = null;
+                    const frameTimestamp = ann.data.frame_timestamp_ms;
+                    const frameFileToUpload = capturedAnnotationFrames[frameTimestamp];
+
+                    // If a captured frame exists for this annotation's timestamp, upload it.
+                    // We check if it's the thumbnail to avoid re-uploading the same image.
+                    if (frameFileToUpload && frameFileToUpload !== thumbnailFileToUpload) {
+                        setSuccessMessage(`Uploading frame for annotation: ${ann.data.text}...`);
+                        uploadedFrameInfo = await uploadFileToFirebase(
+                            frameFileToUpload, 
+                            `users/${currentUser.uid}/${projectId}/annotation_frames`,
+                            currentUser
+                        );
+                    } else if (frameFileToUpload === thumbnailFileToUpload) {
+                        // If this frame IS the thumbnail, just reuse its upload info.
+                        uploadedFrameInfo = uploadedThumbnailInfo;
+                    }
+
+                    // Add the uploaded frame's info to the annotation payload
+                    processedAnnotations.push({
+                        frame_timestamp_ms: frameTimestamp,
+                        annotation_type: ann.geometry.type,
+                        component_name: ann.data.text,
+                        data: ann.data.normalized_geometry,
+                        // Pass the path for the backend to create the File record
+                        frame_image_path: uploadedFrameInfo ? uploadedFrameInfo.path : null,
+                    });
+                }
+                
+                // --- B. Initialize the Step Payload for the API ---
                 const stepPayload = {
                     name: step.name,
                     description: step.description,
@@ -291,19 +263,15 @@ export const createStepHandlers = (
                     best_practice_notes: step.best_practice_notes,
                     associated_video_path: step.associated_video_path,
                     step_order: step.step_order,
-                    annotations: step.annotations.map(ann => ({
-                        frame_timestamp_ms: ann.data.frame_timestamp_ms,
-                        annotation_type: ann.geometry.type,
-                        component_name: ann.data.text,
-                        data: ann.data.normalized_geometry
-                    })),
+                    annotations: processedAnnotations, // Use the newly processed annotations
                     tools: [],
                     materials: [],
                     supplementary_files: [],
                     validation_metric: step.validation_metric,
-                    result_image_url: null,
                     result_image_path: null,
                 };
+
+                // --- C. Handle Uploads for Tools, Materials, etc. (existing logic) ---
 
                 // Upload Tool Images
                 for (const toolFile of step._toolImageFiles || []) {
@@ -318,29 +286,25 @@ export const createStepHandlers = (
                     }
                 }
                 // Add tools without images
-                for (const tool of step.tools || []) {
-                    if (!tool.image_file_name && !stepPayload.tools.some(t => t.name === tool.name)) {
-                         stepPayload.tools.push({ name: tool.name, specification: tool.specification, image_url: null, image_path: null });
-                    }
+                for (const tool of step.tools.filter(t => !t.image_file_name)) {
+                    stepPayload.tools.push({ name: tool.name, specification: tool.specification, image_path: null });
                 }
 
                 // Upload Material Images
                 for (const materialFile of step._materialImageFiles || []) {
-                    const uploaded = await uploadFileToFirebase(materialFile, `users/${currentUser.uid}/${projectId}/materials`, currentUser);
-                    if (uploaded) {
+                     const uploaded = await uploadFileToFirebase(materialFile, `users/${currentUser.uid}/${projectId}/materials`, currentUser);
+                     if (uploaded) {
                         stepPayload.materials.push({
                             name: step.materials.find(m => m.image_file_name === materialFile.name)?.name || 'Unknown Material',
                             specification: step.materials.find(m => m.image_file_name === materialFile.name)?.specification || '',
                             image_url: uploaded.url,
                             image_path: uploaded.path,
                         });
-                    }
+                     }
                 }
                 // Add materials without images
-                for (const material of step.materials || []) {
-                    if (!material.image_file_name && !stepPayload.materials.some(m => m.name === material.name)) {
-                         stepPayload.materials.push({ name: material.name, specification: material.specification, image_url: null, image_path: null });
-                    }
+                for (const material of step.materials.filter(m => !m.image_file_name)) {
+                    stepPayload.materials.push({ name: material.name, specification: material.specification, image_path: null });
                 }
 
                 // Upload Supplementary Files
@@ -349,7 +313,6 @@ export const createStepHandlers = (
                     if (uploaded) {
                         stepPayload.supplementary_files.push({
                             display_name: step.supplementary_files.find(sf => sf.fileName === supFileObj.name)?.displayName || supFileObj.name,
-                            file_url: uploaded.url,
                             file_path: uploaded.path,
                             original_filename: uploaded.name,
                             mime_type: uploaded.type,
@@ -362,22 +325,20 @@ export const createStepHandlers = (
                 if (step._resultImageFileObject) {
                     const uploaded = await uploadFileToFirebase(step._resultImageFileObject, `users/${currentUser.uid}/${projectId}/result_images`, currentUser);
                     if (uploaded) {
-                        stepPayload.result_image_url = uploaded.url;
                         stepPayload.result_image_path = uploaded.path;
                     }
                 }
+                
                 processedStepsPayload.push(stepPayload);
             }
 
-            // Upload Buy List Item Images
+            // --- 3. Process Buy List Images ---
             const processedBuyListPayload = [];
             for (const item of projectBuyList) {
-                let itemImageUrl = null;
                 let itemImagePath = null;
                 if (item.imageFile) {
                     const uploaded = await uploadFileToFirebase(item.imageFile, `users/${currentUser.uid}/${projectId}/buy_list_images`, currentUser);
                     if (uploaded) {
-                        itemImageUrl = uploaded.url;
                         itemImagePath = uploaded.path;
                     }
                 }
@@ -386,30 +347,29 @@ export const createStepHandlers = (
                     quantity: item.quantity,
                     specification: item.specification,
                     purchase_link: item.purchase_link,
-                    image_url: itemImageUrl,
                     image_path: itemImagePath,
                 });
             }
 
+            // --- 4. ASSEMBLE THE FINAL PAYLOAD FOR THE BACKEND ---
             const finalApiPayload = {
                 project_id: projectId,
                 project_name: projectName,
                 user_id: currentUser.uid,
+                // Add the new thumbnail path for the backend
+                thumbnail_path: uploadedThumbnailInfo ? uploadedThumbnailInfo.path : null,
                 steps: processedStepsPayload,
                 buy_list: processedBuyListPayload,
             };
 
             console.log("Final API Payload to send to backend:", JSON.stringify(finalApiPayload, null, 2));
 
-            // TODO: Replace with your actual API endpoint for finalizing project steps
-            const backendApiUrl = `http://localhost:8000/upload_steps`; 
-            const token = currentUser.uid;
+            const backendApiUrl = `http://localhost:8000/upload_steps`;
 
             const response = await fetch(backendApiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify(finalApiPayload),
             });
@@ -423,7 +383,8 @@ export const createStepHandlers = (
             console.log("Backend response from finalize_steps:", responseData);
 
             setSuccessMessage("Project finalized and all data saved successfully! Redirecting...");
-            navigate(`/videos`);
+            // You might want a short delay before navigating
+            setTimeout(() => navigate(`/`), 2000);
 
         } catch (error) {
             console.error("Error during project finalization:", error);
@@ -434,18 +395,10 @@ export const createStepHandlers = (
     };
 
     return {
-        handleVideoSelection,
-        markTime,
-        handleAnnotationSubmit,
-        handleAddToolToCurrentStep,
-        removeToolFromCurrentStep,
-        handleAddMaterialToCurrentStep,
-        removeMaterialFromCurrentStep,
-        handleSupFileChange,
-        removeSupFileFromCurrentStep,
-        handleResultImageChange,
-        handleAddBuyListItem,
-        removeBuyListItem,
+        loadStepForEditing,
+        clearCurrentStepForm,
+        deleteStep,
+        addNewStep,
         handleAddStep,
         handleFinishProject
     };

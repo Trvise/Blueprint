@@ -1,9 +1,7 @@
 import React, { useState } from "react";
-import Login from "./components/AuthComponents/Login";
 import Register from "./components/AuthComponents/Register";
 import Sidebar from "./components/Layout/Sidebar";
-import UploadVideos from "./components/pages/UploadVideos";
-import VideosList from "./components/pages/VideosList";
+import MyProjects from "./components/pages/MyProjects";
 import CreateProjectPage from "./components/pages/CreateProject";
 import ProjectStepsPage from "./components/pages/CreateSteps";
 import { AuthProvider} from "./contexts/authContext";
@@ -15,12 +13,11 @@ function App() {
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
 
   const routesArray = [
-    { path: "*", element:  <ProtectedLogin /> },
+    { path: "*", element:  <ProtectedRoute><MyProjects /></ProtectedRoute> },
     { path: "/login", element: <ProtectedLogin /> },
     { path: "/register", element: <Register /> },
-    { path: "/home", element: (<ProtectedRoute><UploadVideos /></ProtectedRoute>)},
-    { path: "/videos", element: (<ProtectedRoute><VideosList /></ProtectedRoute>) },
-    {path : "/create", element: (<ProtectedRoute><CreateProjectPage /></ProtectedRoute>)},
+    { path: "/my-projects", element: (<ProtectedRoute><MyProjects /></ProtectedRoute>)},
+    { path: "/create", element: (<ProtectedRoute><CreateProjectPage /></ProtectedRoute>)},
     {path: "/annotate", element: (<ProtectedRoute><ProjectStepsPage /></ProtectedRoute>)},
   ];
 

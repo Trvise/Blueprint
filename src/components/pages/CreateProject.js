@@ -4,7 +4,6 @@ import { useAuth } from '../../contexts/authContext';
 import { storage } from '../../firebase/firebase';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { v4 as uuidv4 } from "uuid";
-import UploadVideos from './UploadVideos';
 
 const MAX_FILENAME_STEM_LENGTH = 25; 
 

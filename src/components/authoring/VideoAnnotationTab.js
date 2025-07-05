@@ -73,8 +73,10 @@ const VideoAnnotationTab = ({
                                     }
                                 }}
                                 onError={(e) => { 
-                                    console.error("Video Error:", e); 
-                                    setErrorMessage(`Error loading video.`); 
+                                    console.error("Video Error:", e);
+                                    console.error("Failed video URL:", activeVideoUrl);
+                                    console.error("Video element:", e.target);
+                                    setErrorMessage(`Error loading video: ${uploadedVideos[activeVideoIndex]?.name || 'Unknown video'}. Please check if the video file exists in Firebase Storage.`); 
                                 }}
                             />
                             
@@ -196,8 +198,8 @@ const VideoAnnotationTab = ({
                         <h4 style={{fontWeight: '600', marginBottom: '4px'}}>Annotations on this frame:</h4>
                         {currentStepAnnotations
                             .filter(ann => ann.data.frame_timestamp_ms === frameTimestampMs)
-                            .map(ann => (
-                                <div key={ann.data.id} style={{padding: '2px 0', borderBottom: '1px solid #f0f0f0'}}>
+                            .map((ann, annIndex) => (
+                                <div key={ann.data.id || `frame-ann-${annIndex}`} style={{padding: '2px 0', borderBottom: '1px solid #f0f0f0'}}>
                                     <p><strong>{ann.data.text}</strong> (Type: {ann.geometry.type})</p>
                                     <p>
                                         Coords ({ann.data.normalized_geometry.isPixelValue ? "Raw" : "Norm"}): 

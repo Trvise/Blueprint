@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/authContext';
 import { doSignOut } from '../../firebase/auth';
-import { AiOutlineMenu, AiOutlineHome, AiOutlineVideoCamera, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineFileText, AiOutlineTool, AiOutlineEye, AiOutlineArrowLeft, AiOutlineCheck } from 'react-icons/ai';
+import { AiOutlineMenu, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineFileText, AiOutlineTool, AiOutlineEye, AiOutlineArrowLeft, AiOutlineCheck, AiOutlineUser } from 'react-icons/ai';
 import logo from '../../assets/trvise_logo.png';
 
 const Sidebar = ({ isCollapsed, toggleSidebar }) => {
@@ -40,10 +40,10 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                         <div className="flex items-center space-x-2">
                             <img 
                                 src={logo}
-                                alt="VortexHub Logo" 
+                                alt="Blueprint Logo" 
                                 className="w-14 h-14"
                             />
-                            <h1 className="text-2xl font-semibold whitespace-nowrap">VortexHub</h1>
+                            <h1 className="text-2xl font-semibold whitespace-nowrap">Blueprint</h1>
                         </div>
                     )}
                     <button 
@@ -87,18 +87,11 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                 // Regular navigation
                                 <>
                                     <Link
-                                        to="/home"
+                                        to="/my-projects"
                                         className="flex items-center py-3 px-4 text-base font-normal hover:bg-gray-700 transition-colors"
                                     >
-                                        <AiOutlineHome size={24} />
-                                        {!isCollapsed && <span className="ml-4">Upload Videos</span>}
-                                    </Link>
-                                    <Link
-                                        to="/videos"
-                                        className="flex items-center py-3 px-4 text-base font-normal hover:bg-gray-700 transition-colors"
-                                    >
-                                        <AiOutlineVideoCamera size={24} />
-                                        {!isCollapsed && <span className="ml-4">Videos List</span>}
+                                        <AiOutlineEye size={24} />
+                                        {!isCollapsed && <span className="ml-4">My Projects</span>}
                                     </Link>
                                     <Link
                                         to="/create"
@@ -179,14 +172,14 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                 to="/login"
                                 className="flex items-center py-3 px-4 text-base font-normal hover:bg-gray-700 transition-colors"
                             >
-                                <AiOutlineHome size={24} />
+                                <AiOutlineUser size={24} />
                                 {!isCollapsed && <span className="ml-4">Login</span>}
                             </Link>
                             <Link
                                 to="/register"
                                 className="flex items-center py-3 px-4 text-base font-normal hover:bg-gray-700 transition-colors"
                             >
-                                <AiOutlineHome size={24} />
+                                <AiOutlineUser size={24} />
                                 {!isCollapsed && <span className="ml-4">Register</span>}
                             </Link>
                         </>

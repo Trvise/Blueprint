@@ -60,8 +60,8 @@ const ProjectOverviewTab = ({
                                         Annotations ({step.annotations.length})
                                     </summary>
                                     <ul style={{listStyle: 'disc', paddingLeft: '20px', marginTop: '4px'}}>
-                                        {step.annotations.map(ann => (
-                                            <li key={ann.data.id}>
+                                        {step.annotations.map((ann, annIndex) => (
+                                            <li key={ann.data.id || `annotation-${annIndex}`}>
                                                 {ann.data.text} at {formatTime(ann.data.frame_timestamp_ms / 1000)}
                                             </li>
                                         ))}
@@ -74,8 +74,8 @@ const ProjectOverviewTab = ({
                                         Materials ({step.materials.length})
                                     </summary>
                                     <ul style={{listStyle: 'disc', paddingLeft: '20px', marginTop: '4px'}}>
-                                        {step.materials.map(mat => (
-                                            <li key={mat.id}>
+                                        {step.materials.map((mat, matIndex) => (
+                                            <li key={mat.id || `material-${matIndex}`}>
                                                 {mat.name} {mat.imageFile && `(${mat.imageFile.name.substring(0,15)}...)`}
                                             </li>
                                         ))}
@@ -88,8 +88,8 @@ const ProjectOverviewTab = ({
                                         Files ({step.supplementary_files.length})
                                     </summary>
                                     <ul style={{listStyle: 'disc', paddingLeft: '20px', marginTop: '4px'}}>
-                                        {step.supplementary_files.map(f => (
-                                            <li key={f.id}>{f.displayName}</li>
+                                        {step.supplementary_files.map((f, fileIndex) => (
+                                            <li key={f.id || `file-${fileIndex}`}>{f.displayName}</li>
                                         ))}
                                     </ul>
                                 </details>

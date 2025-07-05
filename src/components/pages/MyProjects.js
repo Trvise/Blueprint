@@ -1,0 +1,594 @@
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth } from '../../contexts/authContext';
+import { useNavigate } from 'react-router-dom';
+
+// Helper functions to check URL types
+const isImageUrl = (url) => {
+    if (!url) return false;
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
+    const lowerUrl = url.toLowerCase();
+    return imageExtensions.some(ext => lowerUrl.includes(ext));
+};
+
+const isVideoUrl = (url) => {
+    if (!url) return false;
+    const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv'];
+    const lowerUrl = url.toLowerCase();
+    return videoExtensions.some(ext => lowerUrl.includes(ext));
+};
+
+// Video thumbnail component that only loads metadata
+const VideoThumbnail = ({ videoUrl, projectName }) => {
+    const [isInView, setIsInView] = useState(false);
+    const [hasError, setHasError] = useState(false);
+    const videoRef = useRef();
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setIsInView(true);
+                    observer.disconnect();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (videoRef.current) {
+            observer.observe(videoRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, []);
+
+    return (
+        <div ref={videoRef} style={{ width: '100%', height: '100%' }}>
+            {isInView && !hasError ? (
+                <video
+                    src={videoUrl}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                    }}
+                    preload="metadata"
+                    muted
+                    onError={() => setHasError(true)}
+                    onLoadedMetadata={(e) => {
+                        // Set video to first frame
+                        e.target.currentTime = 0.1;
+                    }}
+                />
+            ) : hasError ? (
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    flexDirection: 'column',
+                    gap: '0.5rem',
+                    color: '#9ca3af'
+                }}>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+                        <polygon points="23 7 16 12 23 17 23 7"/>
+                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                    </svg>
+                    <span style={{fontSize: '0.75rem'}}>Video unavailable</span>
+                </div>
+            ) : (
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    backgroundColor: '#f3f4f6',
+                    color: '#9ca3af'
+                }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+                        <polygon points="23 7 16 12 23 17 23 7"/>
+                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                    </svg>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Lazy loading component for images
+const LazyImage = ({ src, alt, style, onError }) => {
+    const [isInView, setIsInView] = useState(false);
+    const imgRef = useRef();
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setIsInView(true);
+                    observer.disconnect();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (imgRef.current) {
+            observer.observe(imgRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, []);
+
+    return (
+        <div ref={imgRef} style={style}>
+            {isInView ? (
+                <img
+                    src={src}
+                    alt={alt}
+                    style={style}
+                    onError={onError}
+                    loading="lazy"
+                />
+            ) : (
+                <div style={{
+                    ...style,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#f3f4f6',
+                    color: '#9ca3af'
+                }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v6m0 6v6"/>
+                        <path d="m21 12-6-6-6 6-6-6"/>
+                    </svg>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Add responsive CSS for the grid
+const responsiveGridCSS = `
+.projects-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+@media (min-width: 768px) {
+    .projects-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1400px) {
+    .projects-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+`;
+
+// Styles object moved outside component for shared access
+const styles = {
+    container: {
+        padding: '2rem',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        fontFamily: "'Inter', sans-serif",
+    },
+    header: {
+        marginBottom: '2rem',
+    },
+    title: {
+        fontSize: '2.5rem',
+        fontWeight: 'bold',
+        color: '#2d3748',
+        marginBottom: '0.5rem',
+    },
+    subtitle: {
+        fontSize: '1.1rem',
+        color: '#6b7280',
+        marginBottom: '2rem',
+    },
+    createButton: {
+        backgroundColor: '#4A90E2',
+        color: 'white',
+        padding: '0.75rem 1.5rem',
+        borderRadius: '0.5rem',
+        border: 'none',
+        fontSize: '1rem',
+        fontWeight: '600',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+        textDecoration: 'none',
+        display: 'inline-block',
+    },
+    projectCard: {
+        backgroundColor: 'white',
+        borderRadius: '1rem',
+        padding: '0',
+        boxShadow: '0 4px 12px -2px rgba(0, 0, 0, 0.1)',
+        border: '1px solid #e5e7eb',
+        transition: 'all 0.3s',
+        cursor: 'pointer',
+        overflow: 'hidden',
+        minHeight: '320px',
+    },
+    projectCardHover: {
+        transform: 'translateY(-4px)',
+        boxShadow: '0 12px 35px -5px rgba(0, 0, 0, 0.15)',
+    },
+    projectThumbnail: {
+        width: '100%',
+        height: '160px',
+        objectFit: 'cover',
+        backgroundColor: '#f3f4f6',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#9ca3af',
+        fontSize: '0.875rem',
+    },
+    projectContent: {
+        padding: '1.5rem',
+    },
+    projectName: {
+        fontSize: '1.25rem',
+        fontWeight: '600',
+        color: '#1f2937',
+        marginBottom: '0.5rem',
+    },
+    projectDescription: {
+        fontSize: '0.9rem',
+        color: '#6b7280',
+        marginBottom: '1rem',
+        lineHeight: '1.5',
+        minHeight: '2.8rem',
+        overflow: 'hidden',
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical',
+    },
+    projectMeta: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '1rem',
+        fontSize: '0.875rem',
+        color: '#9ca3af',
+    },
+    projectActions: {
+        display: 'flex',
+        gap: '0.5rem',
+    },
+    actionButton: {
+        padding: '0.5rem 1rem',
+        borderRadius: '0.375rem',
+        border: 'none',
+        fontSize: '0.875rem',
+        fontWeight: '500',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+    },
+    editButton: {
+        backgroundColor: '#10b981',
+        color: 'white',
+    },
+    deleteButton: {
+        backgroundColor: '#ef4444',
+        color: 'white',
+    },
+    emptyState: {
+        textAlign: 'center',
+        padding: '4rem 2rem',
+        color: '#6b7280',
+    },
+    emptyStateIcon: {
+        marginBottom: '1rem',
+        display: 'flex',
+        justifyContent: 'center',
+    },
+    emptyStateText: {
+        fontSize: '1.125rem',
+        marginBottom: '1rem',
+    },
+    loading: {
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '400px',
+        fontSize: '1.125rem',
+        color: '#6b7280',
+    },
+    error: {
+        backgroundColor: '#fef2f2',
+        color: '#dc2626',
+        padding: '1rem',
+        borderRadius: '0.5rem',
+        border: '1px solid #fecaca',
+        marginBottom: '1rem',
+    },
+    statsContainer: {
+        display: 'flex',
+        gap: '1rem',
+        marginBottom: '0.5rem',
+    },
+    statItem: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.375rem',
+        fontSize: '0.875rem',
+        color: '#6b7280',
+    },
+};
+
+// Memoized project card component for better performance
+const ProjectCard = React.memo(({ project, onEdit, onDelete, deleteLoading, formatDate }) => {
+    return (
+        <div
+            style={styles.projectCard}
+            onMouseEnter={(e) => {
+                Object.assign(e.currentTarget.style, styles.projectCardHover);
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(0, 0, 0, 0.1)';
+            }}
+        >
+            {/* Thumbnail */}
+            <div style={styles.projectThumbnail}>
+                {project.thumbnail_url && isImageUrl(project.thumbnail_url) ? (
+                    <LazyImage
+                        src={project.thumbnail_url} 
+                        alt={`${project.name} thumbnail`}
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                        }}
+                        onError={(e) => {
+                            const placeholder = e.target.parentElement;
+                            placeholder.innerHTML = `
+                                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af;">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                                        <polyline points="21,15 16,10 5,21"/>
+                                    </svg>
+                                </div>
+                            `;
+                        }}
+                    />
+                ) : project.frame_url && isVideoUrl(project.frame_url) ? (
+                    <VideoThumbnail
+                        videoUrl={project.frame_url}
+                        projectName={project.name}
+                    />
+                ) : (
+                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: '0.5rem'}}>
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+                            <polygon points="23 7 16 12 23 17 23 7"/>
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                        </svg>
+                        <span style={{fontSize: '0.75rem', color: '#9ca3af'}}>No thumbnail</span>
+                    </div>
+                )}
+            </div>
+
+            {/* Content */}
+            <div style={styles.projectContent}>
+                <div style={styles.projectName}>{project.name}</div>
+                <div style={styles.projectDescription}>
+                    {project.description || 'No description provided'}
+                </div>
+                
+                <div style={styles.statsContainer}>
+                    <div style={styles.statItem}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        <span>{project.view_count || 0}</span>
+                    </div>
+                    <div style={styles.statItem}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                        </svg>
+                        <span>{project.like_count || 0}</span>
+                    </div>
+                    <div style={styles.statItem}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z"/>
+                        </svg>
+                        <span>{project.comments?.length || 0}</span>
+                    </div>
+                </div>
+
+                <div style={styles.projectMeta}>
+                    <span>Created: {formatDate(project.created_at)}</span>
+                </div>
+
+                <div style={styles.projectActions}>
+                    <button
+                        style={{ ...styles.actionButton, ...styles.editButton }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(project.project_id);
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
+                    >
+                        Edit Steps
+                    </button>
+                    <button
+                        style={{ ...styles.actionButton, ...styles.deleteButton }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(project.project_id, project.name);
+                        }}
+                        disabled={deleteLoading === project.project_id}
+                        onMouseEnter={(e) => !e.target.disabled && (e.target.style.backgroundColor = '#dc2626')}
+                        onMouseLeave={(e) => !e.target.disabled && (e.target.style.backgroundColor = '#ef4444')}
+                    >
+                        {deleteLoading === project.project_id ? 'Deleting...' : 'Delete'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+});
+
+const MyProjects = () => {
+    const { currentUser } = useAuth();
+    const navigate = useNavigate();
+    const [projects, setProjects] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [deleteLoading, setDeleteLoading] = useState(null);
+
+    const fetchMyProjects = useCallback(async () => {
+        if (!currentUser) {
+            setLoading(false);
+            return;
+        }
+        
+        try {
+            setLoading(true);
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/projects/?current_firebase_uid=${currentUser.uid}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch projects');
+            }
+
+            const data = await response.json();
+            
+            // Debug logging to see the actual response structure
+            console.log('API Response:', data);
+            console.log('Current User UID:', currentUser?.uid);
+            if (data.length > 0) {
+                console.log('First project creator:', data[0].creator);
+            }
+            
+            // Since the API should filter by current user when we pass current_firebase_uid,
+            // we might not need client-side filtering. Let's try without filtering first.
+            setProjects(data);
+        } catch (err) {
+            console.error('Error fetching projects:', err);
+            setError('Failed to load projects');
+        } finally {
+            setLoading(false);
+        }
+    }, [currentUser]);
+
+    useEffect(() => {
+        fetchMyProjects();
+    }, [fetchMyProjects]);
+
+    const handleDeleteProject = async (projectId, projectName) => {
+        if (!window.confirm(`Are you sure you want to delete "${projectName}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            setDeleteLoading(projectId);
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/projects/${projectId}?firebase_uid=${currentUser.uid}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to delete project');
+            }
+
+            // Remove the project from local state
+            setProjects(projects.filter(project => project.project_id !== projectId));
+            alert('Project deleted successfully');
+        } catch (err) {
+            console.error('Error deleting project:', err);
+            alert('Failed to delete project');
+        } finally {
+            setDeleteLoading(null);
+        }
+    };
+
+    const handleEditProject = (projectId) => {
+        navigate(`/annotate`, { state: { projectId } });
+    };
+
+    const formatDate = (dateString) => {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+        });
+    };
+
+    if (loading) {
+        return (
+            <div style={styles.loading}>
+                <div>Loading your projects...</div>
+            </div>
+        );
+    }
+
+    return (
+        <div style={styles.container}>
+            <style>{responsiveGridCSS}</style>
+            <div style={styles.header}>
+                <h1 style={styles.title}>My Projects</h1>
+                <p style={styles.subtitle}>
+                    Manage and view all your instructional projects
+                </p>
+                <button
+                    style={styles.createButton}
+                    onClick={() => navigate('/create')}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#357ABD'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#4A90E2'}
+                >
+                    + Create New Project
+                </button>
+            </div>
+
+            {error && (
+                <div style={styles.error}>
+                    {error}
+                </div>
+            )}
+
+            {projects.length === 0 ? (
+                <div style={styles.emptyState}>
+                    <div style={styles.emptyStateIcon}>
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" style={{color: '#9ca3af'}}>
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"/>
+                        </svg>
+                    </div>
+                    <div style={styles.emptyStateText}>No projects yet</div>
+                    <p>Create your first instructional project to get started!</p>
+                </div>
+            ) : (
+                <div className="projects-grid">
+                    {projects.map((project) => (
+                        <ProjectCard
+                            key={project.project_id}
+                            project={project}
+                            onEdit={handleEditProject}
+                            onDelete={handleDeleteProject}
+                            deleteLoading={deleteLoading}
+                            formatDate={formatDate}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default MyProjects; 

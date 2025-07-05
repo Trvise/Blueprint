@@ -1,7 +1,9 @@
 // CreateStepsHooks.js - Custom hooks and state management for CreateSteps component
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/authContext';
+import { useAuth } from '../../../contexts/authContext';
+import { storage } from '../../../firebase/firebase';
+import { ref as storageRef, getDownloadURL } from 'firebase/storage';
 
 export const useCreateStepsState = () => {
     const location = useLocation();
@@ -71,6 +73,9 @@ export const useCreateStepsState = () => {
     const [isStepLoading, setIsStepLoading] = useState(false); 
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+    
+    // Add missing state for captured annotation frames
+    const [capturedAnnotationFrames, setCapturedAnnotationFrames] = useState({});
     
     // Refs
     const videoRef = useRef(null);
@@ -191,6 +196,10 @@ export const useCreateStepsState = () => {
         successMessage,
         setSuccessMessage,
         
+        // Add missing state for captured annotation frames
+        capturedAnnotationFrames,
+        setCapturedAnnotationFrames,
+        
         // Refs
         videoRef,
         toolImageInputRef,
@@ -214,6 +223,7 @@ export const useCreateStepsEffects = (state) => {
         setActiveVideoUrl,
         setActiveVideoIndex,
         setErrorMessage,
+        setProjectSteps,
         activeVideoUrl,
         videoRef,
         setVideoDimensions
@@ -240,7 +250,115 @@ export const useCreateStepsEffects = (state) => {
             navigate('/login');
             return;
         }
-        if (location.state) {
+
+        const fetchProjectData = async () => {
+            try {
+                console.log('Fetching project data for ID:', projectId);
+                console.log('Current user:', currentUser?.uid);
+                const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/projects/${projectId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch project data');
+                }
+
+                const projectData = await response.json();
+                console.log('Project data from API:', projectData);
+                
+                setProjectName(projectData.name || `Project ${projectId}`);
+                
+                // Now fetch the project's primary video files
+                const stepsResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/projects/${projectId}/steps`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                let videosFromAPI = [];
+                
+                if (stepsResponse.ok) {
+                    const stepsData = await stepsResponse.json();
+                    console.log('Steps data from API:', stepsData);
+                    console.log('Number of steps returned:', stepsData.length);
+                    
+                    // Verify these steps belong to the current project
+                    stepsData.forEach((step, index) => {
+                        console.log(`Step ${index}:`, {
+                            name: step.name,
+                            project_id: step.project_id || 'not specified',
+                            main_video_file: step.main_video_file?.original_filename || 'no video'
+                        });
+                    });
+                    
+                    // Extract unique video files from steps
+                    const videoFilesMap = new Map();
+                    
+                    // Process each step to extract video files
+                    for (const step of stepsData) {
+                        if (step.main_video_file && step.main_video_file.file_key) {
+                            try {
+                                // Convert file_key to proper Firebase Storage URL
+                                console.log('Processing video file_key:', step.main_video_file.file_key);
+                                const fileRef = storageRef(storage, step.main_video_file.file_key);
+                                const downloadURL = await getDownloadURL(fileRef);
+                                console.log('Generated download URL:', downloadURL);
+                                
+                                videoFilesMap.set(step.main_video_file.file_key, {
+                                    name: step.main_video_file.original_filename,
+                                    url: downloadURL,
+                                    path: step.main_video_file.file_key
+                                });
+                            } catch (error) {
+                                console.error('Error getting download URL for video:', step.main_video_file.file_key, error);
+                                // If file_url is available as fallback, use it
+                                if (step.main_video_file.file_url) {
+                                    videoFilesMap.set(step.main_video_file.file_key, {
+                                        name: step.main_video_file.original_filename,
+                                        url: step.main_video_file.file_url,
+                                        path: step.main_video_file.file_key
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    
+                    videosFromAPI = Array.from(videoFilesMap.values());
+                    setUploadedVideos(videosFromAPI);
+                    console.log("Videos from API:", videosFromAPI);
+                    
+                    // Also load the existing steps for editing
+                    if (stepsData.length > 0) {
+                        console.log('Loading existing steps for editing...');
+                        setProjectSteps(stepsData);
+                    }
+                } else {
+                    // Fallback: create a placeholder if we can't get video files
+                    console.warn('Could not fetch steps data, using placeholder');
+                    setUploadedVideos([]);
+                }
+                
+                if (videosFromAPI.length > 0 && videosFromAPI[0].url) {
+                    console.log('Setting active video URL:', videosFromAPI[0].url);
+                    setActiveVideoUrl(videosFromAPI[0].url);
+                    setActiveVideoIndex(0);
+                } else {
+                    console.log('No videos found or first video missing URL:', videosFromAPI);
+                    setErrorMessage("No videos found for this project. Video files may need to be re-uploaded.");
+                }
+                
+            } catch (error) {
+                console.error('Error fetching project data:', error);
+                setErrorMessage("Failed to load project data. Please try again.");
+            }
+        };
+
+        // If we have project data from navigation state, use it
+        if (location.state && location.state.uploadedVideos && location.state.uploadedVideos.length > 0) {
             setProjectName(location.state.projectName || `Project ${projectId}`);
             const videosFromState = location.state.uploadedVideos || [];
             setUploadedVideos(videosFromState);
@@ -251,14 +369,14 @@ export const useCreateStepsEffects = (state) => {
             } else if (videosFromState.length > 0) {
                  console.warn("First video from state is missing a URL:", videosFromState[0]);
                  setErrorMessage("A primary video URL is missing. Please re-upload.");
-            } else {
-                setErrorMessage("No videos found for this project. Please go back and add videos.");
             }
+        } else if (projectId) {
+            // If no navigation state or no videos, fetch from API
+            fetchProjectData();
         } else {
-            setErrorMessage("Project details not found. Please start from project creation.");
-            console.warn("Project details not passed via location state. Consider fetching from backend.");
+            setErrorMessage("Project ID not found. Please start from project creation.");
         }
-    }, [projectId, location.state, currentUser, navigate, setProjectName, setUploadedVideos, setActiveVideoUrl, setActiveVideoIndex, setErrorMessage]);
+    }, [projectId, location.state, currentUser, navigate, setProjectName, setUploadedVideos, setActiveVideoUrl, setActiveVideoIndex, setErrorMessage, setProjectSteps]);
 
     // Handle video metadata loading
     useEffect(() => {

@@ -1,9 +1,11 @@
+// BACKUP FILE - Contains the longer uncommented version that was replaced by the modular version
+// This file contains the complete implementation before it was refactored into modular components
+// Total lines: 1227 - Contains all original functionality including styles, utilities, and component logic
 
-// src/pages/ProjectStepsPage.js
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/authContext'; // Adjust path as needed
-import Annotation from 'react-image-annotation'; 
+import { useAuth } from '../../contexts/authContext';
+import Annotation from 'react-image-annotation';
 import { v4 as uuidv4 } from 'uuid'; 
 import { storage } from '../../firebase/firebase'; // Assuming firebase.js exports storage
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -886,6 +888,7 @@ const ProjectStepsPage = () => {
                         stepPayload.tools.push({
                             name: step.tools.find(t => t.image_file_name === toolFile.name)?.name || 'Unknown Tool',
                             specification: step.tools.find(t => t.image_file_name === toolFile.name)?.specification || '',
+                            image_url: uploaded.url,
                             image_path: uploaded.path,
                         });
                     }
@@ -902,7 +905,8 @@ const ProjectStepsPage = () => {
                         stepPayload.materials.push({
                             name: step.materials.find(m => m.image_file_name === materialFile.name)?.name || 'Unknown Material',
                             specification: step.materials.find(m => m.image_file_name === materialFile.name)?.specification || '',
-                            image_path: uploaded.path
+                            image_url: uploaded.url,
+                            image_path: uploaded.path,
                         });
                      }
                 }
@@ -970,13 +974,11 @@ const ProjectStepsPage = () => {
             console.log("Final API Payload to send to backend:", JSON.stringify(finalApiPayload, null, 2));
     
             const backendApiUrl = `http://localhost:8000/upload_steps`;
-            const token = await currentUser.getIdToken();
     
             const response = await fetch(backendApiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify(finalApiPayload),
             });
