@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/authContext';
 import { doSignOut } from '../../firebase/auth';
-import { AiOutlineMenu, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineFileText, AiOutlineTool, AiOutlineEye, AiOutlineArrowLeft, AiOutlineCheck, AiOutlineUser } from 'react-icons/ai';
+import { AiOutlineMenu, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineEye, AiOutlineArrowLeft, AiOutlineCheck, AiOutlineUser } from 'react-icons/ai';
 import logo from '../../assets/trvise_logo.png';
 
 const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { userLoggedIn, currentUser } = useAuth();
-    const [activeTab, setActiveTab] = useState('video');
+    const [activeTab, setActiveTab] = useState('details');
 
     // Check if we're on the CreateSteps page
     const isCreateStepsPage = location.pathname.includes('/create-steps') || location.pathname.includes('/steps') || location.pathname.includes('/annotate');
@@ -105,18 +105,6 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                 // CreateSteps navigation
                                 <div className="px-0 py-2">
                                     <button
-                                        onClick={() => handleTabClick('video')}
-                                        className={`w-full flex items-center py-4 px-5 text-base font-medium transition-all duration-200 border-l-3 ${
-                                            activeTab === 'video' 
-                                                ? 'text-white bg-gray-700 border-blue-500' 
-                                                : 'text-gray-300 border-transparent hover:bg-gray-700 hover:text-white'
-                                        }`}
-                                    >
-                                        <AiOutlineVideo size={20} />
-                                        {!isCollapsed && <span className="ml-3">Video & Annotations</span>}
-                                    </button>
-                                    
-                                    <button
                                         onClick={() => handleTabClick('details')}
                                         className={`w-full flex items-center py-4 px-5 text-base font-medium transition-all duration-200 border-l-3 ${
                                             activeTab === 'details' 
@@ -124,32 +112,8 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                                 : 'text-gray-300 border-transparent hover:bg-gray-700 hover:text-white'
                                         }`}
                                     >
-                                        <AiOutlineFileText size={20} />
-                                        {!isCollapsed && <span className="ml-3">Step Details</span>}
-                                    </button>
-                                    
-                                    <button
-                                        onClick={() => handleTabClick('materials')}
-                                        className={`w-full flex items-center py-4 px-5 text-base font-medium transition-all duration-200 border-l-3 ${
-                                            activeTab === 'materials' 
-                                                ? 'text-white bg-gray-700 border-blue-500' 
-                                                : 'text-gray-300 border-transparent hover:bg-gray-700 hover:text-white'
-                                        }`}
-                                    >
-                                        <AiOutlineTool size={20} />
-                                        {!isCollapsed && <span className="ml-3">Tools & Materials</span>}
-                                    </button>
-                                    
-                                    <button
-                                        onClick={() => handleTabClick('overview')}
-                                        className={`w-full flex items-center py-4 px-5 text-base font-medium transition-all duration-200 border-l-3 ${
-                                            activeTab === 'overview' 
-                                                ? 'text-white bg-gray-700 border-blue-500' 
-                                                : 'text-gray-300 border-transparent hover:bg-gray-700 hover:text-white'
-                                        }`}
-                                    >
-                                        <AiOutlineEye size={20} />
-                                        {!isCollapsed && <span className="ml-3">Project Overview</span>}
+                                        <AiOutlineVideo size={20} />
+                                        {!isCollapsed && <span className="ml-3">Video Steps</span>}
                                     </button>
                                     
                                     <button

@@ -13,7 +13,7 @@ export const useCreateStepsState = () => {
     const projectId = location.state?.projectId;
     
     // Tab and UI state
-    const [activeTab, setActiveTab] = useState('video');
+    const [activeTab, setActiveTab] = useState('details');
     const [currentStepIndex, setCurrentStepIndex] = useState(-1);
     const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth >= 1024);
     

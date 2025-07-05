@@ -23,45 +23,6 @@ const FinalizeTab = ({
 }) => {
     return (
         <div>
-            {/* Project Summary */}
-            <div style={styles.card}>
-                <h2 style={styles.sectionTitle}>Project Summary</h2>
-                <div style={{marginBottom: '16px'}}>
-                    <p style={{fontSize: '1rem', color: '#4a5568', marginBottom: '8px'}}>
-                        <strong>Total Steps:</strong> {projectSteps.length}
-                    </p>
-                    <p style={{fontSize: '1rem', color: '#4a5568', marginBottom: '8px'}}>
-                        <strong>Buy List Items:</strong> {projectBuyList.length}
-                    </p>
-                </div>
-                
-                {projectSteps.length > 0 && (
-                    <div>
-                        <h3 style={{...styles.subSectionTitle, color: '#2d3748'}}>Steps Overview</h3>
-                        <div style={{maxHeight: '300px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px'}}>
-                            {projectSteps.map((step, index) => (
-                                <div key={step.id} style={{
-                                    ...styles.listItem,
-                                    ...(index === projectSteps.length - 1 ? styles.listItemLast : {})
-                                }}>
-                                    <div>
-                                        <div style={{fontWeight: '600', color: '#2d3748'}}>
-                                            Step {index + 1}: {step.name}
-                                        </div>
-                                        <div style={{fontSize: '0.85rem', color: '#6b7280', marginTop: '4px'}}>
-                                            {step.description}
-                                        </div>
-                                        <div style={{fontSize: '0.8rem', color: '#9ca3af', marginTop: '4px'}}>
-                                            Duration: {formatTime(step.video_start_time_ms / 1000)} - {formatTime(step.video_end_time_ms / 1000)}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-
             {/* Buy List Management */}
             <div style={styles.card}>
                 <h2 style={styles.sectionTitle}>Shopping List</h2>

@@ -9,7 +9,6 @@ import { styles } from './createsteps helpers/CreateStepsStyles';
 import { formatTime, navigateFrame, captureFrameForAnnotation } from './createsteps helpers/CreateStepsUtils';
 
 // Import Tab Components
-import VideoAnnotationTab from '../authoring/VideoAnnotationTab';
 import StepDetailsTab from '../authoring/StepDetailsTab';
 import MaterialsAndFilesTab from '../authoring/MaterialsAndFilesTab';
 import ProjectOverviewTab from '../authoring/ProjectOverviewTab';
@@ -55,12 +54,7 @@ const ProjectStepsPage = () => {
         currentStepValidationQuestion,
         currentStepValidationAnswer,
         // Annotation data
-        frameForAnnotation,
-        frameTimestampMs,
         currentStepAnnotations,
-        currentAnnotationTool,
-        setCurrentAnnotationTool,
-        videoDimensions,
         setErrorMessage,
         // Tools data
         currentStepTools,
@@ -148,13 +142,11 @@ const ProjectStepsPage = () => {
     }
 
     return (
-        <div style={{...styles.pageContainer, padding: 0, margin: 0}}>
-            {/* Main content area */}
-            <div style={{...styles.mainContent, width: '100%'}}>
+        <div style={styles.videoTimelineContainer}>
                 {/* Header */}
             <header style={styles.header}>
                 <h1 style={styles.pageTitle}>
-                    Authoring Steps for: <span style={styles.projectNameHighlight}>{projectName || `Project ID: ${projectId}`}</span>
+                    Authoring: <span style={styles.projectNameHighlight}>{projectName || `Project ${projectId}`}</span>
                 </h1>
                     <div style={{display: 'flex', gap: '12px', alignItems: 'center'}}>
                         {currentStepIndex >= 0 && (
@@ -165,90 +157,75 @@ const ProjectStepsPage = () => {
                     </div>
             </header>
 
-                {/* Timeline */}
-                <div style={styles.timelineContainer}>
-                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'}}>
-                        <h3 style={{fontSize: '1.1rem', fontWeight: '600', color: '#2d3748'}}>Project Timeline</h3>
+            {/* Error and success messages */}
+            {errorMessage && <div role="alert" style={styles.errorMessage}>{errorMessage}</div>}
+            {successMessage && <div role="alert" style={styles.successMessage} onClick={()=>setSuccessMessage('')}>{successMessage} (click to dismiss)</div>}
+
+            {/* Main content area - conditional layout */}
+            {activeTab === 'finalize' ? (
+                // Finalize page - dedicated layout
+                <div style={styles.finalizeContainer}>
+                    <FinalizeTab 
+                        projectSteps={projectSteps}
+                        projectBuyList={projectBuyList}
+                        buyListItemName={buyListItemName}
+                        setBuyListItemName={setBuyListItemName}
+                        buyListItemQty={buyListItemQty}
+                        setBuyListItemQty={setBuyListItemQty}
+                        buyListItemSpec={buyListItemSpec}
+                        setBuyListItemSpec={setBuyListItemSpec}
+                        buyListItemLink={buyListItemLink}
+                        setBuyListItemLink={setBuyListItemLink}
+                        buyListItemImageFile={buyListItemImageFile}
+                        setBuyListItemImageFile={setBuyListItemImageFile}
+                        buyListImageInputRef={buyListImageInputRef}
+                        handleAddBuyListItem={enhancedHandlers.handleAddBuyListItem}
+                        removeBuyListItem={enhancedHandlers.removeBuyListItem}
+                        handleFinishProject={enhancedHandlers.handleFinishProject}
+                        isLoading={isLoading}
+                        formatTime={formatTime}
+                        styles={styles}
+                    />
+                </div>
+            ) : (
+                // Regular step authoring layout
+                <div style={styles.videoTimelineLayout}>
+
+                {/* Left side - Tabs and controls (2/5ths) */}
+                <div style={styles.leftPanel}>
+                    {/* Tab navigation */}
+                    <div style={styles.tabNavigation}>
                         <button 
-                            onClick={stepActions.addNewStep}
+                            onClick={() => state.setActiveTab('details')}
                             style={{
-                                ...styles.button,
-                                ...styles.buttonPrimary,
-                                fontSize: '0.9rem',
-                                padding: '8px 16px'
+                                ...styles.tabButton,
+                                ...(activeTab === 'details' ? styles.tabButtonActive : {})
                             }}
                         >
-                            + Add Step
+                            Details
                                         </button>
-                                </div>
-                    
-                    <div style={styles.timeline}>
-                        {projectSteps.map((step, index) => (
-                            <div
-                                key={step.id || `step-${index}`}
-                                onClick={() => stepActions.loadStepForEditing(step, index)}
+                        <button 
+                            onClick={() => state.setActiveTab('materials')}
                                 style={{
-                                    ...styles.stepCard,
-                                    ...(currentStepIndex === index ? styles.stepCardActive : {})
-                                }}
-                            >
-                                <div style={{fontWeight: '600', marginBottom: '4px', color: '#2d3748'}}>
-                                    Step {index + 1}
-                                    </div>
-                                <div style={{fontSize: '0.8rem', color: '#6b7280', marginBottom: '4px'}}>
-                                    {step.name}
-                                </div>
-                                <div style={{fontSize: '0.7rem', color: '#9ca3af'}}>
-                                    Video {step.associated_video_index + 1}
-                        </div>
-                                <div style={{fontSize: '0.7rem', color: '#9ca3af'}}>
-                                    {formatTime(step.video_start_time_ms / 1000)} - {formatTime(step.video_end_time_ms / 1000)}
-                            </div>
-                                    </div>
-                                ))}
-                        
-                        {/* Empty step card for adding new step */}
-                        <div
-                            onClick={stepActions.addNewStep}
-                            style={styles.stepCardEmpty}
+                                ...styles.tabButton,
+                                ...(activeTab === 'materials' ? styles.tabButtonActive : {})
+                            }}
                         >
-                            + Add New Step
+                            Materials
+                        </button>
+                        <button 
+                            onClick={() => state.setActiveTab('overview')}
+                            style={{
+                                ...styles.tabButton,
+                                ...(activeTab === 'overview' ? styles.tabButtonActive : {})
+                            }}
+                        >
+                            Overview
+                        </button>
                             </div>
-                                </div>
-                            </div>
-
-                {/* Error and success messages */}
-                {errorMessage && <div role="alert" style={styles.errorMessage}>{errorMessage}</div>}
-                {successMessage && <div role="alert" style={styles.successMessage} onClick={()=>setSuccessMessage('')}>{successMessage} (click to dismiss)</div>}
 
                 {/* Tab content */}
-                <div style={styles.contentArea}>
-                    <div style={styles.tabContent}>
-                        {activeTab === 'video' && (
-                            <VideoAnnotationTab 
-                                uploadedVideos={uploadedVideos}
-                                activeVideoIndex={activeVideoIndex}
-                                activeVideoUrl={activeVideoUrl}
-                                videoRef={videoRef}
-                                videoDimensions={videoDimensions}
-                                handleVideoSelection={enhancedHandlers.handleVideoSelection}
-                                navigateFrame={enhancedHandlers.navigateFrame}
-                                captureFrameForAnnotation={enhancedHandlers.captureFrameForAnnotation}
-                                frameForAnnotation={frameForAnnotation}
-                                frameTimestampMs={frameTimestampMs}
-                                currentStepAnnotations={currentStepAnnotations}
-                                currentAnnotationTool={currentAnnotationTool}
-                                setCurrentAnnotationTool={setCurrentAnnotationTool}
-                                handleAnnotationSubmit={enhancedHandlers.handleAnnotationSubmit}
-                                formatTime={formatTime}
-                                currentStepStartTime={currentStepStartTime}
-                                currentStepEndTime={currentStepEndTime}
-                                markTime={enhancedHandlers.markTime}
-                                styles={styles}
-                                setErrorMessage={setErrorMessage}
-                            />
-                        )}
-
+                    <div style={styles.leftPanelContent}>
                         {activeTab === 'details' && (
                             <StepDetailsTab 
                                 currentStepName={currentStepName}
@@ -316,43 +293,251 @@ const ProjectStepsPage = () => {
                             />
                         )}
 
-                        {activeTab === 'finalize' && (
-                            <FinalizeTab 
-                                projectSteps={projectSteps}
-                                projectBuyList={projectBuyList}
-                                buyListItemName={buyListItemName}
-                                setBuyListItemName={setBuyListItemName}
-                                buyListItemQty={buyListItemQty}
-                                setBuyListItemQty={setBuyListItemQty}
-                                buyListItemSpec={buyListItemSpec}
-                                setBuyListItemSpec={setBuyListItemSpec}
-                                buyListItemLink={buyListItemLink}
-                                setBuyListItemLink={setBuyListItemLink}
-                                buyListItemImageFile={buyListItemImageFile}
-                                setBuyListItemImageFile={setBuyListItemImageFile}
-                                buyListImageInputRef={buyListImageInputRef}
-                                handleAddBuyListItem={enhancedHandlers.handleAddBuyListItem}
-                                removeBuyListItem={enhancedHandlers.removeBuyListItem}
-                                handleFinishProject={enhancedHandlers.handleFinishProject}
-                                isLoading={isLoading}
-                                formatTime={formatTime}
-                                styles={styles}
-                            />
-                        )}
+
                     </div>
+                </div>
+
+                {/* Right side - Video and steps (3/5ths) */}
+                <div style={styles.rightPanel}>
+                    
+                    {/* Video section */}
+                    <div style={styles.videoSection}>
+                        <div style={styles.videoContainer}>
+                            {uploadedVideos.length > 0 && activeVideoUrl ? (
+                                <div>
+                                    {/* Video selection */}
+                                    {uploadedVideos.length > 1 && (
+                                        <div style={styles.videoSelection}>
+                                            {uploadedVideos.map((video, index) => (
+                                                <button 
+                                                    key={video.path || index} 
+                                                    onClick={() => enhancedHandlers.handleVideoSelection(index)}
+                                                    style={{
+                                                        ...styles.videoSelectButton,
+                                                        ...(activeVideoIndex === index ? styles.videoSelectButtonActive : {})
+                                                    }}
+                                                >
+                                                    Video {index + 1}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                    
+                                    {/* Video player */}
+                                    <video 
+                                        ref={videoRef} 
+                                        key={activeVideoUrl} 
+                                        controls 
+                                        src={activeVideoUrl} 
+                                        crossOrigin="anonymous"
+                                        style={styles.videoPlayer}
+                                        onError={(e) => { 
+                                            console.error("Video Error:", e);
+                                            console.error("Failed video URL:", activeVideoUrl);
+                                            setErrorMessage(`Error loading video: ${uploadedVideos[activeVideoIndex]?.name || 'Unknown video'}`); 
+                                        }}
+                                    />
+                                    
+                                    {/* Timeline under video */}
+                                    <div style={styles.videoTimelineUnderVideo}>
+                                        <div style={styles.videoTimelineTrack} onClick={(e) => {
+                                            if (videoRef.current) {
+                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                const clickX = e.clientX - rect.left;
+                                                const timelineWidth = rect.width;
+                                                const videoDuration = videoRef.current.duration || 0;
+                                                const clickedTime = (clickX / timelineWidth) * videoDuration;
+                                                videoRef.current.currentTime = clickedTime;
+                                            }
+                                        }}>
+                                            {/* Background track */}
+                                            <div style={styles.timelineBackground}></div>
+                                            
+                                            {/* Current time indicator */}
+                                            <div 
+                                                style={{
+                                                    ...styles.currentTimeIndicator,
+                                                    left: `${videoRef.current ? ((videoRef.current.currentTime || 0) / (videoRef.current.duration || 1)) * 100 : 0}%`
+                                                }}
+                                            ></div>
+                                            
+                                            {/* Existing steps on timeline */}
+                                            {projectSteps.map((step, index) => (
+                                                <div
+                                                    key={step.id || index}
+                                                    style={{
+                                                        ...styles.timelineStep,
+                                                        left: `${videoRef.current ? ((step.video_start_time_ms / 1000) / (videoRef.current.duration || 1)) * 100 : 0}%`,
+                                                        width: `${videoRef.current ? (((step.video_end_time_ms - step.video_start_time_ms) / 1000) / (videoRef.current.duration || 1)) * 100 : 0}%`
+                                                    }}
+                                                    title={`Step ${index + 1}: ${step.name}`}
+                                                >
+                                                    <div style={styles.timelineStepLabel}>
+                                                        {index + 1}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            
+                                            {/* Start time marker */}
+                                            {currentStepStartTime !== null && (
+                                                <div
+                                                    style={{
+                                                        ...styles.timelineMarker,
+                                                        ...styles.startMarker,
+                                                        left: `${videoRef.current ? (currentStepStartTime / (videoRef.current.duration || 1)) * 100 : 0}%`
+                                                    }}
+                                                >
+                                                    <div style={styles.markerHandle}>S</div>
+                                                    <div style={styles.markerTime}>{formatTime(currentStepStartTime)}</div>
+                                                </div>
+                                            )}
+                                            
+                                            {/* End time marker */}
+                                            {currentStepEndTime !== null && (
+                                                <div
+                                                    style={{
+                                                        ...styles.timelineMarker,
+                                                        ...styles.endMarker,
+                                                        left: `${videoRef.current ? (currentStepEndTime / (videoRef.current.duration || 1)) * 100 : 0}%`
+                                                    }}
+                                                >
+                                                    <div style={styles.markerHandle}>E</div>
+                                                    <div style={styles.markerTime}>{formatTime(currentStepEndTime)}</div>
+                    </div>
+                                            )}
+                                            
+                                            {/* Selection area between start and end */}
+                                            {currentStepStartTime !== null && currentStepEndTime !== null && (
+                                                <div
+                                                    style={{
+                                                        ...styles.selectionArea,
+                                                        left: `${videoRef.current ? (currentStepStartTime / (videoRef.current.duration || 1)) * 100 : 0}%`,
+                                                        width: `${videoRef.current ? ((currentStepEndTime - currentStepStartTime) / (videoRef.current.duration || 1)) * 100 : 0}%`
+                                                    }}
+                                                ></div>
+                                            )}
+                                        </div>
+                                        
+                                        {/* Timeline controls */}
+                                        <div style={styles.videoTimelineControls}>
+                                            <button
+                                                onClick={() => {
+                                                    if (videoRef.current) {
+                                                        state.setCurrentStepStartTime(videoRef.current.currentTime);
+                                                    }
+                                                }}
+                                                style={{...styles.button, ...styles.buttonPrimary, fontSize: '0.8rem', padding: '6px 12px'}}
+                                            >
+                                                Mark Start
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    if (videoRef.current) {
+                                                        const currentTime = videoRef.current.currentTime;
+                                                        if (currentStepStartTime && currentTime <= currentStepStartTime) {
+                                                            setErrorMessage("End time must be after start time");
+                                                            return;
+                                                        }
+                                                        state.setCurrentStepEndTime(currentTime);
+                                                    }
+                                                }}
+                                                style={{...styles.button, ...styles.buttonSecondary, fontSize: '0.8rem', padding: '6px 12px'}}
+                                            >
+                                                Mark End
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    state.setCurrentStepStartTime(null);
+                                                    state.setCurrentStepEndTime(null);
+                                                }}
+                                                style={{...styles.button, backgroundColor: '#dc3545', color: 'white', fontSize: '0.8rem', padding: '6px 12px'}}
+                                            >
+                                                Clear
+                                            </button>
                 </div>
             </div>
             
-            {/* Floating action buttons */}
-            <div style={styles.actionButtons}>
+                                    {/* Video controls */}
+                                    <div style={styles.videoControls}>
+                                        <button 
+                                            onClick={() => enhancedHandlers.navigateFrame('backward')} 
+                                            style={{...styles.button, ...styles.buttonSecondarySm}}
+                                        >
+                                            ◀ Frame
+                                        </button>
+                                        <button 
+                                            onClick={() => enhancedHandlers.navigateFrame('forward')} 
+                                            style={{...styles.button, ...styles.buttonSecondarySm}}
+                                        >
+                                            Frame ▶
+                                        </button>
+                                        <button 
+                                            onClick={enhancedHandlers.captureFrameForAnnotation} 
+                                            style={{...styles.button, backgroundColor: '#3498db', color: 'white'}}
+                                        >
+                                            Capture Frame
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div style={styles.noVideoMessage}>
+                                    <p>No videos available</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Steps section */}
+                    <div style={styles.stepsSection}>
+                        <div style={styles.stepsSectionHeader}>
+                            <h3 style={styles.stepsSectionTitle}>Project Steps</h3>
+                            <button 
+                                onClick={stepActions.addNewStep}
+                                style={{...styles.button, ...styles.buttonPrimary}}
+                            >
+                                + Add Step
+                            </button>
+                        </div>
+                        
+                        <div style={styles.stepsList}>
+                            {projectSteps.map((step, index) => (
+                                <div
+                                    key={step.id || `step-${index}`}
+                                    onClick={() => stepActions.loadStepForEditing(step, index)}
+                                    style={{
+                                        ...styles.stepItem,
+                                        ...(currentStepIndex === index ? styles.stepItemActive : {})
+                                    }}
+                                >
+                                    <div style={styles.stepItemHeader}>
+                                        <span style={styles.stepItemNumber}>Step {index + 1}</span>
+                                        <span style={styles.stepItemTime}>
+                                            {formatTime(step.video_start_time_ms / 1000)} - {formatTime(step.video_end_time_ms / 1000)}
+                                        </span>
+                                    </div>
+                                    <div style={styles.stepItemName}>{step.name}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            )}
+            
+            {/* Floating action button */}
+            <div style={styles.floatingActionButton}>
                 {currentStepIndex >= 0 && (
                     <button 
                         onClick={enhancedHandlers.handleAddStep}
                         disabled={isStepLoading}
                         style={{
-                            ...styles.floatingButton,
-                            ...styles.saveButton,
-                            ...(isStepLoading && styles.buttonDisabled)
+                            ...styles.button,
+                            ...styles.buttonPrimary,
+                            ...(isStepLoading && styles.buttonDisabled),
+                            padding: '12px 24px',
+                            fontSize: '1rem',
+                            borderRadius: '25px',
+                            boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)'
                         }}
                     >
                         {isStepLoading ? 'Saving...' : 'Save Step'}

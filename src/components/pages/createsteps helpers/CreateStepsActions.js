@@ -93,7 +93,6 @@ export const createStepActions = (state) => {
     // Function to add new step
     const addNewStep = () => {
         clearCurrentStepForm();
-        setCurrentStepIndex(projectSteps.length);
     };
 
     const handleAddStep = async (stepData) => {
@@ -174,9 +173,14 @@ export const createStepActions = (state) => {
             setSuccessMessage(`Step "${currentStepName}" updated successfully!`);
         } else {
             // Add new step
-            setProjectSteps(prevSteps => [...prevSteps, newStepData]);
-            setCurrentStepIndex(projectSteps.length);
+            setProjectSteps(prevSteps => {
+                const newSteps = [...prevSteps, newStepData];
+                setCurrentStepIndex(-1); // Reset to allow creating new step
+                return newSteps;
+            });
             setSuccessMessage(`Step "${currentStepName}" added successfully!`);
+            // Clear form for next step
+            clearCurrentStepForm();
         }
 
         console.log("Step data:", newStepData);
