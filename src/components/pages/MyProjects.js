@@ -1,151 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/authContext';
 import { useNavigate } from 'react-router-dom';
-
-// Helper functions to check URL types
-const isImageUrl = (url) => {
-    if (!url) return false;
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
-    const lowerUrl = url.toLowerCase();
-    return imageExtensions.some(ext => lowerUrl.includes(ext));
-};
-
-const isVideoUrl = (url) => {
-    if (!url) return false;
-    const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv'];
-    const lowerUrl = url.toLowerCase();
-    return videoExtensions.some(ext => lowerUrl.includes(ext));
-};
-
-// Video thumbnail component that only loads metadata
-const VideoThumbnail = ({ videoUrl, projectName }) => {
-    const [isInView, setIsInView] = useState(false);
-    const [hasError, setHasError] = useState(false);
-    const videoRef = useRef();
-
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) {
-                    setIsInView(true);
-                    observer.disconnect();
-                }
-            },
-            { threshold: 0.1 }
-        );
-
-        if (videoRef.current) {
-            observer.observe(videoRef.current);
-        }
-
-        return () => observer.disconnect();
-    }, []);
-
-    return (
-        <div ref={videoRef} style={{ width: '100%', height: '100%' }}>
-            {isInView && !hasError ? (
-                <video
-                    src={videoUrl}
-                    style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                    }}
-                    preload="metadata"
-                    muted
-                    onError={() => setHasError(true)}
-                    onLoadedMetadata={(e) => {
-                        // Set video to first frame
-                        e.target.currentTime = 0.1;
-                    }}
-                />
-            ) : hasError ? (
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    flexDirection: 'column',
-                    gap: '0.5rem',
-                    color: '#9ca3af'
-                }}>
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-                        <polygon points="23 7 16 12 23 17 23 7"/>
-                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                    </svg>
-                    <span style={{fontSize: '0.75rem'}}>Video unavailable</span>
-                </div>
-            ) : (
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    backgroundColor: '#f3f4f6',
-                    color: '#9ca3af'
-                }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-                        <polygon points="23 7 16 12 23 17 23 7"/>
-                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                    </svg>
-                </div>
-            )}
-        </div>
-    );
-};
-
-// Lazy loading component for images
-const LazyImage = ({ src, alt, style, onError }) => {
-    const [isInView, setIsInView] = useState(false);
-    const imgRef = useRef();
-
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) {
-                    setIsInView(true);
-                    observer.disconnect();
-                }
-            },
-            { threshold: 0.1 }
-        );
-
-        if (imgRef.current) {
-            observer.observe(imgRef.current);
-        }
-
-        return () => observer.disconnect();
-    }, []);
-
-    return (
-        <div ref={imgRef} style={style}>
-            {isInView ? (
-                <img
-                    src={src}
-                    alt={alt}
-                    style={style}
-                    onError={onError}
-                    loading="lazy"
-                />
-            ) : (
-                <div style={{
-                    ...style,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: '#f3f4f6',
-                    color: '#9ca3af'
-                }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-                        <circle cx="12" cy="12" r="3"/>
-                        <path d="M12 1v6m0 6v6"/>
-                        <path d="m21 12-6-6-6 6-6-6"/>
-                    </svg>
-                </div>
-            )}
-        </div>
-    );
-};
+import { isImageUrl, isVideoUrl, formatDate, getApiUrl, createApiCall } from './createsteps helpers/CreateStepsUtils';
+import { LazyImage, VideoThumbnail } from './createsteps helpers/CommonComponents';
 
 // Add responsive CSS for the grid
 const responsiveGridCSS = `
@@ -455,18 +312,7 @@ const MyProjects = () => {
         
         try {
             setLoading(true);
-            const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/projects/?current_firebase_uid=${currentUser.uid}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch projects');
-            }
-
-            const data = await response.json();
+            const data = await createApiCall(`/projects/?current_firebase_uid=${currentUser.uid}`);
             
             // Debug logging to see the actual response structure
             console.log('API Response:', data);
@@ -497,16 +343,9 @@ const MyProjects = () => {
 
         try {
             setDeleteLoading(projectId);
-            const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/projects/${projectId}?firebase_uid=${currentUser.uid}`, {
+            await createApiCall(`/projects/${projectId}?firebase_uid=${currentUser.uid}`, {
                 method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
             });
-
-            if (!response.ok) {
-                throw new Error('Failed to delete project');
-            }
 
             // Remove the project from local state
             setProjects(projects.filter(project => project.project_id !== projectId));
@@ -523,13 +362,7 @@ const MyProjects = () => {
         navigate(`/annotate`, { state: { projectId } });
     };
 
-    const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        });
-    };
+
 
     if (loading) {
         return (

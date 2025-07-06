@@ -1,4 +1,5 @@
 import React from 'react';
+import { COMPONENTS, TYPOGRAPHY, COLORS, LAYOUT, getListItemBorder } from './shared/styles';
 
 const ToolsTab = ({
     currentStepTools,
@@ -15,7 +16,7 @@ const ToolsTab = ({
 }) => (
     <div style={styles.card}>
         <h2 style={styles.sectionTitle}>Tools Required</h2>
-        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '8px'}}>
+        <div style={COMPONENTS.gridTwoColumns}>
             <input 
                 type="text" 
                 value={currentStepToolName} 
@@ -31,7 +32,7 @@ const ToolsTab = ({
                 style={styles.inputField}
             />
         </div>
-        <div>
+        <div style={{marginTop: LAYOUT.inputSpacing}}>
             <label style={{...styles.inputLabel, fontSize: '0.8rem'}}>Tool Image (Optional)</label>
             <input 
                 type="file" 
@@ -43,26 +44,49 @@ const ToolsTab = ({
         </div>
         <button 
             onClick={handleAddToolToCurrentStep} 
-            style={{...styles.button, ...styles.buttonSecondarySm, marginTop: '8px'}}
+            style={{...styles.button, ...styles.buttonSecondarySm, marginTop: LAYOUT.inputSpacing}}
         >
             Add Tool to Step
         </button>
+        
         {currentStepTools.length > 0 && (
-            <div style={{marginTop: '12px'}}>
-                <h4 style={{fontSize: '0.9rem', fontWeight: '500'}}>Added Tools:</h4>
-                <ul style={{listStyle: 'disc', paddingLeft: '20px', marginTop: '4px', fontSize: '0.9rem'}}>
-                    {currentStepTools.map(tool => (
-                        <li key={tool.id} style={styles.listItem}>
-                            <span>
-                                {tool.name} ({tool.specification || 'No spec'}) 
-                                {tool.imageFile && `(${tool.imageFile.name.substring(0,15)}...)`}
-                            </span>
-                            <button onClick={() => removeToolFromCurrentStep(tool.id)} style={styles.removeButton}>
+            <div style={{marginTop: LAYOUT.sectionSpacing}}>
+                <h4 style={TYPOGRAPHY.listTitle}>Added Tools ({currentStepTools.length}):</h4>
+                <div style={COMPONENTS.fileList}>
+                    {currentStepTools.map((tool, index) => (
+                        <div 
+                            key={tool.id}
+                            style={{
+                                ...COMPONENTS.fileListItem,
+                                ...getListItemBorder(index, currentStepTools.length)
+                            }}
+                        >
+                            <div>
+                                <p style={COMPONENTS.fileListItemTitle}>
+                                    {tool.name}
+                                </p>
+                                <p style={COMPONENTS.fileListItemSubtext}>
+                                    {tool.specification ? `Specification: ${tool.specification}` : 'No specification'}
+                                    {tool.imageFile && ` • Image: ${tool.imageFile.name.substring(0, 20)}...`}
+                                </p>
+                            </div>
+                            <button 
+                                onClick={() => removeToolFromCurrentStep(tool.id)} 
+                                style={COMPONENTS.removeButton}
+                            >
                                 Remove
                             </button>
-                        </li>
+                        </div>
                     ))}
-                </ul>
+                </div>
+            </div>
+        )}
+        
+        {currentStepTools.length === 0 && (
+            <div style={COMPONENTS.emptyState}>
+                <p style={COMPONENTS.emptyStateText}>
+                    No tools added yet. Add tools required to complete this step.
+                </p>
             </div>
         )}
     </div>

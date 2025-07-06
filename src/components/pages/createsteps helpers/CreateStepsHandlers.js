@@ -1,6 +1,6 @@
 // CreateStepsHandlers.js - Handler functions for CreateSteps component
 import { v4 as uuidv4 } from 'uuid';
-import { uploadFileToFirebase } from './CreateStepsUtils';
+import { uploadFileToFirebase, getApiUrl } from './CreateStepsUtils';
 
 export const createStepHandlers = (
     // State setters and dependencies
@@ -105,20 +105,32 @@ export const createStepHandlers = (
     const handleAnnotationSubmit = (newAnnotationFromLibrary) => {
         const { geometry, data: libraryData } = newAnnotationFromLibrary; 
         if (!geometry) { setErrorMessage("Annotation missing geometry."); return; }
+        
+        // Store coordinates in the display format (0-100 scale) for consistency
+        // This is the format expected by react-image-annotation library
         const customDataForAnnotation = {
             id: uuidv4(), 
             text: libraryData?.text || `Annotation ${currentStepAnnotations.filter(a => a.data.frame_timestamp_ms === frameTimestampMs).length + 1}`, 
-            frame_timestamp_ms: frameTimestampMs, 
-            normalized_geometry: {
-                x: geometry.x / 100, y: geometry.y / 100,
-                width: geometry.width / 100, height: geometry.height / 100,
-                type: geometry.type 
-            }
+            frame_timestamp_ms: frameTimestampMs,
+            // Store coordinates in percentage format (0-100 scale)
+            x: geometry.x,
+            y: geometry.y, 
+            width: geometry.width,
+            height: geometry.height,
+            type: geometry.type
         };
-        const annotationToAdd = { geometry: geometry, data: customDataForAnnotation };
-        console.log(annotationToAdd);
-        console.log(videoDimensions.width, videoDimensions.height);
-        console.log(geometry.x, geometry.y, geometry.width, geometry.height);
+        
+        // Store annotation with geometry in the same format as display
+        const annotationToAdd = { 
+            geometry: geometry, 
+            data: customDataForAnnotation 
+        };
+        
+        console.log('Adding annotation with coordinates:', {
+            geometry: geometry,
+            data: customDataForAnnotation
+        });
+        
         setCurrentStepAnnotations(prev => [...prev, annotationToAdd]);
         setCurrentAnnotationTool({}); 
     };
@@ -295,7 +307,13 @@ export const createStepHandlers = (
                         frame_timestamp_ms: ann.data.frame_timestamp_ms,
                         annotation_type: ann.geometry.type,
                         component_name: ann.data.text,
-                        data: ann.data.normalized_geometry
+                        data: {
+                            x: ann.data.x / 100,  // Convert from percentage to normalized (0-1)
+                            y: ann.data.y / 100,
+                            width: ann.data.width / 100,
+                            height: ann.data.height / 100,
+                            type: ann.data.type
+                        }
                     })),
                     tools: [],
                     materials: [],
@@ -402,7 +420,7 @@ export const createStepHandlers = (
             console.log("Final API Payload to send to backend:", JSON.stringify(finalApiPayload, null, 2));
 
             // TODO: Replace with your actual API endpoint for finalizing project steps
-            const backendApiUrl = `http://localhost:8000/upload_steps`; 
+            const backendApiUrl = `${getApiUrl()}/upload_steps`; 
             const token = currentUser.uid;
 
             const response = await fetch(backendApiUrl, {
@@ -446,7 +464,7 @@ export const createStepHandlers = (
         handleResultImageChange,
         handleAddBuyListItem,
         removeBuyListItem,
-        handleAddStep,
+        // handleAddStep, // Removed - using the one from CreateStepsActions instead
         handleFinishProject
     };
 }; 

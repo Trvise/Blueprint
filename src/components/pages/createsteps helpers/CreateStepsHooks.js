@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../contexts/authContext';
 import { storage } from '../../../firebase/firebase';
 import { ref as storageRef, getDownloadURL } from 'firebase/storage';
+import { reconstructCapturedAnnotationFrames, getApiUrl } from './CreateStepsUtils';
 
 export const useCreateStepsState = () => {
     const location = useLocation();
@@ -76,6 +77,9 @@ export const useCreateStepsState = () => {
     
     // Add missing state for captured annotation frames
     const [capturedAnnotationFrames, setCapturedAnnotationFrames] = useState({});
+    
+    // Annotation popup state
+    const [isAnnotationPopupOpen, setIsAnnotationPopupOpen] = useState(false);
     
     // Refs
     const videoRef = useRef(null);
@@ -200,6 +204,10 @@ export const useCreateStepsState = () => {
         capturedAnnotationFrames,
         setCapturedAnnotationFrames,
         
+        // Annotation popup state
+        isAnnotationPopupOpen,
+        setIsAnnotationPopupOpen,
+        
         // Refs
         videoRef,
         toolImageInputRef,
@@ -226,7 +234,9 @@ export const useCreateStepsEffects = (state) => {
         setProjectSteps,
         activeVideoUrl,
         videoRef,
-        setVideoDimensions
+        setVideoDimensions,
+        setCapturedAnnotationFrames,
+        setSuccessMessage
     } = state;
 
     // Expose setActiveTab globally for sidebar navigation
@@ -255,7 +265,7 @@ export const useCreateStepsEffects = (state) => {
             try {
                 console.log('Fetching project data for ID:', projectId);
                 console.log('Current user:', currentUser?.uid);
-                const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/projects/${projectId}`, {
+                const response = await fetch(`${getApiUrl()}/projects/${projectId}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -272,7 +282,7 @@ export const useCreateStepsEffects = (state) => {
                 setProjectName(projectData.name || `Project ${projectId}`);
                 
                 // Now fetch the project's primary video files
-                const stepsResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/projects/${projectId}/steps`, {
+                const stepsResponse = await fetch(`${getApiUrl()}/projects/${projectId}/steps`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -335,6 +345,19 @@ export const useCreateStepsEffects = (state) => {
                     if (stepsData.length > 0) {
                         console.log('Loading existing steps for editing...');
                         setProjectSteps(stepsData);
+                        
+                        // Reconstruct annotation frames for editing
+                        try {
+                            await reconstructCapturedAnnotationFrames(
+                                stepsData, 
+                                setCapturedAnnotationFrames, 
+                                setSuccessMessage
+                            );
+                        } catch (error) {
+                            console.error('Error reconstructing annotation frames:', error);
+                            setSuccessMessage('Project loaded. Annotation frames could not be loaded - you can capture new ones.');
+                            setTimeout(() => setSuccessMessage(''), 3000);
+                        }
                     }
                 } else {
                     // Fallback: create a placeholder if we can't get video files
@@ -376,7 +399,7 @@ export const useCreateStepsEffects = (state) => {
         } else {
             setErrorMessage("Project ID not found. Please start from project creation.");
         }
-    }, [projectId, location.state, currentUser, navigate, setProjectName, setUploadedVideos, setActiveVideoUrl, setActiveVideoIndex, setErrorMessage, setProjectSteps]);
+    }, [projectId, location.state, currentUser, navigate, setProjectName, setUploadedVideos, setActiveVideoUrl, setActiveVideoIndex, setErrorMessage, setProjectSteps, setCapturedAnnotationFrames, setSuccessMessage]);
 
     // Handle video metadata loading
     useEffect(() => {

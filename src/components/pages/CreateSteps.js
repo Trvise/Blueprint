@@ -10,9 +10,13 @@ import { formatTime, navigateFrame, captureFrameForAnnotation } from './createst
 
 // Import Tab Components
 import StepDetailsTab from '../authoring/StepDetailsTab';
-import MaterialsAndFilesTab from '../authoring/MaterialsAndFilesTab';
+import MaterialsAndToolsTab from '../authoring/MaterialsAndFilesTab';
+import FilesTab from '../authoring/FilesTab';
+import ResultTab from '../authoring/ResultTab';
 import ProjectOverviewTab from '../authoring/ProjectOverviewTab';
+import SignOffTab from '../authoring/SignOffTab';
 import FinalizeTab from '../authoring/FinalizeTab';
+import AnnotationPopup from '../authoring/AnnotationPopup';
 
 const ProjectStepsPage = () => {
     // Initialize state using custom hook
@@ -98,6 +102,9 @@ const ProjectStepsPage = () => {
         capturedAnnotationFrames,
         setCapturedAnnotationFrames,
         setSuccessMessage: setSuccessMessageState,
+        // Annotation popup state
+        isAnnotationPopupOpen,
+        setIsAnnotationPopupOpen,
         location,
         navigate
     } = state;
@@ -115,7 +122,8 @@ const ProjectStepsPage = () => {
             state.setErrorMessage,
             setCapturedAnnotationFrames,
             setSuccessMessageState,
-            formatTime
+            formatTime,
+            setIsAnnotationPopupOpen
         ),
         handleAddStep: () => stepActions.handleAddStep({
             currentStepName,
@@ -132,7 +140,88 @@ const ProjectStepsPage = () => {
             currentStepValidationAnswer,
             currentStepResultImageFile
         }),
-        handleFinishProject: () => stepActions.handleFinishProject(projectName, capturedAnnotationFrames)
+        handleFinishProject: () => stepActions.handleFinishProject(projectName, capturedAnnotationFrames),
+        removeAnnotation: (annotationId) => {
+            state.setCurrentStepAnnotations(prev => 
+                prev.filter(ann => {
+                    // Handle both database structure and local structure
+                    const id = ann.annotation_id || ann.data?.id;
+                    return id !== annotationId;
+                })
+            );
+        },
+        onEditStep: (step, index) => {
+            stepActions.loadStepForEditing(step, index);
+            state.setActiveTab('details');
+            setSuccessMessageState(`Loaded step "${step.name}" for editing`);
+            setTimeout(() => setSuccessMessageState(''), 2000);
+        },
+        onEditAnnotation: async (annotation) => {
+            // Handle both database structure and local structure
+            const timestamp = annotation.frame_timestamp_ms || annotation.data?.frame_timestamp_ms;
+            if (!timestamp) {
+                state.setErrorMessage("Cannot edit annotation: missing timestamp");
+            return;
+        }
+
+            setSuccessMessageState("Loading annotation frame...");
+
+            // Check if we have the captured frame for this timestamp
+            let frameFile = capturedAnnotationFrames[timestamp];
+            
+            // If frame not available, try to download it from Firebase if we have the path
+            if (!frameFile) {
+                // Check multiple possible paths for the frame image
+                const framePath = annotation.frame_image_file?.file_key || 
+                                annotation.frame_image_path ||
+                                annotation.data?.frame_image_path;
+                
+                if (framePath) {
+                    try {
+                        const { downloadFirebaseFileAsFileObject } = await import('./createsteps helpers/CreateStepsUtils');
+                        frameFile = await downloadFirebaseFileAsFileObject(
+                            framePath, 
+                            `frame_${timestamp}.jpg`
+                        );
+                        
+                        if (frameFile) {
+                            // Store it for future use
+                    setCapturedAnnotationFrames(prev => ({ ...prev, [timestamp]: frameFile }));
+                            setSuccessMessageState("Frame downloaded successfully");
+                        }
+                    } catch (error) {
+                        console.error("Error downloading frame:", error);
+                    }
+                }
+            }
+
+            if (!frameFile) {
+                state.setErrorMessage(`Cannot edit annotation: frame at ${formatTime(timestamp / 1000)} not available. Try re-capturing this frame by navigating to that time in the video and clicking "Capture Frame".`);
+            return;
+        }
+
+            // Convert the file back to a data URL for display
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const dataURL = e.target.result;
+                
+                // Set up the annotation editing state
+                state.setFrameForAnnotation(dataURL);
+                state.setFrameTimestampMs(timestamp);
+                
+                // Open the annotation popup for editing
+                state.setIsAnnotationPopupOpen(true);
+                
+                setSuccessMessageState(`Editing annotations for frame at ${formatTime(timestamp / 1000)}`);
+                setTimeout(() => setSuccessMessageState(''), 2000);
+            };
+            
+            reader.onerror = () => {
+                state.setErrorMessage("Error loading frame for editing");
+            };
+            
+            reader.readAsDataURL(frameFile);
+        }
     };
 
     // Early returns for loading/error states
@@ -214,6 +303,33 @@ const ProjectStepsPage = () => {
                             Materials
                         </button>
                         <button 
+                            onClick={() => state.setActiveTab('files')}
+                            style={{
+                                ...styles.tabButton,
+                                ...(activeTab === 'files' ? styles.tabButtonActive : {})
+                            }}
+                        >
+                            Files
+                        </button>
+                        <button 
+                            onClick={() => state.setActiveTab('result')}
+                            style={{
+                                ...styles.tabButton,
+                                ...(activeTab === 'result' ? styles.tabButtonActive : {})
+                            }}
+                        >
+                            Result
+                        </button>
+                        <button 
+                            onClick={() => state.setActiveTab('signoff')}
+                            style={{
+                                ...styles.tabButton,
+                                ...(activeTab === 'signoff' ? styles.tabButtonActive : {})
+                            }}
+                        >
+                            Sign Off
+                        </button>
+                        <button 
                             onClick={() => state.setActiveTab('overview')}
                             style={{
                                 ...styles.tabButton,
@@ -234,21 +350,15 @@ const ProjectStepsPage = () => {
                                 setCurrentStepDescription={state.setCurrentStepDescription}
                                 currentStepStartTime={currentStepStartTime}
                                 currentStepEndTime={currentStepEndTime}
-                                currentCautionaryNotes={currentCautionaryNotes}
-                                setCurrentCautionaryNotes={state.setCurrentCautionaryNotes}
-                                currentBestPracticeNotes={currentBestPracticeNotes}
-                                setBestPracticeNotes={state.setCurrentBestPracticeNotes}
-                                currentStepValidationQuestion={currentStepValidationQuestion}
-                                setCurrentStepValidationQuestion={state.setCurrentStepValidationQuestion}
-                                currentStepValidationAnswer={currentStepValidationAnswer}
-                                setCurrentStepValidationAnswer={state.setCurrentStepValidationAnswer}
+                                currentStepAnnotations={state.currentStepAnnotations}
                                 formatTime={formatTime}
+                                onEditAnnotation={enhancedHandlers.onEditAnnotation}
                                 styles={styles}
                             />
                         )}
 
                         {activeTab === 'materials' && (
-                            <MaterialsAndFilesTab 
+                            <MaterialsAndToolsTab 
                                 // Tools props
                                 currentStepTools={currentStepTools}
                                 currentStepToolName={currentStepToolName}
@@ -271,16 +381,41 @@ const ProjectStepsPage = () => {
                                 materialImageInputRef={materialImageInputRef}
                                 handleAddMaterialToCurrentStep={enhancedHandlers.handleAddMaterialToCurrentStep}
                                 removeMaterialFromCurrentStep={enhancedHandlers.removeMaterialFromCurrentStep}
-                                // Files props
+                                styles={styles}
+                            />
+                        )}
+
+                        {activeTab === 'files' && (
+                            <FilesTab 
                                 currentStepSupFiles={currentStepSupFiles}
                                 currentStepSupFileName={currentStepSupFileName}
                                 setCurrentStepSupFileName={setCurrentStepSupFileName}
                                 supFileInputRef={supFileInputRef}
+                                handleSupFileChange={enhancedHandlers.handleSupFileChange}
+                                removeSupFileFromCurrentStep={enhancedHandlers.removeSupFileFromCurrentStep}
+                                styles={styles}
+                            />
+                        )}
+
+                        {activeTab === 'result' && (
+                            <ResultTab 
                                 currentStepResultImageFile={currentStepResultImageFile}
                                 setCurrentStepResultImageFile={state.setCurrentStepResultImageFile}
                                 resultImageInputRef={resultImageInputRef}
-                                handleSupFileChange={enhancedHandlers.handleSupFileChange}
-                                removeSupFileFromCurrentStep={enhancedHandlers.removeSupFileFromCurrentStep}
+                                styles={styles}
+                            />
+                        )}
+
+                        {activeTab === 'signoff' && (
+                            <SignOffTab 
+                                currentCautionaryNotes={currentCautionaryNotes}
+                                setCurrentCautionaryNotes={state.setCurrentCautionaryNotes}
+                                currentBestPracticeNotes={currentBestPracticeNotes}
+                                setBestPracticeNotes={state.setCurrentBestPracticeNotes}
+                                currentStepValidationQuestion={currentStepValidationQuestion}
+                                setCurrentStepValidationQuestion={state.setCurrentStepValidationQuestion}
+                                currentStepValidationAnswer={currentStepValidationAnswer}
+                                setCurrentStepValidationAnswer={state.setCurrentStepValidationAnswer}
                                 styles={styles}
                             />
                         )}
@@ -288,15 +423,17 @@ const ProjectStepsPage = () => {
                         {activeTab === 'overview' && (
                             <ProjectOverviewTab 
                                 projectSteps={projectSteps}
+                                projectBuyList={projectBuyList}
                                 formatTime={formatTime}
+                                onEditStep={enhancedHandlers.onEditStep}
                                 styles={styles}
                             />
                         )}
-
-
                     </div>
-                </div>
 
+
+            </div>
+            
                 {/* Right side - Video and steps (3/5ths) */}
                 <div style={styles.rightPanel}>
                     
@@ -309,16 +446,16 @@ const ProjectStepsPage = () => {
                                     {uploadedVideos.length > 1 && (
                                         <div style={styles.videoSelection}>
                                             {uploadedVideos.map((video, index) => (
-                                                <button 
+                    <button 
                                                     key={video.path || index} 
                                                     onClick={() => enhancedHandlers.handleVideoSelection(index)}
-                                                    style={{
+                        style={{
                                                         ...styles.videoSelectButton,
                                                         ...(activeVideoIndex === index ? styles.videoSelectButtonActive : {})
-                                                    }}
-                                                >
+                        }}
+                    >
                                                     Video {index + 1}
-                                                </button>
+                    </button>
                                             ))}
                                         </div>
                                     )}
@@ -374,7 +511,7 @@ const ProjectStepsPage = () => {
                                                 >
                                                     <div style={styles.timelineStepLabel}>
                                                         {index + 1}
-                                                    </div>
+            </div>
                                                 </div>
                                             ))}
                                             
@@ -459,7 +596,7 @@ const ProjectStepsPage = () => {
             
                                     {/* Video controls */}
                                     <div style={styles.videoControls}>
-                                        <button 
+                    <button 
                                             onClick={() => enhancedHandlers.navigateFrame('backward')} 
                                             style={{...styles.button, ...styles.buttonSecondarySm}}
                                         >
@@ -504,7 +641,7 @@ const ProjectStepsPage = () => {
                                 <div
                                     key={step.id || `step-${index}`}
                                     onClick={() => stepActions.loadStepForEditing(step, index)}
-                                    style={{
+                        style={{
                                         ...styles.stepItem,
                                         ...(currentStepIndex === index ? styles.stepItemActive : {})
                                     }}
@@ -524,12 +661,18 @@ const ProjectStepsPage = () => {
             </div>
             )}
             
-            {/* Floating action button */}
-            <div style={styles.floatingActionButton}>
-                {currentStepIndex >= 0 && (
+            {/* Floating save button - left middle */}
+            {activeTab !== 'finalize' && (currentStepIndex >= 0 || currentStepName.trim() || currentStepDescription.trim() || currentStepStartTime !== null || currentStepEndTime !== null) && (
+                <div style={{
+                    position: 'fixed',
+                    left: '20px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    zIndex: 1000
+                }}>
                     <button 
                         onClick={enhancedHandlers.handleAddStep}
-                        disabled={isStepLoading}
+                        disabled={isStepLoading || !currentStepName.trim() || !currentStepDescription.trim() || currentStepStartTime === null || currentStepEndTime === null}
                         style={{
                             ...styles.button,
                             ...styles.buttonPrimary,
@@ -540,10 +683,26 @@ const ProjectStepsPage = () => {
                             boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)'
                         }}
                     >
-                        {isStepLoading ? 'Saving...' : 'Save Step'}
+                        {isStepLoading ? 'Saving...' : 
+                         currentStepIndex >= 0 ? 'Update Step' : 'Save New Step'}
                     </button>
+                </div>
                 )}
-            </div>
+
+            {/* Annotation Popup */}
+            <AnnotationPopup
+                isOpen={isAnnotationPopupOpen}
+                onClose={() => setIsAnnotationPopupOpen(false)}
+                frameForAnnotation={state.frameForAnnotation}
+                frameTimestampMs={state.frameTimestampMs}
+                currentStepAnnotations={state.currentStepAnnotations}
+                currentAnnotationTool={state.currentAnnotationTool}
+                setCurrentAnnotationTool={state.setCurrentAnnotationTool}
+                handleAnnotationSubmit={handlers.handleAnnotationSubmit}
+                removeAnnotation={enhancedHandlers.removeAnnotation}
+                formatTime={formatTime}
+                styles={styles}
+            />
         </div>
     );
 };

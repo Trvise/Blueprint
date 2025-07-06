@@ -1,7 +1,8 @@
 import React from 'react';
 import ToolsTab from './ToolsTab';
+import { COMPONENTS, TYPOGRAPHY, COLORS, LAYOUT, getListItemBorder } from './shared/styles';
 
-const MaterialsAndFilesTab = ({
+const MaterialsAndToolsTab = ({
     // Tools props
     currentStepTools,
     currentStepToolName,
@@ -24,19 +25,9 @@ const MaterialsAndFilesTab = ({
     materialImageInputRef,
     handleAddMaterialToCurrentStep,
     removeMaterialFromCurrentStep,
-    // Files props
-    currentStepSupFiles,
-    currentStepSupFileName,
-    setCurrentStepSupFileName,
-    supFileInputRef,
-    currentStepResultImageFile,
-    setCurrentStepResultImageFile,
-    resultImageInputRef,
-    handleSupFileChange,
-    removeSupFileFromCurrentStep,
     styles
 }) => (
-    <div style={{display: 'flex', flexDirection: 'column', gap: '24px'}}>
+    <div style={{display: 'flex', flexDirection: 'column', gap: LAYOUT.cardPadding}}>
         {/* Tools Section */}
         <ToolsTab 
             currentStepTools={currentStepTools}
@@ -55,7 +46,7 @@ const MaterialsAndFilesTab = ({
         {/* Materials Section */}
         <div style={styles.card}>
             <h2 style={styles.sectionTitle}>Materials</h2>
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '8px'}}>
+            <div style={COMPONENTS.gridTwoColumns}>
                 <input 
                     type="text" 
                     value={currentStepMaterialName} 
@@ -71,7 +62,7 @@ const MaterialsAndFilesTab = ({
                     style={styles.inputField}
                 />
             </div>
-            <div>
+            <div style={{marginTop: LAYOUT.inputSpacing}}>
                 <label style={{...styles.inputLabel, fontSize: '0.8rem'}}>Material Image (Optional)</label>
                 <input 
                     type="file" 
@@ -83,80 +74,53 @@ const MaterialsAndFilesTab = ({
             </div>
             <button 
                 onClick={handleAddMaterialToCurrentStep} 
-                style={{...styles.button, ...styles.buttonSecondarySm, marginTop: '8px'}}
+                style={{...styles.button, ...styles.buttonSecondarySm, marginTop: LAYOUT.inputSpacing}}
             >
                 Add Material to Step
             </button>
+            
             {currentStepMaterials.length > 0 && (
-                <div style={{marginTop: '12px'}}>
-                    <h4 style={{fontSize: '0.9rem', fontWeight: '500'}}>Added Materials:</h4>
-                    <ul style={{listStyle: 'disc', paddingLeft: '20px', marginTop: '4px', fontSize: '0.9rem'}}>
-                        {currentStepMaterials.map(mat => (
-                            <li key={mat.id} style={styles.listItem}>
-                                <span>
-                                    {mat.name} ({mat.specification || 'No spec'}) 
-                                    {mat.imageFile && `(${mat.imageFile.name.substring(0,15)}...)`}
-                                </span>
-                                <button onClick={() => removeMaterialFromCurrentStep(mat.id)} style={styles.removeButton}>
+                <div style={{marginTop: LAYOUT.sectionSpacing}}>
+                    <h4 style={TYPOGRAPHY.listTitle}>Added Materials ({currentStepMaterials.length}):</h4>
+                    <div style={COMPONENTS.fileList}>
+                        {currentStepMaterials.map((material, index) => (
+                            <div 
+                                key={material.id}
+                                style={{
+                                    ...COMPONENTS.fileListItem,
+                                    ...getListItemBorder(index, currentStepMaterials.length)
+                                }}
+                            >
+                                <div>
+                                    <p style={COMPONENTS.fileListItemTitle}>
+                                        {material.name}
+                                    </p>
+                                    <p style={COMPONENTS.fileListItemSubtext}>
+                                        {material.specification ? `Specification: ${material.specification}` : 'No specification'}
+                                        {material.imageFile && ` • Image: ${material.imageFile.name.substring(0, 20)}...`}
+                                    </p>
+                                </div>
+                                <button 
+                                    onClick={() => removeMaterialFromCurrentStep(material.id)} 
+                                    style={COMPONENTS.removeButton}
+                                >
                                     Remove
                                 </button>
-                            </li>
+                            </div>
                         ))}
-                    </ul>
+                    </div>
                 </div>
             )}
-        </div>
-
-        {/* Supplementary Files Section */}
-        <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>Supplementary Files</h2>
-            <input 
-                type="text" 
-                value={currentStepSupFileName} 
-                onChange={(e) => setCurrentStepSupFileName(e.target.value)} 
-                placeholder="Display Name for File (optional)" 
-                style={{...styles.inputField, marginBottom: '8px'}}
-            />
-            <input 
-                type="file" 
-                onChange={handleSupFileChange} 
-                ref={supFileInputRef} 
-                style={styles.fileInput}
-            />
-            {currentStepSupFiles.length > 0 && (
-                <div style={{marginTop: '12px'}}>
-                    <h4 style={{fontSize: '0.9rem', fontWeight: '500'}}>Added Files:</h4>
-                    <ul style={{listStyle: 'disc', paddingLeft: '20px', marginTop: '4px', fontSize: '0.9rem'}}>
-                        {currentStepSupFiles.map(f => (
-                            <li key={f.id} style={styles.listItem}>
-                                <span>{f.displayName} ({f.fileObject.name.substring(0,20)}...)</span>
-                                <button onClick={() => removeSupFileFromCurrentStep(f.id)} style={styles.removeButton}>
-                                    Remove
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
+            
+            {currentStepMaterials.length === 0 && (
+                <div style={COMPONENTS.emptyState}>
+                    <p style={COMPONENTS.emptyStateText}>
+                        No materials added yet. Add materials needed to complete this step.
+                    </p>
                 </div>
-            )}
-        </div>
-
-        {/* Step Result Image Section */}
-        <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>Step Result Image</h2>
-            <input 
-                type="file" 
-                accept="image/*" 
-                onChange={(e) => setCurrentStepResultImageFile(e.target.files[0])} 
-                ref={resultImageInputRef} 
-                style={styles.fileInput}
-            />
-            {currentStepResultImageFile && (
-                <p style={{fontSize: '0.9rem', marginTop: '4px'}}>
-                    Selected: {currentStepResultImageFile.name}
-                </p>
             )}
         </div>
     </div>
 );
 
-export default MaterialsAndFilesTab; 
+export default MaterialsAndToolsTab; 

@@ -88,7 +88,7 @@ export const styles = {
         position: 'relative',
     },
     stepCardActive: {
-        borderColor: '#4A90E2',
+        border: '2px solid #4A90E2',
         backgroundColor: '#e3f2fd',
         boxShadow: '0 4px 12px rgba(74, 144, 226, 0.15)',
     },
@@ -293,7 +293,7 @@ export const styles = {
     videoSelectButtonActive: {
         backgroundColor: '#4A90E2',
         color: 'white',
-        borderColor: '#4A90E2',
+        border: '1px solid #4A90E2',
     },
     videoControls: {
         display: 'flex',
@@ -337,7 +337,7 @@ export const styles = {
         transition: 'all 0.2s',
     },
     stepItemActive: {
-        borderColor: '#4A90E2',
+        border: '1px solid #4A90E2',
         backgroundColor: '#e3f2fd',
         boxShadow: '0 2px 8px rgba(74, 144, 226, 0.15)',
     },

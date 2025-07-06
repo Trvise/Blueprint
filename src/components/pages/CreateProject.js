@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/authContext';
 import { storage } from '../../firebase/firebase';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { v4 as uuidv4 } from "uuid";
+import { getApiUrl, createApiCall } from './createsteps helpers/CreateStepsUtils';
 
 const MAX_FILENAME_STEM_LENGTH = 25; 
 
@@ -145,10 +146,8 @@ const CreateProjectPage = () => {
         };
 
         try {
-
-            const token = currentUser.uid
-            const backendApiUrl = 'http://localhost:8000/projects/';
-            const response = await fetch(backendApiUrl, {
+            const token = currentUser.uid;
+            const responseData = await createApiCall('/projects/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -156,14 +155,6 @@ const CreateProjectPage = () => {
                 },
                 body: JSON.stringify(projectDataForBackend),
             });
-
-            const responseData = await response.json();
-
-            if (!response.ok) {
-                console.error('Backend API Error:', responseData);
-                const backendErrorMessage = responseData.detail || `Failed to create project. Status: ${response.status}`;
-                throw new Error(backendErrorMessage);
-            }
 
             const createdProjectId = responseData.project_id; // Assuming backend returns project_id
             setSuccessMessage(`Project "${projectName}" created successfully! Preparing next step...`);

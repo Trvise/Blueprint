@@ -1,4 +1,17 @@
 import React from 'react';
+import { COMPONENTS, COLORS, LAYOUT, TYPOGRAPHY } from './shared/styles';
+
+const getAnnotationText = (annotation) => {
+    return annotation.component_name || annotation.data?.text || 'Untitled annotation';
+};
+
+const getAnnotationTimestamp = (annotation) => {
+    return annotation.frame_timestamp_ms || annotation.data?.frame_timestamp_ms;
+};
+
+const getAnnotationId = (annotation) => {
+    return annotation.annotation_id || annotation.data?.id;
+};
 
 const StepDetailsTab = ({
     currentStepName,
@@ -7,23 +20,17 @@ const StepDetailsTab = ({
     setCurrentStepDescription,
     currentStepStartTime,
     currentStepEndTime,
-    currentCautionaryNotes,
-    setCurrentCautionaryNotes,
-    currentBestPracticeNotes,
-    setBestPracticeNotes,
-    currentStepValidationQuestion,
-    setCurrentStepValidationQuestion,
-    currentStepValidationAnswer,
-    setCurrentStepValidationAnswer,
+    currentStepAnnotations,
     formatTime,
+    onEditAnnotation,
     styles
 }) => (
     <div style={styles.card}>
         <h2 style={styles.sectionTitle}>Step Details</h2>
-        <div style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
+        <div style={COMPONENTS.flexColumn}>
             <div>
                 <label htmlFor="stepName" style={styles.inputLabel}>
-                    Step Name <span style={{color: 'red'}}>*</span>
+                    Step Name <span style={{color: COLORS.danger}}>*</span>
                 </label>
                 <input 
                     type="text" 
@@ -37,74 +44,139 @@ const StepDetailsTab = ({
 
             <div>
                 <label htmlFor="stepDescription" style={styles.inputLabel}>
-                    Step Description <span style={{color: 'red'}}>*</span>
+                    Step Description <span style={{color: COLORS.danger}}>*</span>
                 </label>
                 <textarea 
                     id="stepDescription" 
                     value={currentStepDescription} 
                     onChange={(e) => setCurrentStepDescription(e.target.value)} 
                     rows="4" 
-                    placeholder="Detailed instructions..." 
+                    placeholder="Detailed instructions for completing this step..." 
                     style={styles.textareaField}
                 />
             </div>
 
-            {/* Display time range as read-only information */}
-            <div style={{
-                padding: '12px',
-                backgroundColor: '#f8fafc',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0'
-            }}>
+            <div style={COMPONENTS.timeDisplay}>
                 <label style={styles.inputLabel}>Video Time Range</label>
-                <div style={{fontSize: '0.9rem', color: '#4a5568'}}>
-                    Start: {currentStepStartTime !== null ? formatTime(currentStepStartTime) : 'Not set'}
-                    <br />
-                    End: {currentStepEndTime !== null ? formatTime(currentStepEndTime) : 'Not set'}
+                <div style={{fontSize: '0.9rem', color: COLORS.text.secondary, marginTop: '4px'}}>
+                    <div style={{marginBottom: '2px'}}>
+                        <strong>Start:</strong> {currentStepStartTime !== null ? formatTime(currentStepStartTime) : 'Not set'}
+                    </div>
+                    <div>
+                        <strong>End:</strong> {currentStepEndTime !== null ? formatTime(currentStepEndTime) : 'Not set'}
+                    </div>
                 </div>
             </div>
 
-            <div>
-                <label htmlFor="cautionaryNotes" style={styles.inputLabel}>Cautionary Notes</label>
-                <textarea 
-                    id="cautionaryNotes" 
-                    value={currentCautionaryNotes} 
-                    onChange={(e) => setCurrentCautionaryNotes(e.target.value)} 
-                    rows="2" 
-                    placeholder="e.g., Wear safety glasses." 
-                    style={styles.textareaField}
-                />
-            </div>
-
-            <div>
-                <label htmlFor="bestPracticeNotes" style={styles.inputLabel}>Best Practice Notes</label>
-                <textarea 
-                    id="bestPracticeNotes" 
-                    value={currentBestPracticeNotes} 
-                    onChange={(e) => setBestPracticeNotes(e.target.value)} 
-                    rows="2" 
-                    placeholder="e.g., Pre-drill pilot holes." 
-                    style={styles.textareaField}
-                />
-            </div>
-
-            <div>
-                <label htmlFor="validationQuestion" style={styles.inputLabel}>Validation Question</label>
-                <textarea 
-                    id="validationQuestion"
-                    value={currentStepValidationQuestion} 
-                    onChange={(e) => setCurrentStepValidationQuestion(e.target.value)} 
-                    placeholder="Validation Question Prompt" 
-                    rows="2" 
-                    style={{...styles.textareaField, marginBottom: '8px'}}
-                />
-                <input 
-                    type="text" 
-                    value={currentStepValidationAnswer} 
-                    onChange={(e) => setCurrentStepValidationAnswer(e.target.value)} 
-                    placeholder="Expected Answer/Range" 
-                    style={styles.inputField}
-                />
+            {/* Annotations Management Section */}
+            <div style={{
+                ...COMPONENTS.timeDisplay,
+                backgroundColor: COLORS.gray[50],
+                border: `1px solid ${COLORS.gray[200]}`
+            }}>
+                <label style={styles.inputLabel}>Step Annotations</label>
+                <div style={{marginTop: LAYOUT.sm}}>
+                    {currentStepAnnotations && currentStepAnnotations.length > 0 ? (
+                        <div>
+                            <p style={{
+                                fontSize: '0.85rem',
+                                color: COLORS.text.secondary,
+                                marginBottom: LAYOUT.sm
+                            }}>
+                                {currentStepAnnotations.length} annotation{currentStepAnnotations.length !== 1 ? 's' : ''} in this step
+                            </p>
+                            <div style={{
+                                maxHeight: '120px',
+                                overflowY: 'auto',
+                                marginBottom: LAYOUT.sm
+                            }}>
+                                {currentStepAnnotations.map((annotation, index) => {
+                                    const annotationText = getAnnotationText(annotation);
+                                    const annotationTimestamp = getAnnotationTimestamp(annotation);
+                                    const annotationId = getAnnotationId(annotation);
+                                    
+                                    return (
+                                        <div 
+                                            key={annotationId || `annotation-${index}`}
+                                            style={{
+                                                padding: LAYOUT.sm,
+                                                backgroundColor: 'white',
+                                                border: `1px solid ${COLORS.gray[200]}`,
+                                                borderRadius: '4px',
+                                                marginBottom: LAYOUT.xs,
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center'
+                                            }}
+                                        >
+                                            <div style={{flex: 1}}>
+                                                <p style={{
+                                                    margin: 0,
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: '500',
+                                                    color: COLORS.text.primary
+                                                }}>
+                                                    {annotationText}
+                                                </p>
+                                                <p style={{
+                                                    margin: '2px 0 0 0',
+                                                    fontSize: '0.75rem',
+                                                    color: COLORS.text.muted
+                                                }}>
+                                                    {annotationTimestamp 
+                                                        ? `At ${formatTime(annotationTimestamp / 1000)}`
+                                                        : 'No timestamp'
+                                                    }
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={() => onEditAnnotation && onEditAnnotation(annotation)}
+                                                style={{
+                                                    backgroundColor: COLORS.primary,
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    padding: '4px 8px',
+                                                    fontSize: '0.75rem',
+                                                    cursor: 'pointer',
+                                                    fontWeight: '500'
+                                                }}
+                                            >
+                                                Edit
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <p style={{
+                                fontSize: '0.75rem',
+                                color: COLORS.text.muted,
+                                fontStyle: 'italic',
+                                margin: 0
+                            }}>
+                                💡 Click "Edit" to modify an annotation or "Capture Frame" to add new ones
+                            </p>
+                        </div>
+                    ) : (
+                        <div style={{textAlign: 'center', padding: LAYOUT.lg}}>
+                            <p style={{
+                                margin: 0,
+                                color: COLORS.text.muted,
+                                fontStyle: 'italic',
+                                fontSize: '0.85rem'
+                            }}>
+                                No annotations yet
+                            </p>
+                            <p style={{
+                                margin: '4px 0 0 0',
+                                fontSize: '0.75rem',
+                                color: COLORS.text.muted
+                            }}>
+                                Use "Capture Frame" in the video section to add annotations
+                            </p>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     </div>
