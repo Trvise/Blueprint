@@ -240,4 +240,6 @@ export const reconstructCapturedAnnotationFrames = async (projectSteps, setCaptu
         setTimeout(() => setSuccessMessage(''), 5000);
         return {};
     }
-}; 
+};
+
+ 

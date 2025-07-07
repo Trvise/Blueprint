@@ -516,7 +516,7 @@ const ProjectStepsPage = () => {
                                             ))}
                                             
                                             {/* Start time marker */}
-                                            {currentStepStartTime !== null && (
+                                            {(currentStepStartTime !== null && currentStepStartTime !== undefined) && (
                                                 <div
                                                     style={{
                                                         ...styles.timelineMarker,
@@ -530,7 +530,7 @@ const ProjectStepsPage = () => {
                                             )}
                                             
                                             {/* End time marker */}
-                                            {currentStepEndTime !== null && (
+                                            {(currentStepEndTime !== null && currentStepEndTime !== undefined) && (
                                                 <div
                                                     style={{
                                                         ...styles.timelineMarker,
@@ -544,7 +544,8 @@ const ProjectStepsPage = () => {
                                             )}
                                             
                                             {/* Selection area between start and end */}
-                                            {currentStepStartTime !== null && currentStepEndTime !== null && (
+                                            {(currentStepStartTime !== null && currentStepStartTime !== undefined) && 
+                                             (currentStepEndTime !== null && currentStepEndTime !== undefined) && (
                                                 <div
                                                     style={{
                                                         ...styles.selectionArea,
@@ -571,7 +572,7 @@ const ProjectStepsPage = () => {
                                                 onClick={() => {
                                                     if (videoRef.current) {
                                                         const currentTime = videoRef.current.currentTime;
-                                                        if (currentStepStartTime && currentTime <= currentStepStartTime) {
+                                                        if (currentStepStartTime !== null && currentStepStartTime !== undefined && currentTime <= currentStepStartTime) {
                                                             setErrorMessage("End time must be after start time");
                                                             return;
                                                         }
@@ -647,12 +648,12 @@ const ProjectStepsPage = () => {
                                     }}
                                 >
                                     <div style={styles.stepItemHeader}>
-                                        <span style={styles.stepItemNumber}>Step {index + 1}</span>
-                                        <span style={styles.stepItemTime}>
+                                        <span style={currentStepIndex === index ? styles.stepItemNumberActive : styles.stepItemNumber}>Step {index + 1}</span>
+                                        <span style={currentStepIndex === index ? styles.stepItemTimeActive : styles.stepItemTime}>
                                             {formatTime(step.video_start_time_ms / 1000)} - {formatTime(step.video_end_time_ms / 1000)}
                                         </span>
                                     </div>
-                                    <div style={styles.stepItemName}>{step.name}</div>
+                                    <div style={currentStepIndex === index ? styles.stepItemNameActive : styles.stepItemName}>{step.name}</div>
                                 </div>
                             ))}
                         </div>
@@ -662,7 +663,9 @@ const ProjectStepsPage = () => {
             )}
             
             {/* Floating save button - left middle */}
-            {activeTab !== 'finalize' && (currentStepIndex >= 0 || currentStepName.trim() || currentStepDescription.trim() || currentStepStartTime !== null || currentStepEndTime !== null) && (
+            {activeTab !== 'finalize' && (currentStepIndex >= 0 || currentStepName.trim() || currentStepDescription.trim() || 
+             (currentStepStartTime !== null && currentStepStartTime !== undefined) || 
+             (currentStepEndTime !== null && currentStepEndTime !== undefined)) && (
                 <div style={{
                     position: 'fixed',
                     left: '20px',
@@ -672,7 +675,7 @@ const ProjectStepsPage = () => {
                 }}>
                     <button 
                         onClick={enhancedHandlers.handleAddStep}
-                        disabled={isStepLoading || !currentStepName.trim() || !currentStepDescription.trim() || currentStepStartTime === null || currentStepEndTime === null}
+                        disabled={isStepLoading || !currentStepName.trim() || !currentStepDescription.trim() || (currentStepStartTime === null || currentStepStartTime === undefined) || (currentStepEndTime === null || currentStepEndTime === undefined)}
                         style={{
                             ...styles.button,
                             ...styles.buttonPrimary,

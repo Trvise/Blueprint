@@ -126,7 +126,7 @@ export const createStepHandlers = (
             data: customDataForAnnotation 
         };
         
-        console.log('Adding annotation with coordinates:', {
+        console.log('Adding new annotation:', {
             geometry: geometry,
             data: customDataForAnnotation
         });
@@ -196,92 +196,6 @@ export const createStepHandlers = (
 
     const removeBuyListItem = (itemId) => setProjectBuyList(prev => prev.filter(item => item.id !== itemId));
 
-    const handleAddStep = async (
-        currentStepName,
-        currentStepDescription,
-        currentStepStartTime,
-        currentStepEndTime,
-        currentCautionaryNotes,
-        currentBestPracticeNotes,
-        activeVideoIndex,
-        currentStepAnnotations,
-        currentStepTools,
-        currentStepMaterials,
-        currentStepSupFiles,
-        currentStepValidationQuestion,
-        currentStepValidationAnswer,
-        currentStepResultImageFile
-    ) => {
-        if (!currentStepName.trim()) { alert("Step name is required."); return; }
-        if (currentStepStartTime === null || currentStepEndTime === null) { alert("Mark start/end times."); return; }
-        if (currentStepEndTime <= currentStepStartTime) { alert("End time must be after start time."); return; }
-        
-        setIsStepLoading(true); 
-        setErrorMessage('');
-        setSuccessMessage('');
-
-        const stepData = {
-            id: currentStepIndex >= 0 && currentStepIndex < projectSteps.length 
-                ? projectSteps[currentStepIndex].id 
-                : `local_step_${uuidv4()}`,
-            project_id: projectId, 
-            name: currentStepName,
-            description: currentStepDescription, 
-            video_start_time_ms: Math.round(currentStepStartTime * 1000),
-            video_end_time_ms: Math.round(currentStepEndTime * 1000),
-            cautionary_notes: currentCautionaryNotes, 
-            best_practice_notes: currentBestPracticeNotes,
-            associated_video_index: activeVideoIndex, 
-            associated_video_path: uploadedVideos[activeVideoIndex]?.path, 
-            step_order: currentStepIndex >= 0 ? currentStepIndex : projectSteps.length, 
-            annotations: [...currentStepAnnotations], 
-            tools: currentStepTools.map(tool => ({ 
-                name: tool.name,
-                specification: tool.specification,
-                image_file_name: tool.imageFile ? tool.imageFile.name : null,
-            })), 
-            materials: currentStepMaterials.map(mat => ({ 
-                name: mat.name,
-                specification: mat.specification,
-                image_file_name: mat.imageFile ? mat.imageFile.name : null,
-            })),
-            supplementary_files: currentStepSupFiles.map(f => ({ 
-                displayName: f.displayName, 
-                fileName: f.fileObject.name, 
-                fileType: f.fileObject.type,
-            })), 
-            validation_metric: { 
-                question: currentStepValidationQuestion,
-                expected_answer: currentStepValidationAnswer 
-            },
-            result_image_file_info: currentStepResultImageFile 
-                ? { name: currentStepResultImageFile.name, type: currentStepResultImageFile.type, size: currentStepResultImageFile.size } 
-                : null,
-            _toolImageFiles: currentStepTools.map(t => t.imageFile).filter(Boolean),
-            _materialImageFiles: currentStepMaterials.map(m => m.imageFile).filter(Boolean),
-            _supplementaryFileObjects: currentStepSupFiles.map(f => f.fileObject),
-            _resultImageFileObject: currentStepResultImageFile,
-        };
-
-        if (currentStepIndex >= 0 && currentStepIndex < projectSteps.length) {
-            // Update existing step
-            setProjectSteps(prevSteps => {
-                const newSteps = [...prevSteps];
-                newSteps[currentStepIndex] = stepData;
-                return newSteps;
-            });
-            setSuccessMessage(`Step "${currentStepName}" updated successfully!`);
-        } else {
-            // Add new step
-            setProjectSteps(prevSteps => [...prevSteps, stepData]);
-            setCurrentStepIndex(projectSteps.length);
-            setSuccessMessage(`Step "${currentStepName}" added successfully!`);
-        }
-
-        console.log("Step data:", stepData);
-        setIsStepLoading(false);
-    };
-
     const handleFinishProject = async (projectName) => {
         if (!projectSteps.length) {
             alert("Please add at least one step before finishing the project.");
@@ -338,7 +252,7 @@ export const createStepHandlers = (
                 // Add tools without images
                 for (const tool of step.tools || []) {
                     if (!tool.image_file_name && !stepPayload.tools.some(t => t.name === tool.name)) {
-                         stepPayload.tools.push({ name: tool.name, specification: tool.specification, image_url: null, image_path: null });
+                         stepPayload.tools.push({ name: tool.name, specification: tool.specification, image_url: tool.image_url || null, image_path: tool.image_path || null });
                     }
                 }
 
@@ -357,7 +271,7 @@ export const createStepHandlers = (
                 // Add materials without images
                 for (const material of step.materials || []) {
                     if (!material.image_file_name && !stepPayload.materials.some(m => m.name === material.name)) {
-                         stepPayload.materials.push({ name: material.name, specification: material.specification, image_url: null, image_path: null });
+                         stepPayload.materials.push({ name: material.name, specification: material.specification, image_url: material.image_url || null, image_path: material.image_path || null });
                     }
                 }
 
@@ -464,7 +378,6 @@ export const createStepHandlers = (
         handleResultImageChange,
         handleAddBuyListItem,
         removeBuyListItem,
-        // handleAddStep, // Removed - using the one from CreateStepsActions instead
         handleFinishProject
     };
 }; 

@@ -100,8 +100,8 @@ const StepDetailsTab = ({
                                             key={annotationId || `annotation-${index}`}
                                             style={{
                                                 padding: LAYOUT.sm,
-                                                backgroundColor: 'white',
-                                                border: `1px solid ${COLORS.gray[200]}`,
+                                                backgroundColor: '#D9D9D9',
+                                                border: `1px solid ${COLORS.gray[400]}`,
                                                 borderRadius: '4px',
                                                 marginBottom: LAYOUT.xs,
                                                 display: 'flex',
@@ -114,14 +114,14 @@ const StepDetailsTab = ({
                                                     margin: 0,
                                                     fontSize: '0.85rem',
                                                     fontWeight: '500',
-                                                    color: COLORS.text.primary
+                                                    color: '#000000'
                                                 }}>
                                                     {annotationText}
                                                 </p>
                                                 <p style={{
                                                     margin: '2px 0 0 0',
                                                     fontSize: '0.75rem',
-                                                    color: COLORS.text.muted
+                                                    color: '#333333'
                                                 }}>
                                                     {annotationTimestamp 
                                                         ? `At ${formatTime(annotationTimestamp / 1000)}`

@@ -1,26 +1,32 @@
 // Shared styles for authoring components
 export const COLORS = {
-    primary: '#3b82f6',
-    secondary: '#64748b',
+    // New primary highlight color (Blue)
+    primary: '#0000FF',
+    // Accent color for company importance (Gold)
+    accent: '#F1C232',
+    // Secondary is still blue shade for subtle accents (could also be accent)
+    secondary: '#0000FF',
+    // Danger / success colors remain unchanged
     danger: '#dc2626',
     dangerBg: '#fecaca',
     success: '#10b981',
     successBg: '#d1fae5',
+    // Off-white / gray palette adjusted to new text color scheme
     gray: {
-        50: '#f8fafc',
-        100: '#f1f5f9',
-        200: '#e2e8f0',
-        300: '#cbd5e1',
-        400: '#94a3b8',
-        500: '#64748b',
-        600: '#475569',
-        700: '#334155',
-        800: '#1e293b',
-        900: '#0f172a'
+        50: '#000000', // Background now black
+        100: '#111111',
+        200: '#222222',
+        300: '#333333',
+        400: '#444444',
+        500: '#555555',
+        600: '#666666',
+        700: '#777777',
+        800: '#888888',
+        900: '#999999'
     },
     text: {
-        primary: '#374151',
-        secondary: '#6b7280',
+        primary: '#D9D9D9',
+        secondary: '#D9D9D9',
         muted: '#9ca3af'
     }
 };

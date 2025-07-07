@@ -32,10 +32,10 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     };
 
     return (
-        <div className={`h-screen bg-gray-800 text-white fixed top-0 transition-all duration-300 z-50 ${isCollapsed ? 'w-16' : 'w-64'}`}>
+        <div className={`h-screen bg-black text-[#D9D9D9] fixed top-0 transition-all duration-300 z-50 ${isCollapsed ? 'w-16' : 'w-64'}`}>
             <div className="flex flex-col h-full relative">
                 {/* Toggle Button */}
-                <div className="flex items-center justify-between h-20 border-b border-gray-700 px-5">
+                <div className="flex items-center justify-between h-20 border-b border-gray-800 px-5">
                     {!isCollapsed && (
                         <div className="flex items-center space-x-2">
                             <img 
@@ -43,7 +43,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                 alt="Blueprint Logo" 
                                 className="w-14 h-14"
                             />
-                            <h1 className="text-2xl font-semibold whitespace-nowrap">Blueprint</h1>
+                            <h1 className="text-2xl font-semibold whitespace-nowrap" style={{color: '#F1C232'}}>Blueprint</h1>
                         </div>
                     )}
                     <button 
@@ -88,14 +88,14 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                 <>
                                     <Link
                                         to="/my-projects"
-                                        className="flex items-center py-3 px-4 text-base font-normal hover:bg-gray-700 transition-colors"
+                                        className="flex items-center py-3 px-4 text-base font-normal hover:bg-[#0000FF]/20 transition-colors"
                                     >
                                         <AiOutlineEye size={24} />
                                         {!isCollapsed && <span className="ml-4">My Projects</span>}
                                     </Link>
                                     <Link
                                         to="/create"
-                                        className="flex items-center py-3 px-4 text-base font-normal hover:bg-gray-700 transition-colors"
+                                        className="flex items-center py-3 px-4 text-base font-normal hover:bg-[#0000FF]/20 transition-colors"
                                     >
                                         <AiFillTool size={24} />
                                         {!isCollapsed && <span className="ml-4">Create Project</span>}
@@ -108,8 +108,8 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                         onClick={() => handleTabClick('details')}
                                         className={`w-full flex items-center py-4 px-5 text-base font-medium transition-all duration-200 border-l-3 ${
                                             activeTab === 'details' 
-                                                ? 'text-white bg-gray-700 border-blue-500' 
-                                                : 'text-gray-300 border-transparent hover:bg-gray-700 hover:text-white'
+                                                ? 'text-[#F1C232] bg-black border-[#F1C232]' 
+                                                : 'text-[#D9D9D9] border-transparent hover:bg-[#0000FF]/20 hover:text-[#D9D9D9]'
                                         }`}
                                     >
                                         <AiOutlineVideo size={20} />
@@ -120,8 +120,8 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                         onClick={() => handleTabClick('finalize')}
                                         className={`w-full flex items-center py-4 px-5 text-base font-medium transition-all duration-200 border-l-3 ${
                                             activeTab === 'finalize' 
-                                                ? 'text-white bg-green-700 border-green-500' 
-                                                : 'text-gray-300 border-transparent hover:bg-green-700 hover:text-white'
+                                                ? 'text-[#F1C232] bg-black border-[#F1C232]' 
+                                                : 'text-[#D9D9D9] border-transparent hover:bg-green-700 hover:text-[#D9D9D9]'
                                         }`}
                                     >
                                         <AiOutlineCheck size={20} />
@@ -134,14 +134,14 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                         <>
                             <Link
                                 to="/login"
-                                className="flex items-center py-3 px-4 text-base font-normal hover:bg-gray-700 transition-colors"
+                                className="flex items-center py-3 px-4 text-base font-normal hover:bg-[#0000FF]/20 transition-colors"
                             >
                                 <AiOutlineUser size={24} />
                                 {!isCollapsed && <span className="ml-4">Login</span>}
                             </Link>
                             <Link
                                 to="/register"
-                                className="flex items-center py-3 px-4 text-base font-normal hover:bg-gray-700 transition-colors"
+                                className="flex items-center py-3 px-4 text-base font-normal hover:bg-[#0000FF]/20 transition-colors"
                             >
                                 <AiOutlineUser size={24} />
                                 {!isCollapsed && <span className="ml-4">Register</span>}

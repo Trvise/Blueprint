@@ -142,7 +142,8 @@ const CreateProjectPage = () => {
             description: projectDescription,
             tags: selectedTags,
             firebase_uid: currentUser.uid,
-            UploadVideos: uploadedVideoUrls
+            UploadVideos: uploadedVideoUrls,
+            frame_url: uploadedVideoUrls.length > 0 ? uploadedVideoUrls[0].url : null  // Set first video as frame_url for thumbnail
         };
 
         try {

@@ -19,8 +19,7 @@ export const createStepActions = (state) => {
         setCurrentStepValidationQuestion,
         setCurrentStepValidationAnswer,
         setCurrentStepResultImageFile,
-        setFrameForAnnotation,
-        setCurrentAnnotationTool,
+
         setProjectSteps,
         setIsStepLoading,
         setErrorMessage,
@@ -41,16 +40,70 @@ export const createStepActions = (state) => {
         setCurrentStepIndex(index);
         setCurrentStepName(step.name || '');
         setCurrentStepDescription(step.description || '');
-        setCurrentStepStartTime(step.video_start_time_ms ? step.video_start_time_ms / 1000 : null);
-        setCurrentStepEndTime(step.video_end_time_ms ? step.video_end_time_ms / 1000 : null);
+        setCurrentStepStartTime(step.video_start_time_ms !== null && step.video_start_time_ms !== undefined ? step.video_start_time_ms / 1000 : null);
+        setCurrentStepEndTime(step.video_end_time_ms !== null && step.video_end_time_ms !== undefined ? step.video_end_time_ms / 1000 : null);
         setCurrentCautionaryNotes(step.cautionary_notes || '');
         setCurrentBestPracticeNotes(step.best_practice_notes || '');
-        const annotations = step.annotations || [];
-        console.log('Loading annotations for editing:', annotations);
+        // Transform existing annotations to library format expected by react-image-annotation
+        console.log('Original step annotations:', step.annotations);
+        const annotations = (step.annotations || []).map((ann) => {
+            console.log('Processing annotation:', ann);
+            
+            // If annotation already has geometry (locally created), pass through
+            if (ann.geometry && ann.data) {
+                console.log('Annotation has geometry, passing through');
+                return ann;
+            }
+            
+            // Handle database annotations - they come with different structure
+            // Database format: { frame_timestamp_ms, annotation_type, component_name, data: {x, y, width, height} }
+            if (ann.data && typeof ann.data === 'object') {
+                // Check if data has normalized coordinates (0-1 scale from database)
+                const coords = ann.data;
+                if (coords.x !== undefined && coords.y !== undefined) {
+                    const transformed = {
+                        geometry: {
+                            type: ann.annotation_type || 'rectangle',
+                            x: coords.x * 100,  // Convert normalized (0-1) to percentage (0-100)
+                            y: coords.y * 100,
+                            width: coords.width * 100,
+                            height: coords.height * 100,
+                        },
+                        data: {
+                            text: ann.component_name || 'Untitled annotation',
+                            id: ann.annotation_id || Math.random().toString(),
+                            frame_timestamp_ms: ann.frame_timestamp_ms,
+                        }
+                    };
+                    console.log('Transformed DB annotation:', transformed);
+                    return transformed;
+                }
+            }
+            
+            // Fallback - return as is
+            console.log('Returning annotation as-is');
+            return ann;
+        });
+        console.log('Final transformed annotations:', annotations);
         setCurrentStepAnnotations(annotations);
         
-        setCurrentStepTools(step.tools || []);
-        setCurrentStepMaterials(step.materials || []);
+        // Ensure tools / materials keep existing image paths if any
+        const mappedTools = (step.tools || []).map(t => ({
+            ...t,
+            image_file_name: t.image_file_name || null,
+            image_path: t.image_path || null,
+            image_url: t.image_url || null,
+        }));
+
+        const mappedMaterials = (step.materials || []).map(m => ({
+            ...m,
+            image_file_name: m.image_file_name || null,
+            image_path: m.image_path || null,
+            image_url: m.image_url || null,
+        }));
+
+        setCurrentStepTools(mappedTools);
+        setCurrentStepMaterials(mappedMaterials);
         setCurrentStepSupFiles(step.supplementary_files || []);
         setCurrentStepValidationQuestion(step.validation_metric?.question || '');
         setCurrentStepValidationAnswer(step.validation_metric?.expected_answer || '');
@@ -109,7 +162,8 @@ export const createStepActions = (state) => {
             setErrorMessage("Step description is required.");
             return;
         }
-        if (stepData.currentStepStartTime === null || stepData.currentStepEndTime === null) {
+        if (stepData.currentStepStartTime === null || stepData.currentStepStartTime === undefined || 
+            stepData.currentStepEndTime === null || stepData.currentStepEndTime === undefined) {
             setErrorMessage("Please set both start and end times for the step.");
             return;
         }
@@ -118,84 +172,84 @@ export const createStepActions = (state) => {
         setErrorMessage('');
 
         try {
-            const {
-                currentStepName,
-                currentStepDescription,
-                currentStepStartTime,
-                currentStepEndTime,
-                currentCautionaryNotes,
-                currentBestPracticeNotes,
-                currentStepAnnotations,
-                currentStepTools,
-                currentStepMaterials,
-                currentStepSupFiles,
-                currentStepValidationQuestion,
-                currentStepValidationAnswer,
-                currentStepResultImageFile
-            } = stepData;
+        const {
+            currentStepName,
+            currentStepDescription,
+            currentStepStartTime,
+            currentStepEndTime,
+            currentCautionaryNotes,
+            currentBestPracticeNotes,
+            currentStepAnnotations,
+            currentStepTools,
+            currentStepMaterials,
+            currentStepSupFiles,
+            currentStepValidationQuestion,
+            currentStepValidationAnswer,
+            currentStepResultImageFile
+        } = stepData;
 
-            const newStepData = {
-                id: currentStepIndex >= 0 && currentStepIndex < projectSteps.length 
-                    ? projectSteps[currentStepIndex].id 
-                    : `local_step_${uuidv4()}`,
-                project_id: projectId, 
-                name: currentStepName,
-                description: currentStepDescription, 
-                video_start_time_ms: Math.round(currentStepStartTime * 1000),
-                video_end_time_ms: Math.round(currentStepEndTime * 1000),
-                cautionary_notes: currentCautionaryNotes, 
-                best_practice_notes: currentBestPracticeNotes,
-                associated_video_index: activeVideoIndex, 
-                associated_video_path: uploadedVideos[activeVideoIndex]?.path, 
-                step_order: currentStepIndex >= 0 ? currentStepIndex : projectSteps.length, 
-                annotations: [...currentStepAnnotations], 
-                tools: currentStepTools.map(tool => ({ 
-                    name: tool.name,
-                    specification: tool.specification,
-                    image_file_name: tool.imageFile ? tool.imageFile.name : null,
-                })), 
-                materials: currentStepMaterials.map(mat => ({ 
-                    name: mat.name,
-                    specification: mat.specification,
-                    image_file_name: mat.imageFile ? mat.imageFile.name : null,
-                })),
-                supplementary_files: currentStepSupFiles.map(f => ({ 
-                    displayName: f.displayName, 
-                    fileName: f.fileObject.name, 
-                    fileType: f.fileObject.type,
-                })), 
-                validation_metric: { 
-                    question: currentStepValidationQuestion,
-                    expected_answer: currentStepValidationAnswer 
-                },
-                result_image_file_info: currentStepResultImageFile 
-                    ? { name: currentStepResultImageFile.name, type: currentStepResultImageFile.type, size: currentStepResultImageFile.size } 
-                    : null,
+        const newStepData = {
+            id: currentStepIndex >= 0 && currentStepIndex < projectSteps.length 
+                ? projectSteps[currentStepIndex].id 
+                : `local_step_${uuidv4()}`,
+            project_id: projectId, 
+            name: currentStepName,
+            description: currentStepDescription, 
+            video_start_time_ms: Math.round(currentStepStartTime * 1000),
+            video_end_time_ms: Math.round(currentStepEndTime * 1000),
+            cautionary_notes: currentCautionaryNotes, 
+            best_practice_notes: currentBestPracticeNotes,
+            associated_video_index: activeVideoIndex, 
+            associated_video_path: uploadedVideos[activeVideoIndex]?.path, 
+            step_order: currentStepIndex >= 0 ? currentStepIndex : projectSteps.length, 
+            annotations: [...currentStepAnnotations], 
+            tools: currentStepTools.map(tool => ({ 
+                name: tool.name,
+                specification: tool.specification,
+                image_file_name: tool.imageFile ? tool.imageFile.name : null,
+            })), 
+            materials: currentStepMaterials.map(mat => ({ 
+                name: mat.name,
+                specification: mat.specification,
+                image_file_name: mat.imageFile ? mat.imageFile.name : null,
+            })),
+            supplementary_files: currentStepSupFiles.map(f => ({ 
+                displayName: f.displayName, 
+                fileName: f.fileObject.name, 
+                fileType: f.fileObject.type,
+            })), 
+            validation_metric: { 
+                question: currentStepValidationQuestion,
+                expected_answer: currentStepValidationAnswer 
+            },
+            result_image_file_info: currentStepResultImageFile 
+                ? { name: currentStepResultImageFile.name, type: currentStepResultImageFile.type, size: currentStepResultImageFile.size } 
+                : null,
                 
                 // Store file objects for later upload
                 _toolImageFiles: currentStepTools.filter(tool => tool.imageFile).map(tool => tool.imageFile),
                 _materialImageFiles: currentStepMaterials.filter(mat => mat.imageFile).map(mat => mat.imageFile),
                 _supFileObjects: currentStepSupFiles.map(f => f.fileObject),
                 _resultImageFile: currentStepResultImageFile
-            };
+        };
 
-            if (currentStepIndex >= 0 && currentStepIndex < projectSteps.length) {
-                // Update existing step
+        if (currentStepIndex >= 0 && currentStepIndex < projectSteps.length) {
+            // Update existing step
                 setProjectSteps(prev => prev.map((step, index) => 
                     index === currentStepIndex ? newStepData : step
                 ));
-                setSuccessMessage(`Step "${currentStepName}" updated successfully!`);
-            } else {
-                // Add new step
+            setSuccessMessage(`Step "${currentStepName}" updated successfully!`);
+        } else {
+            // Add new step
                 setProjectSteps(prev => [...prev, newStepData]);
-                setSuccessMessage(`Step "${currentStepName}" added successfully!`);
-            }
+            setSuccessMessage(`Step "${currentStepName}" added successfully!`);
+        }
 
         } catch (error) {
             console.error('Error adding step:', error);
             setErrorMessage(`Error adding step: ${error.message}`);
         } finally {
-            setIsStepLoading(false);
+        setIsStepLoading(false);
         }
     };
 
@@ -213,12 +267,13 @@ export const createStepActions = (state) => {
             let thumbnailFileToUpload = null;
             let uploadedThumbnailInfo = null;
             
+            // Use first annotation frame as thumbnail if available
             if (capturedAnnotationFrames && Object.keys(capturedAnnotationFrames).length > 0) {
                 const firstFrameTimestamp = Object.keys(capturedAnnotationFrames)[0];
                 thumbnailFileToUpload = capturedAnnotationFrames[firstFrameTimestamp];
-                
+
                 if (thumbnailFileToUpload) {
-                    setSuccessMessage('Uploading project thumbnail...');
+                    setSuccessMessage('Using first annotation frame as project thumbnail...');
                     uploadedThumbnailInfo = await uploadFileToFirebase(
                         thumbnailFileToUpload, 
                         `users/${currentUser.uid}/${projectId}/thumbnails`,
@@ -227,17 +282,15 @@ export const createStepActions = (state) => {
                 }
             }
 
-            // --- 2. LOOP THROUGH STEPS TO PROCESS AND UPLOAD ALL OTHER FILES ---
             const processedStepsPayload = [];
             for (const step of projectSteps) {
                 
-                // --- A. Process Annotations and Upload their Frames ---
                 const processedAnnotations = [];
                 
                 // Only process annotations if they exist and are valid
                 if (step.annotations && Array.isArray(step.annotations)) {
                     console.log(`Processing ${step.annotations.length} annotations for step "${step.name}"`);
-                    for (const ann of step.annotations) {
+                for (const ann of step.annotations) {
                         console.log('Processing annotation:', ann);
                         // Handle both database and local annotation structures
                         const frameTimestamp = ann.frame_timestamp_ms || ann.data?.frame_timestamp_ms;
@@ -246,64 +299,58 @@ export const createStepActions = (state) => {
                             continue;
                         }
                         
-                        let uploadedFrameInfo = null;
-                        const frameFileToUpload = capturedAnnotationFrames[frameTimestamp];
+                    let uploadedFrameInfo = null;
+                    const frameFileToUpload = capturedAnnotationFrames[frameTimestamp];
 
-                        // If a captured frame exists for this annotation's timestamp, upload it.
-                        // We check if it's the thumbnail to avoid re-uploading the same image.
-                        if (frameFileToUpload && frameFileToUpload !== thumbnailFileToUpload) {
+                    // If a captured frame exists for this annotation's timestamp, upload it.
+                    // We check if it's the thumbnail to avoid re-uploading the same image.
+                    if (frameFileToUpload && frameFileToUpload !== thumbnailFileToUpload) {
                             const annotationText = ann.component_name || ann.data?.text || 'Untitled annotation';
                             setSuccessMessage(`Uploading frame for annotation: ${annotationText}...`);
-                            uploadedFrameInfo = await uploadFileToFirebase(
-                                frameFileToUpload, 
-                                `users/${currentUser.uid}/${projectId}/annotation_frames`,
-                                currentUser
-                            );
-                        } else if (frameFileToUpload === thumbnailFileToUpload) {
-                            // If this frame IS the thumbnail, just reuse its upload info.
-                            uploadedFrameInfo = uploadedThumbnailInfo;
-                        }
+                        uploadedFrameInfo = await uploadFileToFirebase(
+                            frameFileToUpload, 
+                            `users/${currentUser.uid}/${projectId}/annotation_frames`,
+                            currentUser
+                        );
+                    } else if (frameFileToUpload === thumbnailFileToUpload) {
+                        // If this frame IS the thumbnail, just reuse its upload info.
+                        uploadedFrameInfo = uploadedThumbnailInfo;
+                    }
 
-                        // Add the uploaded frame's info to the annotation payload
+                    // Add the uploaded frame's info to the annotation payload
                         // Handle both database and local annotation structures
                         const annotationType = ann.annotation_type || ann.geometry?.type || 'rectangle';
                         const annotationText = ann.component_name || ann.data?.text || 'Untitled annotation';
                         
-                        // Handle geometry data from both structures
+                        // Handle geometry data - normalize coordinates to 0-1 scale for backend
                         let geometryData = {};
-                        if (ann.data && typeof ann.data === 'object') {
-                            // Check if coordinates are in percentage format (0-100) and normalize to 0-1 for backend
-                            if (ann.data.x !== undefined) {
-                                // Local annotation format - coordinates in percentage (0-100)
-                                geometryData = {
-                                    x: ann.data.x / 100,  // Convert from percentage to normalized (0-1)
-                                    y: ann.data.y / 100,
-                                    width: ann.data.width / 100,
-                                    height: ann.data.height / 100,
-                                    type: ann.data.type || 'rectangle'
-                                };
-                            } else if (ann.data.normalized_geometry) {
-                                // Already normalized format (0-1)
-                                geometryData = ann.data.normalized_geometry;
-                            } else {
-                                // Fallback for other database structures
-                                geometryData = {
-                                    x: (ann.data.x || 0) / 100,
-                                    y: (ann.data.y || 0) / 100,
-                                    width: (ann.data.width || 0) / 100,
-                                    height: (ann.data.height || 0) / 100,
-                                    type: ann.data.type || 'rectangle'
-                                };
-                            }
+                        if (ann.geometry) {
+                            // Local annotation with geometry object (coordinates in 0-100 scale)
+                            geometryData = {
+                                x: ann.geometry.x / 100,  // Convert from percentage to normalized (0-1)
+                                y: ann.geometry.y / 100,
+                                width: ann.geometry.width / 100,
+                                height: ann.geometry.height / 100,
+                                type: ann.geometry.type || 'rectangle'
+                            };
+                        } else if (ann.data && typeof ann.data === 'object') {
+                            // Database annotation or other format
+                            geometryData = {
+                                x: ann.data.x || 0,
+                                y: ann.data.y || 0,
+                                width: ann.data.width || 0,
+                                height: ann.data.height || 0,
+                                type: ann.data.type || 'rectangle'
+                            };
                         }
                         
                         const processedAnnotation = {
-                            frame_timestamp_ms: frameTimestamp,
+                        frame_timestamp_ms: frameTimestamp,
                             annotation_type: annotationType,
                             component_name: annotationText,
                             data: geometryData,
-                            // Pass the path for the backend to create the File record
-                            frame_image_path: uploadedFrameInfo ? uploadedFrameInfo.path : null,
+                        // Pass the path for the backend to create the File record
+                        frame_image_path: uploadedFrameInfo ? uploadedFrameInfo.path : null,
                         };
                         
                         console.log('Processed annotation:', processedAnnotation);
@@ -359,14 +406,14 @@ export const createStepActions = (state) => {
                             `users/${currentUser.uid}/${projectId}/tools`,
                             currentUser
                         );
-                        if (uploaded) {
+                    if (uploaded) {
                             const toolData = step.tools.find(t => t.image_file_name === toolFile.name);
-                            stepPayload.tools.push({
+                        stepPayload.tools.push({
                                 name: toolData?.name || 'Unknown Tool',
                                 specification: toolData?.specification || '',
-                                image_url: uploaded.url,
-                                image_path: uploaded.path,
-                            });
+                            image_url: uploaded.url,
+                            image_path: uploaded.path,
+                        });
                         }
                     } catch (error) {
                         console.error(`Error uploading tool image ${toolFile.name}:`, error);
@@ -378,7 +425,8 @@ export const createStepActions = (state) => {
                     stepPayload.tools.push({ 
                         name: tool.name, 
                         specification: tool.specification, 
-                        image_path: null 
+                        image_path: tool.image_path || null,
+                        image_url: tool.image_url || null,
                     });
                 }
 
@@ -390,19 +438,19 @@ export const createStepActions = (state) => {
                             `users/${currentUser.uid}/${projectId}/materials`,
                             currentUser
                         );
-                        if (uploaded) {
+                     if (uploaded) {
                             const materialData = step.materials.find(m => m.image_file_name === materialFile.name);
-                            stepPayload.materials.push({
+                        stepPayload.materials.push({
                                 name: materialData?.name || 'Unknown Material',
                                 specification: materialData?.specification || '',
                                 quantity: materialData?.quantity || 1,
-                                image_url: uploaded.url,
-                                image_path: uploaded.path,
-                            });
+                            image_url: uploaded.url,
+                            image_path: uploaded.path,
+                        });
                         }
                     } catch (error) {
                         console.error(`Error uploading material image ${materialFile.name}:`, error);
-                    }
+                     }
                 }
 
                 // Add materials without images
@@ -411,7 +459,8 @@ export const createStepActions = (state) => {
                         name: material.name, 
                         specification: material.specification, 
                         quantity: material.quantity || 1,
-                        image_path: null 
+                        image_path: material.image_path || null,
+                        image_url: material.image_url || null,
                     });
                 }
 
@@ -423,12 +472,12 @@ export const createStepActions = (state) => {
                             `users/${currentUser.uid}/${projectId}/supplementary_files`,
                             currentUser
                         );
-                        if (uploaded) {
+                    if (uploaded) {
                             const supFileData = step.supplementary_files.find(sf => sf.fileName === supFile.name);
-                            stepPayload.supplementary_files.push({
+                        stepPayload.supplementary_files.push({
                                 display_name: supFileData?.displayName || supFile.name,
                                 file_url: uploaded.url,
-                                file_path: uploaded.path,
+                            file_path: uploaded.path,
                             });
                         }
                     } catch (error) {
@@ -444,14 +493,14 @@ export const createStepActions = (state) => {
                             `users/${currentUser.uid}/${projectId}/result_images`,
                             currentUser
                         );
-                        if (uploaded) {
-                            stepPayload.result_image_path = uploaded.path;
+                    if (uploaded) {
+                        stepPayload.result_image_path = uploaded.path;
                         }
                     } catch (error) {
                         console.error(`Error uploading result image:`, error);
                     }
                 }
-
+                
                 processedStepsPayload.push(stepPayload);
             }
 
@@ -463,6 +512,7 @@ export const createStepActions = (state) => {
                 steps: processedStepsPayload,
                 buy_list: projectBuyList || [],
                 thumbnail_image_path: uploadedThumbnailInfo ? uploadedThumbnailInfo.path : null,
+                thumbnail_url: uploadedThumbnailInfo ? uploadedThumbnailInfo.url : null,
             };
 
             // Validate payload before sending
@@ -536,8 +586,8 @@ export const createStepActions = (state) => {
                     }
                 } else if (errorText) {
                     errorMessage = errorText;
-                }
-                
+            }
+            
                 const error = new Error(errorMessage);
                 error.status = response.status;
                 error.details = errorDetails;
@@ -546,7 +596,7 @@ export const createStepActions = (state) => {
 
             const result = await response.json();
             console.log('API Response:', result);
-            
+
             setSuccessMessage('Project finalized successfully! Redirecting to projects...');
             setTimeout(() => navigate('/my-projects'), 2000);
 
@@ -586,4 +636,6 @@ export const createStepActions = (state) => {
         handleAddStep,
         handleFinishProject
     };
-}; 
+};
+
+ 

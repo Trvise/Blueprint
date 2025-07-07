@@ -15,12 +15,12 @@ const ProjectOverviewTab = ({
 
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: LAYOUT.cardPadding}}>
-            <div style={styles.card}>
-                <h2 style={styles.sectionTitle}>Project Overview</h2>
+        <div style={styles.card}>
+            <h2 style={styles.sectionTitle}>Project Overview</h2>
                 <div style={{marginBottom: LAYOUT.sectionSpacing}}>
                     <p style={TYPOGRAPHY.sectionDescription}>
-                        This is a comprehensive overview of your project steps. Review each step to ensure all details are correct before finalizing.
-                    </p>
+                    This is a comprehensive overview of your project steps. Review each step to ensure all details are correct before finalizing.
+                </p>
                     <div style={{
                         display: 'grid', 
                         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
@@ -28,70 +28,70 @@ const ProjectOverviewTab = ({
                         marginBottom: LAYOUT.sectionSpacing
                     }}>
                         <div style={{
-                            backgroundColor: '#e3f2fd',
+                            backgroundColor: '#0000FF',
                             padding: LAYOUT.lg,
                             borderRadius: '8px',
                             textAlign: 'center',
-                            border: `2px solid ${COLORS.primary}20`
+                            border: `2px solid #000000`
                         }}>
-                            <div style={{fontSize: '2rem', fontWeight: 'bold', color: COLORS.primary}}>
+                            <div style={{fontSize: '2rem', fontWeight: 'bold', color: '#FFFFFF'}}>
                                 {totalSteps}
                             </div>
-                            <div style={{fontSize: '0.9rem', color: COLORS.text.secondary}}>
+                            <div style={{fontSize: '0.9rem', color: '#D9D9D9'}}>
                                 Total Steps
                             </div>
                         </div>
                         <div style={{
-                            backgroundColor: '#f3e5f5',
+                            backgroundColor: '#F1C232',
                             padding: LAYOUT.lg,
                             borderRadius: '8px',
                             textAlign: 'center',
-                            border: `2px solid #7b1fa220`
+                            border: `2px solid #000000`
                         }}>
-                            <div style={{fontSize: '2rem', fontWeight: 'bold', color: '#7b1fa2'}}>
+                            <div style={{fontSize: '2rem', fontWeight: 'bold', color: '#000000'}}>
                                 {totalAnnotations}
                             </div>
-                            <div style={{fontSize: '0.9rem', color: COLORS.text.secondary}}>
+                            <div style={{fontSize: '0.9rem', color: '#000000'}}>
                                 Total Annotations
                             </div>
                         </div>
                         <div style={{
-                            backgroundColor: COLORS.successBg,
+                            backgroundColor: '#D9D9D9',
                             padding: LAYOUT.lg,
                             borderRadius: '8px',
                             textAlign: 'center',
-                            border: `2px solid ${COLORS.success}20`
+                            border: `2px solid #000000`
                         }}>
-                            <div style={{fontSize: '2rem', fontWeight: 'bold', color: COLORS.success}}>
+                            <div style={{fontSize: '2rem', fontWeight: 'bold', color: '#000000'}}>
                                 {totalTools}
                             </div>
-                            <div style={{fontSize: '0.9rem', color: COLORS.text.secondary}}>
+                            <div style={{fontSize: '0.9rem', color: '#000000'}}>
                                 Tools
                             </div>
                         </div>
                         <div style={{
-                            backgroundColor: COLORS.warningBg,
+                            backgroundColor: '#000000',
                             padding: LAYOUT.lg,
                             borderRadius: '8px',
                             textAlign: 'center',
-                            border: `2px solid ${COLORS.warning}20`
+                            border: `2px solid #D9D9D9`
                         }}>
-                            <div style={{fontSize: '2rem', fontWeight: 'bold', color: COLORS.warning}}>
+                            <div style={{fontSize: '2rem', fontWeight: 'bold', color: '#D9D9D9'}}>
                                 {totalMaterials}
                             </div>
-                            <div style={{fontSize: '0.9rem', color: COLORS.text.secondary}}>
+                            <div style={{fontSize: '0.9rem', color: '#D9D9D9'}}>
                                 Materials
-                            </div>
-                        </div>
+                    </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            {projectSteps.length > 0 && (
-                <div style={styles.card}>
+        {projectSteps.length > 0 && (
+            <div style={styles.card}>
                     <h2 style={styles.sectionTitle}>Defined Project Steps ({totalSteps})</h2>
                     <div style={COMPONENTS.fileList}>
-                        {projectSteps.map((step, index) => (
+                    {projectSteps.map((step, index) => (
                             <div 
                                 key={step.id || index} 
                                 style={{
@@ -112,44 +112,44 @@ const ProjectOverviewTab = ({
                                             color: COLORS.text.primary,
                                             marginBottom: LAYOUT.sm
                                         }}>
-                                            {index + 1}. {step.name} (Video {step.associated_video_index + 1})
-                                        </h3>
+                                {index + 1}. {step.name} (Video {step.associated_video_index + 1})
+                            </h3>
                                         <p style={{
                                             fontSize: '0.9rem',
                                             color: COLORS.text.secondary,
                                             marginBottom: LAYOUT.sm,
                                             whiteSpace: 'pre-wrap'
                                         }}>
-                                            {step.description}
-                                        </p>
+                                {step.description}
+                            </p>
                                         
-                                        {step.cautionary_notes && (
+                            {step.cautionary_notes && (
                                             <div style={{
                                                 fontSize: '0.85rem',
-                                                color: '#e67e22',
+                                                color: '#000000',
                                                 marginBottom: LAYOUT.sm,
                                                 padding: LAYOUT.sm,
-                                                backgroundColor: '#fff3cd',
+                                                backgroundColor: '#F1C232',
                                                 borderRadius: '4px',
-                                                border: '1px solid #ffeaa7'
+                                                border: '1px solid #000000'
                                             }}>
                                                 <strong>⚠️ Caution:</strong> {step.cautionary_notes}
                                             </div>
-                                        )}
+                            )}
                                         
-                                        {step.best_practice_notes && (
+                            {step.best_practice_notes && (
                                             <div style={{
                                                 fontSize: '0.85rem',
-                                                color: '#3498db',
+                                                color: '#FFFFFF',
                                                 marginBottom: LAYOUT.sm,
                                                 padding: LAYOUT.sm,
-                                                backgroundColor: '#d1ecf1',
+                                                backgroundColor: '#0000FF',
                                                 borderRadius: '4px',
-                                                border: '1px solid #bee5eb'
+                                                border: '1px solid #000000'
                                             }}>
                                                 <strong>💡 Best Practice:</strong> {step.best_practice_notes}
                                             </div>
-                                        )}
+                            )}
                                         
                                         <div style={{
                                             fontSize: '0.8rem',
@@ -181,16 +181,16 @@ const ProjectOverviewTab = ({
                                 </div>
                                 
                                 <div style={{display: 'flex', flexWrap: 'wrap', gap: LAYOUT.sm}}>
-                                    {step.annotations?.length > 0 && (
+                            {step.annotations?.length > 0 && (
                                         <details style={{fontSize: '0.85rem'}}>
                                             <summary style={{
-                                                color: '#8e44ad',
+                                                color: '#000000',
                                                 cursor: 'pointer',
                                                 fontWeight: '500',
                                                 padding: '4px 8px',
-                                                backgroundColor: '#f8f9fa',
+                                                backgroundColor: '#D9D9D9',
                                                 borderRadius: '4px',
-                                                border: '1px solid #e9ecef'
+                                                border: '1px solid #000000'
                                             }}>
                                                 📍 Annotations ({step.annotations.length})
                                             </summary>
@@ -219,16 +219,16 @@ const ProjectOverviewTab = ({
                                     {step.tools?.length > 0 && (
                                         <details style={{fontSize: '0.85rem'}}>
                                             <summary style={{
-                                                color: '#e67e22',
+                                                color: '#000000',
                                                 cursor: 'pointer',
                                                 fontWeight: '500',
                                                 padding: '4px 8px',
-                                                backgroundColor: '#f8f9fa',
+                                                backgroundColor: '#D9D9D9',
                                                 borderRadius: '4px',
-                                                border: '1px solid #e9ecef'
+                                                border: '1px solid #000000'
                                             }}>
                                                 🔧 Tools ({step.tools.length})
-                                            </summary>
+                                    </summary>
                                             <ul style={{
                                                 listStyle: 'disc',
                                                 paddingLeft: '20px',
@@ -240,25 +240,25 @@ const ProjectOverviewTab = ({
                                                         <strong>{tool.name}</strong>
                                                         {tool.specification && <span> - {tool.specification}</span>}
                                                         {tool.image_file && <span> 📷</span>}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </details>
-                                    )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </details>
+                            )}
                                     
-                                    {step.materials?.length > 0 && (
+                            {step.materials?.length > 0 && (
                                         <details style={{fontSize: '0.85rem'}}>
                                             <summary style={{
-                                                color: '#27ae60',
+                                                color: '#000000',
                                                 cursor: 'pointer',
                                                 fontWeight: '500',
                                                 padding: '4px 8px',
-                                                backgroundColor: '#f8f9fa',
+                                                backgroundColor: '#D9D9D9',
                                                 borderRadius: '4px',
-                                                border: '1px solid #e9ecef'
+                                                border: '1px solid #000000'
                                             }}>
                                                 🧱 Materials ({step.materials.length})
-                                            </summary>
+                                    </summary>
                                             <ul style={{
                                                 listStyle: 'disc',
                                                 paddingLeft: '20px',
@@ -270,25 +270,25 @@ const ProjectOverviewTab = ({
                                                         <strong>{material.name}</strong>
                                                         {material.specification && <span> - {material.specification}</span>}
                                                         {material.image_file && <span> 📷</span>}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </details>
-                                    )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </details>
+                            )}
                                     
-                                    {step.supplementary_files?.length > 0 && (
+                            {step.supplementary_files?.length > 0 && (
                                         <details style={{fontSize: '0.85rem'}}>
                                             <summary style={{
-                                                color: '#3498db',
+                                                color: '#000000',
                                                 cursor: 'pointer',
                                                 fontWeight: '500',
                                                 padding: '4px 8px',
-                                                backgroundColor: '#f8f9fa',
+                                                backgroundColor: '#D9D9D9',
                                                 borderRadius: '4px',
-                                                border: '1px solid #e9ecef'
+                                                border: '1px solid #000000'
                                             }}>
                                                 📎 Files ({step.supplementary_files.length})
-                                            </summary>
+                                    </summary>
                                             <ul style={{
                                                 listStyle: 'disc',
                                                 paddingLeft: '20px',
@@ -300,21 +300,21 @@ const ProjectOverviewTab = ({
                                                         {file.display_name || file.displayName}
                                                         {file.file && <span> ({formatFileSize(file.file.file_size_bytes)})</span>}
                                                     </li>
-                                                ))}
-                                            </ul>
-                                        </details>
-                                    )}
+                                        ))}
+                                    </ul>
+                                </details>
+                            )}
                                     
                                     {step.validation_metric?.question && (
                                         <details style={{fontSize: '0.85rem'}}>
                                             <summary style={{
-                                                color: '#9b59b6',
+                                                color: '#000000',
                                                 cursor: 'pointer',
                                                 fontWeight: '500',
                                                 padding: '4px 8px',
-                                                backgroundColor: '#f8f9fa',
+                                                backgroundColor: '#D9D9D9',
                                                 borderRadius: '4px',
-                                                border: '1px solid #e9ecef'
+                                                border: '1px solid #000000'
                                             }}>
                                                 ✅ Validation
                                             </summary>
@@ -330,18 +330,18 @@ const ProjectOverviewTab = ({
                                     )}
                                 </div>
                                 
-                                {step.result_image_file_info && (
+                            {step.result_image_file_info && (
                                     <p style={{
                                         fontSize: '0.85rem',
-                                        color: COLORS.text.secondary,
+                                        color: '#000000',
                                         marginTop: LAYOUT.sm,
                                         padding: LAYOUT.sm,
-                                        backgroundColor: COLORS.gray[50],
+                                        backgroundColor: '#D9D9D9',
                                         borderRadius: '4px'
                                     }}>
                                         <strong>📸 Result Image:</strong> {step.result_image_file_info.name}
-                                    </p>
-                                )}
+                                </p>
+                            )}
                             </div>
                         ))}
                     </div>
@@ -357,28 +357,28 @@ const ProjectOverviewTab = ({
                         maxHeight: '200px',
                         overflowY: 'auto',
                         padding: LAYOUT.md,
-                        backgroundColor: COLORS.gray[50],
+                        backgroundColor: '#D9D9D9',
                         borderRadius: '8px',
-                        border: `1px solid ${COLORS.gray[200]}`
+                        border: `1px solid ${COLORS.gray[400]}`
                     }}>
                         {projectBuyList.map((item, index) => (
                             <div 
                                 key={item.id || index}
                                 style={{
                                     padding: '8px 0',
-                                    borderBottom: index < projectBuyList.length - 1 ? `1px solid ${COLORS.gray[200]}` : 'none',
+                                    borderBottom: index < projectBuyList.length - 1 ? `1px solid ${COLORS.gray[400]}` : 'none',
                                     fontSize: '0.9rem'
                                 }}
                             >
-                                <strong>{item.name}</strong> (Qty: {item.quantity})
-                                {item.specification && <div style={{fontSize: '0.8rem', color: COLORS.text.muted}}>{item.specification}</div>}
+                                <strong style={{color: '#000000'}}>{item.name}</strong> <span style={{color: '#000000'}}>(Qty: {item.quantity})</span>
+                                {item.specification && <div style={{fontSize: '0.8rem', color: '#333333'}}>{item.specification}</div>}
                             </div>
-                        ))}
+                    ))}
                     </div>
-                </div>
-            )}
-        </div>
-    );
+            </div>
+        )}
+    </div>
+);
 };
 
 export default ProjectOverviewTab; 

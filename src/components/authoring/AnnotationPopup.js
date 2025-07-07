@@ -9,57 +9,12 @@ const getAnnotationTimestamp = (annotation) => {
 // Helper function to transform database annotations to the format expected by react-image-annotation
 const transformAnnotationForDisplay = (annotation) => {
     // If it's already in the correct format (has geometry), return as is
-    if (annotation.geometry) {
+    if (annotation.geometry && annotation.data) {
         return annotation;
     }
     
-    // If it's a database annotation, transform it
-    if (annotation.data && typeof annotation.data === 'object') {
-        let geometry = {};
-        
-        // Check if coordinates are in local format (0-100) or database format (0-1)
-        if (annotation.data.x !== undefined) {
-            // Local format - coordinates are already in percentage (0-100)
-            geometry = {
-                type: annotation.annotation_type || annotation.data.type || 'rectangle',
-                x: annotation.data.x,
-                y: annotation.data.y,
-                width: annotation.data.width,
-                height: annotation.data.height
-            };
-        } else if (annotation.data.normalized_geometry) {
-            // Database format - coordinates are normalized (0-1), need to convert to percentage (0-100)
-            const norm = annotation.data.normalized_geometry;
-            geometry = {
-                type: annotation.annotation_type || norm.type || 'rectangle',
-                x: norm.x * 100,  // Convert from normalized to percentage
-                y: norm.y * 100,
-                width: norm.width * 100,
-                height: norm.height * 100
-            };
-        } else {
-            // Fallback - assume database format with coordinates in data field
-            geometry = {
-                type: annotation.annotation_type || 'rectangle',
-                x: (annotation.data.x || 0) * 100,  // Convert from normalized to percentage
-                y: (annotation.data.y || 0) * 100,
-                width: (annotation.data.width || 0) * 100,
-                height: (annotation.data.height || 0) * 100
-            };
-        }
-        
-        const data = {
-            text: annotation.component_name || annotation.data.text || 'Untitled annotation',
-            id: annotation.annotation_id || annotation.data.id || Math.random().toString()
-        };
-        
-        return {
-            geometry,
-            data
-        };
-    }
-    
-    // Fallback - return original annotation
+    // This should not be needed anymore since transformation happens in loadStepForEditing
+    // But keep as fallback
     return annotation;
 };
 

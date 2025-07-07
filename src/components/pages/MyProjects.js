@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/authContext';
 import { useNavigate } from 'react-router-dom';
-import { isImageUrl, isVideoUrl, formatDate, getApiUrl, createApiCall } from './createsteps helpers/CreateStepsUtils';
+import { isImageUrl, isVideoUrl, formatDate, createApiCall } from './createsteps helpers/CreateStepsUtils';
 import { LazyImage, VideoThumbnail } from './createsteps helpers/CommonComponents';
 
 // Add responsive CSS for the grid
@@ -40,7 +40,7 @@ const styles = {
     title: {
         fontSize: '2.5rem',
         fontWeight: 'bold',
-        color: '#2d3748',
+        color: '#D9D9D9',
         marginBottom: '0.5rem',
     },
     subtitle: {
@@ -49,7 +49,7 @@ const styles = {
         marginBottom: '2rem',
     },
     createButton: {
-        backgroundColor: '#4A90E2',
+        backgroundColor: '#0000FF',
         color: 'white',
         padding: '0.75rem 1.5rem',
         borderRadius: '0.5rem',
@@ -129,7 +129,7 @@ const styles = {
         transition: 'all 0.2s',
     },
     editButton: {
-        backgroundColor: '#10b981',
+        backgroundColor: '#000099',
         color: 'white',
     },
     deleteButton: {
@@ -181,7 +181,7 @@ const styles = {
 };
 
 // Memoized project card component for better performance
-const ProjectCard = React.memo(({ project, onEdit, onDelete, deleteLoading, formatDate }) => {
+const ProjectCard = React.memo(({ project, onEdit, onDelete, onGenerateThumbnail, deleteLoading, formatDate }) => {
     return (
         <div
             style={styles.projectCard}
@@ -195,6 +195,7 @@ const ProjectCard = React.memo(({ project, onEdit, onDelete, deleteLoading, form
         >
             {/* Thumbnail */}
             <div style={styles.projectThumbnail}>
+
                 {project.thumbnail_url && isImageUrl(project.thumbnail_url) ? (
                     <LazyImage
                         src={project.thumbnail_url} 
@@ -273,10 +274,21 @@ const ProjectCard = React.memo(({ project, onEdit, onDelete, deleteLoading, form
                             e.stopPropagation();
                             onEdit(project.project_id);
                         }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#000099'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = '#000099'}
                     >
                         Edit Steps
+                    </button>
+                    <button
+                        style={{...styles.actionButton, backgroundColor: '#F1C232', color: '#000'}}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onGenerateThumbnail(project.project_id);
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#E6B800'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = '#F1C232'}
+                    >
+                        {(project.thumbnail_url || project.frame_url) ? 'Replace Thumbnail' : 'Upload Thumbnail'}
                     </button>
                     <button
                         style={{ ...styles.actionButton, ...styles.deleteButton }}
@@ -314,12 +326,7 @@ const MyProjects = () => {
             setLoading(true);
             const data = await createApiCall(`/projects/?current_firebase_uid=${currentUser.uid}`);
             
-            // Debug logging to see the actual response structure
-            console.log('API Response:', data);
-            console.log('Current User UID:', currentUser?.uid);
-            if (data.length > 0) {
-                console.log('First project creator:', data[0].creator);
-            }
+
             
             // Since the API should filter by current user when we pass current_firebase_uid,
             // we might not need client-side filtering. Let's try without filtering first.
@@ -362,6 +369,122 @@ const MyProjects = () => {
         navigate(`/annotate`, { state: { projectId } });
     };
 
+    const handleGenerateThumbnail = async (projectId) => {
+        try {
+            // Create a file input element
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.style.display = 'none';
+            
+            fileInput.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    alert('Please select an image file');
+                    return;
+                }
+                
+                // Validate file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Image file too large. Please select a file under 5MB.');
+                    return;
+                }
+                
+                try {
+                    // Import upload function
+                    const { uploadFileToFirebase } = await import('./createsteps helpers/CreateStepsUtils');
+                    
+                    // Show uploading state
+                    const project = projects.find(p => p.project_id === projectId);
+                    const projectName = project?.name || 'Unknown Project';
+                    
+                    // Upload the thumbnail
+                    const uploadedThumbnailInfo = await uploadFileToFirebase(
+                        file,
+                        `users/${currentUser.uid}/${projectId}/thumbnails`,
+                        currentUser
+                    );
+                    
+                    if (uploadedThumbnailInfo) {
+                        // Update the backend with the new thumbnail using the dedicated endpoint
+                        try {
+                            const { getApiUrl } = await import('./createsteps helpers/CreateStepsUtils');
+                            
+
+                            
+                            // Use the new dedicated thumbnail update endpoint
+                            const response = await fetch(`${getApiUrl()}/projects/${projectId}/thumbnail`, {
+                                method: 'PATCH',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    firebase_uid: currentUser.uid,
+                                    thumbnail_path: uploadedThumbnailInfo.path
+                                }),
+                            });
+
+                            if (!response.ok) {
+                                const errorText = await response.text();
+                                throw new Error(`Backend update failed: ${response.status} - ${errorText}`);
+                            }
+                            
+
+
+                            // Update the project in local state
+                            setProjects(prevProjects => 
+                                prevProjects.map(p => 
+                                    p.project_id === projectId 
+                                        ? { ...p, thumbnail_url: uploadedThumbnailInfo.url }
+                                        : p
+                                )
+                            );
+                            
+                            alert(`Thumbnail uploaded successfully for "${projectName}"!`);
+                        } catch (backendError) {
+                            console.error('Error updating backend with thumbnail:', backendError);
+                            
+                            // Still update local state even if backend fails
+                            setProjects(prevProjects => 
+                                prevProjects.map(p => 
+                                    p.project_id === projectId 
+                                        ? { ...p, thumbnail_url: uploadedThumbnailInfo.url }
+                                        : p
+                                )
+                            );
+                            
+                            // Provide more specific error message based on the type of error
+                            const errorMessage = backendError.message?.includes('steps') 
+                                ? 'Failed to fetch existing project data. Thumbnail uploaded but database not updated.'
+                                : 'Database update failed but thumbnail is uploaded. It will appear after next project finalization.';
+                            
+                            alert(`Thumbnail uploaded to storage! Note: ${errorMessage}`);
+                        }
+                    } else {
+                        alert('Failed to upload thumbnail');
+                    }
+                } catch (error) {
+                    console.error('Error uploading thumbnail:', error);
+                    alert('Failed to upload thumbnail: ' + error.message);
+                }
+                
+                // Clean up
+                document.body.removeChild(fileInput);
+            };
+            
+            // Add to DOM and trigger click
+            document.body.appendChild(fileInput);
+            fileInput.click();
+            
+        } catch (error) {
+            console.error('Error setting up thumbnail upload:', error);
+            alert('Failed to set up thumbnail upload');
+        }
+    };
+
 
 
     if (loading) {
@@ -383,8 +506,8 @@ const MyProjects = () => {
                 <button
                     style={styles.createButton}
                     onClick={() => navigate('/create')}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#357ABD'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = '#4A90E2'}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#0000FF'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#0000FF'}
                 >
                     + Create New Project
                 </button>
@@ -414,6 +537,7 @@ const MyProjects = () => {
                             project={project}
                             onEdit={handleEditProject}
                             onDelete={handleDeleteProject}
+                            onGenerateThumbnail={handleGenerateThumbnail}
                             deleteLoading={deleteLoading}
                             formatDate={formatDate}
                         />

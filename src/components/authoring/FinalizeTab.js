@@ -26,12 +26,12 @@ const FinalizeTab = ({
             {/* Buy List Management */}
             <div style={styles.card}>
                 <h2 style={styles.sectionTitle}>Shopping List</h2>
-                <p style={{fontSize: '0.9rem', color: '#6b7280', marginBottom: '20px'}}>
+                <p style={{fontSize: '0.9rem', color: '#D9D9D9', marginBottom: '20px'}}>
                     Add items that users will need to purchase to complete this project.
                 </p>
                 
                 {/* Add Buy List Item Form */}
-                <div style={{backgroundColor: '#f8fafc', padding: '20px', borderRadius: '8px', marginBottom: '20px'}}>
+                <div style={{backgroundColor: '#000000', border: '1px solid #444444', padding: '20px', borderRadius: '8px', marginBottom: '20px'}}>
                     <h3 style={{...styles.subSectionTitle, marginTop: '0'}}>Add New Item</h3>
                     <div style={{display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '16px'}}>
                         <div>
@@ -100,20 +100,20 @@ const FinalizeTab = ({
                 {projectBuyList.length > 0 && (
                     <div>
                         <h3 style={styles.subSectionTitle}>Current Shopping List</h3>
-                        <div style={{border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden'}}>
+                        <div style={{border: '1px solid #444444', borderRadius: '8px', overflow: 'hidden'}}>
                             {projectBuyList.map((item, index) => (
                                 <div key={item.id} style={{
                                     padding: '16px',
-                                    borderBottom: index < projectBuyList.length - 1 ? '1px solid #e2e8f0' : 'none',
-                                    backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc'
+                                    borderBottom: index < projectBuyList.length - 1 ? '1px solid #444444' : 'none',
+                                    backgroundColor: index % 2 === 0 ? '#D9D9D9' : '#CCCCCC'
                                 }}>
                                     <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
                                         <div style={{flex: 1}}>
-                                            <div style={{fontWeight: '600', color: '#2d3748', marginBottom: '4px'}}>
+                                            <div style={{fontWeight: '600', color: '#000000', marginBottom: '4px'}}>
                                                 {item.name} (Qty: {item.quantity})
                                             </div>
                                             {item.specification && (
-                                                <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '4px'}}>
+                                                <div style={{fontSize: '0.85rem', color: '#333333', marginBottom: '4px'}}>
                                                     {item.specification}
                                                 </div>
                                             )}
@@ -123,7 +123,7 @@ const FinalizeTab = ({
                                                         href={item.purchase_link} 
                                                         target="_blank" 
                                                         rel="noopener noreferrer"
-                                                        style={{color: '#4A90E2', textDecoration: 'none'}}
+                                                        style={{color: '#0000FF', textDecoration: 'none'}}
                                                     >
                                                         View Product Link
                                                     </a>
