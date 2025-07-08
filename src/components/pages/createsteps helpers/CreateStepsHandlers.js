@@ -25,6 +25,7 @@ export const createStepHandlers = (
         setCurrentStepSupFiles,
         setCurrentStepSupFileName,
         setCurrentStepResultImageFile,
+        setCurrentStepResultImage,
         setProjectBuyList,
         setBuyListItemName,
         setBuyListItemQty,
@@ -176,9 +177,13 @@ export const createStepHandlers = (
 
     const handleResultImageChange = (e) => {
         if (e.target.files && e.target.files[0]) {
-            setCurrentStepResultImageFile(e.target.files[0]);
+            const file = e.target.files[0];
+            setCurrentStepResultImageFile(file);
+            // Create a URL for immediate preview
+            setCurrentStepResultImage(URL.createObjectURL(file));
         } else {
             setCurrentStepResultImageFile(null);
+            setCurrentStepResultImage(null);
         }
     };
 

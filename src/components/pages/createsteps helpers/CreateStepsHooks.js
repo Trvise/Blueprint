@@ -59,6 +59,7 @@ export const useCreateStepsState = () => {
     const [currentStepValidationQuestion, setCurrentStepValidationQuestion] = useState('');
     const [currentStepValidationAnswer, setCurrentStepValidationAnswer] = useState(''); 
     const [currentStepResultImageFile, setCurrentStepResultImageFile] = useState(null);
+    const [currentStepResultImage, setCurrentStepResultImage] = useState(null); // For displaying image URL
     
     // Buy list state
     const [projectBuyList, setProjectBuyList] = useState([]); 
@@ -74,6 +75,9 @@ export const useCreateStepsState = () => {
     const [isStepLoading, setIsStepLoading] = useState(false); 
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+    
+    // Project thumbnail state
+    const [existingThumbnailUrl, setExistingThumbnailUrl] = useState(null);
     
     // Add missing state for captured annotation frames
     const [capturedAnnotationFrames, setCapturedAnnotationFrames] = useState({});
@@ -173,6 +177,8 @@ export const useCreateStepsState = () => {
         setCurrentStepValidationAnswer,
         currentStepResultImageFile,
         setCurrentStepResultImageFile,
+        currentStepResultImage,
+        setCurrentStepResultImage,
         
         // Buy list state
         projectBuyList,
@@ -199,6 +205,10 @@ export const useCreateStepsState = () => {
         setErrorMessage,
         successMessage,
         setSuccessMessage,
+        
+        // Project thumbnail state
+        existingThumbnailUrl,
+        setExistingThumbnailUrl,
         
         // Add missing state for captured annotation frames
         capturedAnnotationFrames,
@@ -236,7 +246,8 @@ export const useCreateStepsEffects = (state) => {
         videoRef,
         setVideoDimensions,
         setCapturedAnnotationFrames,
-        setSuccessMessage
+        setSuccessMessage,
+        setExistingThumbnailUrl
     } = state;
 
     // Expose setActiveTab globally for sidebar navigation
@@ -280,6 +291,12 @@ export const useCreateStepsEffects = (state) => {
                 console.log('Project data from API:', projectData);
                 
                 setProjectName(projectData.name || `Project ${projectId}`);
+                
+                // Store existing thumbnail URL if it exists
+                if (projectData.thumbnail_url) {
+                    setExistingThumbnailUrl(projectData.thumbnail_url);
+                    console.log('Found existing thumbnail:', projectData.thumbnail_url);
+                }
                 
                 // Now fetch the project's primary video files
                 const stepsResponse = await fetch(`${getApiUrl()}/projects/${projectId}/steps`, {
@@ -399,7 +416,7 @@ export const useCreateStepsEffects = (state) => {
         } else {
             setErrorMessage("Project ID not found. Please start from project creation.");
         }
-    }, [projectId, location.state, currentUser, navigate, setProjectName, setUploadedVideos, setActiveVideoUrl, setActiveVideoIndex, setErrorMessage, setProjectSteps, setCapturedAnnotationFrames, setSuccessMessage]);
+    }, [projectId, location.state, currentUser, navigate, setProjectName, setUploadedVideos, setActiveVideoUrl, setActiveVideoIndex, setErrorMessage, setProjectSteps, setCapturedAnnotationFrames, setSuccessMessage, setExistingThumbnailUrl]);
 
     // Handle video metadata loading
     useEffect(() => {

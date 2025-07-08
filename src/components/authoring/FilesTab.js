@@ -44,10 +44,16 @@ const FilesTab = ({
                         >
                             <div>
                                 <p style={COMPONENTS.fileListItemTitle}>
-                                    {f.displayName}
+                                    📎 {f.displayName}
                                 </p>
                                 <p style={COMPONENTS.fileListItemSubtext}>
-                                    File: {f.fileObject.name} ({formatFileSize(f.fileObject.size)})
+                                    {f.fileObject ? (
+                                        `New file: ${f.fileObject.name} (${formatFileSize(f.fileObject.size)})`
+                                    ) : f.hasExistingFile ? (
+                                        `Existing file: ${f.original_filename} ${f.file_size_bytes ? `(${formatFileSize(f.file_size_bytes)})` : ''}`
+                                    ) : (
+                                        'File information unavailable'
+                                    )}
                                 </p>
                             </div>
                             <button 

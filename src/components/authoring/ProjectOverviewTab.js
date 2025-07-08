@@ -236,10 +236,40 @@ const ProjectOverviewTab = ({
                                                 fontSize: '0.8rem'
                                             }}>
                                                 {step.tools.map((tool, toolIndex) => (
-                                                    <li key={tool.id || `tool-${toolIndex}`}>
-                                                        <strong>{tool.name}</strong>
-                                                        {tool.specification && <span> - {tool.specification}</span>}
-                                                        {tool.image_file && <span> 📷</span>}
+                                                    <li key={tool.id || `tool-${toolIndex}`} style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px'}}>
+                                                        {(tool.image_url || tool.image_path || tool.hasExistingImage) && (
+                                                            <div style={{
+                                                                width: '20px',
+                                                                height: '20px',
+                                                                borderRadius: '2px',
+                                                                border: '1px solid #ccc',
+                                                                overflow: 'hidden',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                backgroundColor: '#f8f9fa',
+                                                                flexShrink: 0
+                                                            }}>
+                                                                <img 
+                                                                    src={tool.image_url} 
+                                                                    alt={tool.name}
+                                                                    style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                                                                    onError={(e) => {
+                                                                        e.target.style.display = 'none';
+                                                                        e.target.nextSibling.style.display = 'flex';
+                                                                    }}
+                                                                />
+                                                                <div style={{
+                                                                    display: 'none',
+                                                                    fontSize: '10px',
+                                                                    color: '#666'
+                                                                }}>📷</div>
+                                                            </div>
+                                                        )}
+                                                        <span>
+                                                            <strong>{tool.name}</strong>
+                                                            {tool.specification && <span> - {tool.specification}</span>}
+                                                        </span>
                                             </li>
                                         ))}
                                     </ul>
@@ -266,10 +296,40 @@ const ProjectOverviewTab = ({
                                                 fontSize: '0.8rem'
                                             }}>
                                                 {step.materials.map((material, matIndex) => (
-                                                    <li key={material.id || `material-${matIndex}`}>
-                                                        <strong>{material.name}</strong>
-                                                        {material.specification && <span> - {material.specification}</span>}
-                                                        {material.image_file && <span> 📷</span>}
+                                                    <li key={material.id || `material-${matIndex}`} style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px'}}>
+                                                        {(material.image_url || material.image_path || material.hasExistingImage) && (
+                                                            <div style={{
+                                                                width: '20px',
+                                                                height: '20px',
+                                                                borderRadius: '2px',
+                                                                border: '1px solid #ccc',
+                                                                overflow: 'hidden',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                backgroundColor: '#f8f9fa',
+                                                                flexShrink: 0
+                                                            }}>
+                                                                <img 
+                                                                    src={material.image_url} 
+                                                                    alt={material.name}
+                                                                    style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                                                                    onError={(e) => {
+                                                                        e.target.style.display = 'none';
+                                                                        e.target.nextSibling.style.display = 'flex';
+                                                                    }}
+                                                                />
+                                                                <div style={{
+                                                                    display: 'none',
+                                                                    fontSize: '10px',
+                                                                    color: '#666'
+                                                                }}>📷</div>
+                                                            </div>
+                                                        )}
+                                                        <span>
+                                                            <strong>{material.name}</strong>
+                                                            {material.specification && <span> - {material.specification}</span>}
+                                                        </span>
                                             </li>
                                         ))}
                                     </ul>

@@ -28,7 +28,7 @@ const ResultTab = ({
             </p>
         </div>
         
-        {currentStepResultImage && (
+        {(currentStepResultImage || (currentStepResultImageFile && (currentStepResultImageFile.hasExistingImage || currentStepResultImageFile instanceof File))) && (
             <div style={{marginTop: LAYOUT.sectionSpacing}}>
                 <h4 style={TYPOGRAPHY.listTitle}>Preview:</h4>
                 <div style={{
@@ -37,7 +37,11 @@ const ResultTab = ({
                     textAlign: 'center'
                 }}>
                     <img 
-                        src={currentStepResultImage} 
+                        src={
+                            currentStepResultImage || 
+                            (currentStepResultImageFile?.hasExistingImage ? currentStepResultImageFile.image_url : null) ||
+                            (currentStepResultImageFile instanceof File ? URL.createObjectURL(currentStepResultImageFile) : null)
+                        } 
                         alt="Step result preview" 
                         style={{
                             maxWidth: '100%',
@@ -46,14 +50,27 @@ const ResultTab = ({
                             border: `2px solid ${COLORS.gray[200]}`,
                             boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                         }}
+                        onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'block';
+                        }}
                     />
+                    <div style={{display: 'none', color: '#666', fontSize: '14px'}}>
+                        📷 Image failed to load
+                    </div>
                     {currentStepResultImageFile && (
                         <p style={{
                             ...COMPONENTS.fileListItemSubtext,
                             marginTop: LAYOUT.inputSpacing,
                             textAlign: 'center'
                         }}>
-                            File: {currentStepResultImageFile.name}
+                            {currentStepResultImageFile instanceof File ? (
+                                `New image: ${currentStepResultImageFile.name}`
+                            ) : currentStepResultImageFile.hasExistingImage ? (
+                                `Existing image: ${currentStepResultImageFile.name}`
+                            ) : (
+                                `File: ${currentStepResultImageFile.name}`
+                            )}
                         </p>
                     )}
                 </div>

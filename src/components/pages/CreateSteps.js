@@ -84,6 +84,7 @@ const ProjectStepsPage = () => {
         setCurrentStepSupFileName,
         supFileInputRef,
         currentStepResultImageFile,
+        currentStepResultImage,
         resultImageInputRef,
         // Buy list data
         projectBuyList,
@@ -399,8 +400,9 @@ const ProjectStepsPage = () => {
 
                         {activeTab === 'result' && (
                             <ResultTab 
+                                currentStepResultImage={currentStepResultImage}
                                 currentStepResultImageFile={currentStepResultImageFile}
-                                setCurrentStepResultImageFile={state.setCurrentStepResultImageFile}
+                                handleResultImageChange={enhancedHandlers.handleResultImageChange}
                                 resultImageInputRef={resultImageInputRef}
                                 styles={styles}
                             />

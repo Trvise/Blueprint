@@ -1,5 +1,5 @@
 import React from 'react';
-import { COMPONENTS, TYPOGRAPHY, COLORS, LAYOUT, getListItemBorder } from './shared/styles';
+import { COMPONENTS, TYPOGRAPHY, LAYOUT, getListItemBorder } from './shared/styles';
 
 const ToolsTab = ({
     currentStepTools,
@@ -61,14 +61,55 @@ const ToolsTab = ({
                                 ...getListItemBorder(index, currentStepTools.length)
                             }}
                         >
-                            <div>
-                                <p style={COMPONENTS.fileListItemTitle}>
-                                    {tool.name}
-                                </p>
-                                <p style={COMPONENTS.fileListItemSubtext}>
-                                    {tool.specification ? `Specification: ${tool.specification}` : 'No specification'}
-                                    {tool.imageFile && ` • Image: ${tool.imageFile.name.substring(0, 20)}...`}
-                                </p>
+                            <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                                {/* Show image thumbnail if available */}
+                                {(tool.imageFile || tool.hasExistingImage) && (
+                                    <div style={{
+                                        width: '40px',
+                                        height: '40px',
+                                        borderRadius: '4px',
+                                        border: '1px solid #D9D9D9',
+                                        overflow: 'hidden',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        backgroundColor: '#f8f9fa'
+                                    }}>
+                                        {tool.imageFile ? (
+                                            <img 
+                                                src={URL.createObjectURL(tool.imageFile)} 
+                                                alt={tool.name}
+                                                style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                                            />
+                                        ) : tool.hasExistingImage ? (
+                                            <img 
+                                                src={tool.image_url} 
+                                                alt={tool.name}
+                                                style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                                                onError={(e) => {
+                                                    e.target.style.display = 'none';
+                                                    e.target.nextSibling.style.display = 'flex';
+                                                }}
+                                            />
+                                        ) : null}
+                                        <div style={{
+                                            display: 'none',
+                                            fontSize: '12px',
+                                            color: '#666'
+                                        }}>📷</div>
+                                    </div>
+                                )}
+                                
+                                <div>
+                                    <p style={COMPONENTS.fileListItemTitle}>
+                                        {tool.name}
+                                    </p>
+                                    <p style={COMPONENTS.fileListItemSubtext}>
+                                        {tool.specification ? `Specification: ${tool.specification}` : 'No specification'}
+                                        {tool.imageFile && ` • New image: ${tool.imageFile.name.substring(0, 20)}...`}
+                                        {tool.hasExistingImage && !tool.imageFile && ` • Has image`}
+                                    </p>
+                                </div>
                             </div>
                             <button 
                                 onClick={() => removeToolFromCurrentStep(tool.id)} 

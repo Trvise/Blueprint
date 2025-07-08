@@ -1,6 +1,6 @@
 import React from 'react';
 import ToolsTab from './ToolsTab';
-import { COMPONENTS, TYPOGRAPHY, COLORS, LAYOUT, getListItemBorder } from './shared/styles';
+import { COMPONENTS, TYPOGRAPHY, LAYOUT, getListItemBorder } from './shared/styles';
 
 const MaterialsAndToolsTab = ({
     // Tools props
@@ -91,14 +91,55 @@ const MaterialsAndToolsTab = ({
                                     ...getListItemBorder(index, currentStepMaterials.length)
                                 }}
                             >
-                                <div>
-                                    <p style={COMPONENTS.fileListItemTitle}>
-                                        {material.name}
-                                    </p>
-                                    <p style={COMPONENTS.fileListItemSubtext}>
-                                        {material.specification ? `Specification: ${material.specification}` : 'No specification'}
-                                        {material.imageFile && ` • Image: ${material.imageFile.name.substring(0, 20)}...`}
-                                    </p>
+                                <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                                    {/* Show image thumbnail if available */}
+                                    {(material.imageFile || material.hasExistingImage) && (
+                                        <div style={{
+                                            width: '40px',
+                                            height: '40px',
+                                            borderRadius: '4px',
+                                            border: '1px solid #D9D9D9',
+                                            overflow: 'hidden',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            backgroundColor: '#f8f9fa'
+                                        }}>
+                                            {material.imageFile ? (
+                                                <img 
+                                                    src={URL.createObjectURL(material.imageFile)} 
+                                                    alt={material.name}
+                                                    style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                                                />
+                                            ) : material.hasExistingImage ? (
+                                                <img 
+                                                    src={material.image_url} 
+                                                    alt={material.name}
+                                                    style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        e.target.nextSibling.style.display = 'flex';
+                                                    }}
+                                                />
+                                            ) : null}
+                                            <div style={{
+                                                display: 'none',
+                                                fontSize: '12px',
+                                                color: '#666'
+                                            }}>📷</div>
+                                        </div>
+                                    )}
+                                    
+                                    <div>
+                                        <p style={COMPONENTS.fileListItemTitle}>
+                                            {material.name}
+                                        </p>
+                                        <p style={COMPONENTS.fileListItemSubtext}>
+                                            {material.specification ? `Specification: ${material.specification}` : 'No specification'}
+                                            {material.imageFile && ` • New image: ${material.imageFile.name.substring(0, 20)}...`}
+                                            {material.hasExistingImage && !material.imageFile && ` • Has image`}
+                                        </p>
+                                    </div>
                                 </div>
                                 <button 
                                     onClick={() => removeMaterialFromCurrentStep(material.id)} 

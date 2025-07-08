@@ -19,6 +19,7 @@ export const createStepActions = (state) => {
         setCurrentStepValidationQuestion,
         setCurrentStepValidationAnswer,
         setCurrentStepResultImageFile,
+        setCurrentStepResultImage,
 
         setProjectSteps,
         setIsStepLoading,
@@ -32,7 +33,8 @@ export const createStepActions = (state) => {
         projectId,
         projectBuyList,
         currentUser,
-        navigate
+        navigate,
+        existingThumbnailUrl
     } = state;
 
     // Function to load step data for editing
@@ -87,27 +89,65 @@ export const createStepActions = (state) => {
         console.log('Final transformed annotations:', annotations);
         setCurrentStepAnnotations(annotations);
         
-        // Ensure tools / materials keep existing image paths if any
+        // Ensure tools / materials keep existing image paths if any and restore as proper objects
         const mappedTools = (step.tools || []).map(t => ({
-            ...t,
+            id: t.tool_id || t.id || `tool_${uuidv4()}`,
+            name: t.name,
+            specification: t.specification || '',
+            imageFile: null, // Will be restored if has image_url
             image_file_name: t.image_file_name || null,
-            image_path: t.image_path || null,
-            image_url: t.image_url || null,
+            image_path: t.image_path || t.image_file?.file_key || null,
+            image_url: t.image_url || t.image_file?.file_url || null, // Extract from nested structure
+            hasExistingImage: !!(t.image_url || t.image_file?.file_url || t.image_path || t.image_file?.file_key), // Flag to show existing image
         }));
 
         const mappedMaterials = (step.materials || []).map(m => ({
-            ...m,
+            id: m.item_id || m.id || `material_${uuidv4()}`,
+            name: m.name,
+            specification: m.specification || '',
+            imageFile: null, // Will be restored if has image_url
             image_file_name: m.image_file_name || null,
-            image_path: m.image_path || null,
-            image_url: m.image_url || null,
+            image_path: m.image_path || m.image_file?.file_key || null,
+            image_url: m.image_url || m.image_file?.file_url || null, // Extract from nested structure
+            hasExistingImage: !!(m.image_url || m.image_file?.file_url || m.image_path || m.image_file?.file_key), // Flag to show existing image
+        }));
+
+        // Map supplementary files to proper format
+        const mappedSupFiles = (step.supplementary_files || []).map(f => ({
+            id: f.file_id || f.id || `supfile_${uuidv4()}`,
+            displayName: f.display_name || f.displayName || f.file?.original_filename || f.original_filename,
+            fileObject: null, // Can't restore file object, but we have the info
+            hasExistingFile: !!(f.file_url || f.file?.file_url || f.file_path || f.file?.file_key),
+            file_url: f.file_url || f.file?.file_url || null,
+            file_path: f.file_path || f.file?.file_key || null,
+            original_filename: f.original_filename || f.file?.original_filename || null,
+            mime_type: f.mime_type || f.file?.mime_type || null,
+            file_size_bytes: f.file_size_bytes || f.file?.file_size_bytes || null,
         }));
 
         setCurrentStepTools(mappedTools);
         setCurrentStepMaterials(mappedMaterials);
-        setCurrentStepSupFiles(step.supplementary_files || []);
-        setCurrentStepValidationQuestion(step.validation_metric?.question || '');
-        setCurrentStepValidationAnswer(step.validation_metric?.expected_answer || '');
-        setCurrentStepResultImageFile(step.result_image_file_info ? new File([], step.result_image_file_info.name) : null);
+        setCurrentStepSupFiles(mappedSupFiles);
+        setCurrentStepValidationQuestion(step.validation_metric?.validation_data?.question || step.validation_metric?.question || '');
+        setCurrentStepValidationAnswer(step.validation_metric?.validation_data?.expected_answer || step.validation_metric?.expected_answer || '');
+        
+        // Handle result image - show existing if available
+        const resultImageUrl = step.result_image_url || step.result_image_file?.file_url;
+        const resultImagePath = step.result_image_path || step.result_image_file?.file_key;
+        
+        if (resultImageUrl || resultImagePath) {
+            // We can't restore the actual File object, but we can show the existing image
+            setCurrentStepResultImageFile({
+                name: step.result_image_file_info?.name || step.result_image_file?.original_filename || 'result-image.jpg',
+                hasExistingImage: true,
+                image_url: resultImageUrl,
+                image_path: resultImagePath
+            });
+            setCurrentStepResultImage(resultImageUrl);
+        } else {
+            setCurrentStepResultImageFile(null);
+            setCurrentStepResultImage(null);
+        }
         
         // Set active video if different
         if (step.associated_video_index !== undefined && step.associated_video_index !== activeVideoIndex) {
@@ -132,6 +172,7 @@ export const createStepActions = (state) => {
         setCurrentStepValidationQuestion('');
         setCurrentStepValidationAnswer('');
         setCurrentStepResultImageFile(null);
+        setCurrentStepResultImage(null);
         // Don't clear annotation frame and tool state - preserve for new steps
         // setFrameForAnnotation(null);
         // setCurrentAnnotationTool({});
@@ -204,33 +245,60 @@ export const createStepActions = (state) => {
             step_order: currentStepIndex >= 0 ? currentStepIndex : projectSteps.length, 
             annotations: [...currentStepAnnotations], 
             tools: currentStepTools.map(tool => ({ 
+                id: tool.id,
                 name: tool.name,
                 specification: tool.specification,
-                image_file_name: tool.imageFile ? tool.imageFile.name : null,
+                image_file_name: tool.imageFile ? tool.imageFile.name : tool.image_file_name,
+                image_url: tool.imageFile ? null : tool.image_url, // Keep existing URL if no new file
+                image_path: tool.imageFile ? null : tool.image_path, // Keep existing path if no new file
+                hasExistingImage: tool.hasExistingImage && !tool.imageFile, // Flag for existing image
             })), 
             materials: currentStepMaterials.map(mat => ({ 
+                id: mat.id,
                 name: mat.name,
                 specification: mat.specification,
-                image_file_name: mat.imageFile ? mat.imageFile.name : null,
+                image_file_name: mat.imageFile ? mat.imageFile.name : mat.image_file_name,
+                image_url: mat.imageFile ? null : mat.image_url, // Keep existing URL if no new file
+                image_path: mat.imageFile ? null : mat.image_path, // Keep existing path if no new file
+                hasExistingImage: mat.hasExistingImage && !mat.imageFile, // Flag for existing image
             })),
             supplementary_files: currentStepSupFiles.map(f => ({ 
-                displayName: f.displayName, 
-                fileName: f.fileObject.name, 
-                fileType: f.fileObject.type,
+                id: f.id,
+                displayName: f.displayName,
+                fileName: f.fileObject ? f.fileObject.name : f.original_filename,
+                fileType: f.fileObject ? f.fileObject.type : f.mime_type,
+                // Keep existing file info if no new file uploaded
+                file_url: f.fileObject ? null : f.file_url,
+                file_path: f.fileObject ? null : f.file_path,
+                original_filename: f.fileObject ? f.fileObject.name : f.original_filename,
+                mime_type: f.fileObject ? f.fileObject.type : f.mime_type,
+                file_size_bytes: f.fileObject ? f.fileObject.size : f.file_size_bytes,
+                hasExistingFile: f.hasExistingFile && !f.fileObject,
             })), 
             validation_metric: { 
                 question: currentStepValidationQuestion,
                 expected_answer: currentStepValidationAnswer 
             },
-            result_image_file_info: currentStepResultImageFile 
-                ? { name: currentStepResultImageFile.name, type: currentStepResultImageFile.type, size: currentStepResultImageFile.size } 
+            result_image_file_info: currentStepResultImageFile && (currentStepResultImageFile instanceof File || currentStepResultImageFile.hasExistingImage)
+                ? { 
+                    name: currentStepResultImageFile.name, 
+                    type: currentStepResultImageFile.type || 'image/jpeg', 
+                    size: currentStepResultImageFile.size || 0,
+                    hasExistingImage: currentStepResultImageFile.hasExistingImage,
+                    image_url: currentStepResultImageFile.image_url,
+                    image_path: currentStepResultImageFile.image_path
+                } 
                 : null,
                 
-                // Store file objects for later upload
+                // Store file objects for later upload (only new files)
                 _toolImageFiles: currentStepTools.filter(tool => tool.imageFile).map(tool => tool.imageFile),
                 _materialImageFiles: currentStepMaterials.filter(mat => mat.imageFile).map(mat => mat.imageFile),
-                _supFileObjects: currentStepSupFiles.map(f => f.fileObject),
-                _resultImageFile: currentStepResultImageFile
+                _supFileObjects: currentStepSupFiles.filter(f => f.fileObject).map(f => f.fileObject),
+                _resultImageFile: currentStepResultImageFile instanceof File ? currentStepResultImageFile : null,
+                
+                // Keep existing URLs for items without new files
+                result_image_url: currentStepResultImageFile && !(currentStepResultImageFile instanceof File) ? currentStepResultImageFile.image_url : null,
+                result_image_path: currentStepResultImageFile && !(currentStepResultImageFile instanceof File) ? currentStepResultImageFile.image_path : null
         };
 
         if (currentStepIndex >= 0 && currentStepIndex < projectSteps.length) {
@@ -263,12 +331,10 @@ export const createStepActions = (state) => {
         setSuccessMessage('Finalizing project... Uploading files...');
 
         try {
-            // --- 1. UPLOAD THUMBNAIL IMAGE ---
             let thumbnailFileToUpload = null;
             let uploadedThumbnailInfo = null;
             
-            // Use first annotation frame as thumbnail if available
-            if (capturedAnnotationFrames && Object.keys(capturedAnnotationFrames).length > 0) {
+            if (!existingThumbnailUrl && capturedAnnotationFrames && Object.keys(capturedAnnotationFrames).length > 0) {
                 const firstFrameTimestamp = Object.keys(capturedAnnotationFrames)[0];
                 thumbnailFileToUpload = capturedAnnotationFrames[firstFrameTimestamp];
 
@@ -280,6 +346,9 @@ export const createStepActions = (state) => {
                         currentUser
                     );
                 }
+            } else if (existingThumbnailUrl) {
+                console.log('Project already has thumbnail, skipping thumbnail upload:', existingThumbnailUrl);
+                setSuccessMessage('Project already has thumbnail, proceeding with step finalization...');
             }
 
             const processedStepsPayload = [];
@@ -420,8 +489,8 @@ export const createStepActions = (state) => {
                     }
                 }
 
-                // Add tools without images
-                for (const tool of step.tools.filter(t => !t.image_file_name)) {
+                // Add tools without new images (including those with existing images)
+                for (const tool of step.tools.filter(t => !t.image_file_name || t.hasExistingImage)) {
                     stepPayload.tools.push({ 
                         name: tool.name, 
                         specification: tool.specification, 
@@ -453,8 +522,8 @@ export const createStepActions = (state) => {
                      }
                 }
 
-                // Add materials without images
-                for (const material of step.materials.filter(m => !m.image_file_name)) {
+                // Add materials without new images (including those with existing images)
+                for (const material of step.materials.filter(m => !m.image_file_name || m.hasExistingImage)) {
                     stepPayload.materials.push({ 
                         name: material.name, 
                         specification: material.specification, 
@@ -477,12 +546,27 @@ export const createStepActions = (state) => {
                         stepPayload.supplementary_files.push({
                                 display_name: supFileData?.displayName || supFile.name,
                                 file_url: uploaded.url,
-                            file_path: uploaded.path,
+                                file_path: uploaded.path,
+                                original_filename: uploaded.name,
+                                mime_type: uploaded.type,
+                                file_size_bytes: uploaded.size,
                             });
                         }
                     } catch (error) {
                         console.error(`Error uploading supplementary file ${supFile.name}:`, error);
                     }
+                }
+
+                // Add existing supplementary files (without new uploads)
+                for (const supFile of step.supplementary_files.filter(sf => sf.hasExistingFile)) {
+                    stepPayload.supplementary_files.push({
+                        display_name: supFile.displayName,
+                        file_url: supFile.file_url,
+                        file_path: supFile.file_path,
+                        original_filename: supFile.original_filename,
+                        mime_type: supFile.mime_type,
+                        file_size_bytes: supFile.file_size_bytes,
+                    });
                 }
 
                 // --- F. Upload Result Image ---
@@ -494,11 +578,16 @@ export const createStepActions = (state) => {
                             currentUser
                         );
                     if (uploaded) {
+                        stepPayload.result_image_url = uploaded.url;
                         stepPayload.result_image_path = uploaded.path;
                         }
                     } catch (error) {
                         console.error(`Error uploading result image:`, error);
                     }
+                } else if (step.result_image_url) {
+                    // Keep existing result image
+                    stepPayload.result_image_url = step.result_image_url;
+                    stepPayload.result_image_path = step.result_image_path;
                 }
                 
                 processedStepsPayload.push(stepPayload);
@@ -511,8 +600,7 @@ export const createStepActions = (state) => {
                 user_id: currentUser.uid,
                 steps: processedStepsPayload,
                 buy_list: projectBuyList || [],
-                thumbnail_image_path: uploadedThumbnailInfo ? uploadedThumbnailInfo.path : null,
-                thumbnail_url: uploadedThumbnailInfo ? uploadedThumbnailInfo.url : null,
+                thumbnail_path: uploadedThumbnailInfo ? uploadedThumbnailInfo.path : null,
             };
 
             // Validate payload before sending
