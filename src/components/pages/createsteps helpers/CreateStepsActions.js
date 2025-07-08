@@ -264,7 +264,7 @@ export const createStepActions = (state) => {
             })),
             supplementary_files: currentStepSupFiles.map(f => ({ 
                 id: f.id,
-                displayName: f.displayName,
+                displayName: f.displayName, 
                 fileName: f.fileObject ? f.fileObject.name : f.original_filename,
                 fileType: f.fileObject ? f.fileObject.type : f.mime_type,
                 // Keep existing file info if no new file uploaded
@@ -546,12 +546,12 @@ export const createStepActions = (state) => {
                         stepPayload.supplementary_files.push({
                                 display_name: supFileData?.displayName || supFile.name,
                                 file_url: uploaded.url,
-                                file_path: uploaded.path,
-                                original_filename: uploaded.name,
-                                mime_type: uploaded.type,
-                                file_size_bytes: uploaded.size,
-                            });
-                        }
+                            file_path: uploaded.path,
+                            original_filename: uploaded.name,
+                            mime_type: uploaded.type,
+                            file_size_bytes: uploaded.size,
+                        });
+                    }
                     } catch (error) {
                         console.error(`Error uploading supplementary file ${supFile.name}:`, error);
                     }
@@ -724,6 +724,6 @@ export const createStepActions = (state) => {
         handleAddStep,
         handleFinishProject
     };
-};
+}; 
 
  

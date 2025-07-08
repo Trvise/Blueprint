@@ -78,7 +78,7 @@ const ProjectOverviewTab = ({
                         }}>
                             <div style={{fontSize: '2rem', fontWeight: 'bold', color: '#D9D9D9'}}>
                                 {totalMaterials}
-                            </div>
+                    </div>
                             <div style={{fontSize: '0.9rem', color: '#D9D9D9'}}>
                                 Materials
                     </div>
