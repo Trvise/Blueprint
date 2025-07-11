@@ -1,5 +1,5 @@
 import React from 'react';
-import { COMPONENTS, TYPOGRAPHY, COLORS, LAYOUT } from './shared/styles';
+import { COMPONENTS, TYPOGRAPHY, LAYOUT } from './shared/styles';
 
 const SignOffTab = ({
     currentCautionaryNotes,

@@ -247,7 +247,9 @@ export const useCreateStepsEffects = (state) => {
         setVideoDimensions,
         setCapturedAnnotationFrames,
         setSuccessMessage,
-        setExistingThumbnailUrl
+        setExistingThumbnailUrl,
+        setProjectBuyList,
+        projectBuyList
     } = state;
 
     // Expose setActiveTab globally for sidebar navigation
@@ -298,13 +300,21 @@ export const useCreateStepsEffects = (state) => {
                     console.log('Found existing thumbnail:', projectData.thumbnail_url);
                 }
                 
-                // Now fetch the project's primary video files
-                const stepsResponse = await fetch(`${getApiUrl()}/projects/${projectId}/steps`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                });
+                // Now fetch the project's primary video files and buy list
+                const [stepsResponse, buyListResponse] = await Promise.all([
+                    fetch(`${getApiUrl()}/projects/${projectId}/steps`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    }),
+                    fetch(`${getApiUrl()}/projects/${projectId}/buy_list`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    })
+                ]);
 
                 let videosFromAPI = [];
                 
@@ -321,6 +331,39 @@ export const useCreateStepsEffects = (state) => {
                             main_video_file: step.main_video_file?.original_filename || 'no video'
                         });
                     });
+                    
+                    // Process and load existing buy list
+                    if (buyListResponse.ok) {
+                        const buyListData = await buyListResponse.json();
+                        console.log('Buy list data from API:', buyListData);
+                        console.log('Number of buy list items:', buyListData.length);
+                        
+                        // Transform buy list items to frontend format
+                        const transformedBuyList = buyListData.map(item => ({
+                            id: `buyitem_${item.item_id}`, // Use backend ID with prefix
+                            name: item.name,
+                            quantity: item.quantity,
+                            specification: item.specification || '',
+                            purchase_link: item.purchase_link || '',
+                            imageFile: null, // Existing items don't have File objects
+                            hasExistingImage: !!(item.image_file && item.image_file.file_url),
+                            image_url: item.image_file?.file_url || null,
+                            image_path: item.image_file?.file_key || null,
+                            sourceType: 'existing', // Mark as existing buy list item
+                            sourceId: item.item_id
+                        }));
+                        
+                        setProjectBuyList(transformedBuyList);
+                        console.log('Loaded existing buy list:', transformedBuyList);
+                        
+                        // Show success message if items were loaded
+                        if (transformedBuyList.length > 0) {
+                            setSuccessMessage(`Loaded existing buy list with ${transformedBuyList.length} item${transformedBuyList.length !== 1 ? 's' : ''}.`);
+                            setTimeout(() => setSuccessMessage(''), 3000);
+                        }
+                    } else {
+                        console.log('No existing buy list found or failed to fetch buy list');
+                    }
                     
                     // Extract unique video files from steps
                     const videoFilesMap = new Map();
@@ -380,6 +423,35 @@ export const useCreateStepsEffects = (state) => {
                     // Fallback: create a placeholder if we can't get video files
                     console.warn('Could not fetch steps data, using placeholder');
                     setUploadedVideos([]);
+                    
+                    // Still try to load buy list even if steps failed
+                    if (buyListResponse.ok) {
+                        const buyListData = await buyListResponse.json();
+                        console.log('Buy list data from API (steps failed):', buyListData);
+                        
+                        const transformedBuyList = buyListData.map(item => ({
+                            id: `buyitem_${item.item_id}`,
+                            name: item.name,
+                            quantity: item.quantity,
+                            specification: item.specification || '',
+                            purchase_link: item.purchase_link || '',
+                            imageFile: null,
+                            hasExistingImage: !!(item.image_file && item.image_file.file_url),
+                            image_url: item.image_file?.file_url || null,
+                            image_path: item.image_file?.file_key || null,
+                            sourceType: 'existing',
+                            sourceId: item.item_id
+                        }));
+                        
+                        setProjectBuyList(transformedBuyList);
+                        console.log('Loaded existing buy list (steps failed):', transformedBuyList);
+                        
+                        // Show success message if items were loaded
+                        if (transformedBuyList.length > 0) {
+                            setSuccessMessage(`Loaded existing buy list with ${transformedBuyList.length} item${transformedBuyList.length !== 1 ? 's' : ''}.`);
+                            setTimeout(() => setSuccessMessage(''), 3000);
+                        }
+                    }
                 }
                 
                 if (videosFromAPI.length > 0 && videosFromAPI[0].url) {
@@ -394,6 +466,11 @@ export const useCreateStepsEffects = (state) => {
             } catch (error) {
                 console.error('Error fetching project data:', error);
                 setErrorMessage("Failed to load project data. Please try again.");
+                
+                // If project data fetch fails completely, still try to initialize empty buy list
+                if (projectBuyList.length === 0) {
+                    setProjectBuyList([]);
+                }
             }
         };
 
@@ -416,7 +493,7 @@ export const useCreateStepsEffects = (state) => {
         } else {
             setErrorMessage("Project ID not found. Please start from project creation.");
         }
-    }, [projectId, location.state, currentUser, navigate, setProjectName, setUploadedVideos, setActiveVideoUrl, setActiveVideoIndex, setErrorMessage, setProjectSteps, setCapturedAnnotationFrames, setSuccessMessage, setExistingThumbnailUrl]);
+    }, [projectId, location.state, currentUser, navigate, setProjectName, setUploadedVideos, setActiveVideoUrl, setActiveVideoIndex, setErrorMessage, setProjectSteps, setCapturedAnnotationFrames, setSuccessMessage, setExistingThumbnailUrl, setProjectBuyList, projectBuyList.length]);
 
     // Handle video metadata loading
     useEffect(() => {

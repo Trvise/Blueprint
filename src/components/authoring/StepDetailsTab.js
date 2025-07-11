@@ -1,5 +1,5 @@
-import React from 'react';
-import { COMPONENTS, COLORS, LAYOUT, TYPOGRAPHY } from './shared/styles';
+import React, { useEffect } from 'react';
+import { COMPONENTS, COLORS, LAYOUT } from './shared/styles';
 
 const getAnnotationText = (annotation) => {
     return annotation.component_name || annotation.data?.text || 'Untitled annotation';
@@ -24,7 +24,18 @@ const StepDetailsTab = ({
     formatTime,
     onEditAnnotation,
     styles
-}) => (
+}) => {
+    // Track when step times change for debugging
+    useEffect(() => {
+        console.log('StepDetailsTab - Step times changed:', {
+            startTime: currentStepStartTime,
+            endTime: currentStepEndTime,
+            startFormatted: currentStepStartTime !== null ? formatTime(currentStepStartTime) : 'Not set',
+            endFormatted: currentStepEndTime !== null ? formatTime(currentStepEndTime) : 'Not set'
+        });
+    }, [currentStepStartTime, currentStepEndTime, formatTime]);
+    
+    return (
     <div style={styles.card}>
         <h2 style={styles.sectionTitle}>Step Details</h2>
         <div style={COMPONENTS.flexColumn}>
@@ -56,16 +67,47 @@ const StepDetailsTab = ({
                 />
             </div>
 
-            <div style={COMPONENTS.timeDisplay}>
-                <label style={styles.inputLabel}>Video Time Range</label>
-                <div style={{fontSize: '0.9rem', color: COLORS.text.secondary, marginTop: '4px'}}>
-                    <div style={{marginBottom: '2px'}}>
-                        <strong>Start:</strong> {currentStepStartTime !== null ? formatTime(currentStepStartTime) : 'Not set'}
+            <div style={{
+                ...COMPONENTS.timeDisplay,
+                backgroundColor: (currentStepStartTime === null || currentStepEndTime === null) ? '#fff3cd' : '#d1edff',
+                border: `2px solid ${(currentStepStartTime === null || currentStepEndTime === null) ? '#856404' : '#0c5460'}`,
+                borderRadius: '6px',
+                padding: '12px'
+            }}>
+                <label style={{
+                    ...styles.inputLabel, 
+                    color: (currentStepStartTime === null || currentStepEndTime === null) ? '#856404' : '#0c5460',
+                    margin: '0 0 8px 0',
+                    display: 'block'
+                }}>
+                    Video Time Range {(currentStepStartTime === null || currentStepEndTime === null) && 
+                    <span style={{color: '#dc3545', fontSize: '0.9rem'}}> (Required - Use Mark Start/End buttons)</span>}
+                </label>
+                <div style={{fontSize: '0.9rem', marginTop: '4px'}}>
+                    <div style={{
+                        marginBottom: '4px',
+                        color: currentStepStartTime === null ? '#dc3545' : '#28a745',
+                        fontWeight: '500'
+                    }}>
+                        <strong>Start:</strong> {currentStepStartTime !== null ? formatTime(currentStepStartTime) : '⚠️ Not set'}
                     </div>
-                    <div>
-                        <strong>End:</strong> {currentStepEndTime !== null ? formatTime(currentStepEndTime) : 'Not set'}
+                    <div style={{
+                        color: currentStepEndTime === null ? '#dc3545' : '#28a745',
+                        fontWeight: '500'
+                    }}>
+                        <strong>End:</strong> {currentStepEndTime !== null ? formatTime(currentStepEndTime) : '⚠️ Not set'}
                     </div>
                 </div>
+                {(currentStepStartTime === null || currentStepEndTime === null) && (
+                    <div style={{
+                        fontSize: '0.8rem',
+                        color: '#856404',
+                        marginTop: '8px',
+                        fontStyle: 'italic'
+                    }}>
+                        💡 Play the video and click "Mark Start" and "Mark End" buttons below the video to set the time range for this step.
+                    </div>
+                )}
             </div>
 
             {/* Annotations Management Section */}
@@ -180,6 +222,6 @@ const StepDetailsTab = ({
             </div>
         </div>
     </div>
-);
+)};
 
 export default StepDetailsTab; 

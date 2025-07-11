@@ -271,6 +271,8 @@ const ProjectStepsPage = () => {
                         buyListImageInputRef={buyListImageInputRef}
                         handleAddBuyListItem={enhancedHandlers.handleAddBuyListItem}
                         removeBuyListItem={enhancedHandlers.removeBuyListItem}
+                        handleAutoPopulateBuyList={enhancedHandlers.handleAutoPopulateBuyList}
+                        handleClearBuyList={enhancedHandlers.handleClearBuyList}
                         handleFinishProject={enhancedHandlers.handleFinishProject}
                         isLoading={isLoading}
                         formatTime={formatTime}
@@ -292,7 +294,7 @@ const ProjectStepsPage = () => {
                                 ...(activeTab === 'details' ? styles.tabButtonActive : {})
                             }}
                         >
-                            Details
+                            Step Details
                                         </button>
                         <button 
                             onClick={() => state.setActiveTab('materials')}
@@ -301,7 +303,7 @@ const ProjectStepsPage = () => {
                                 ...(activeTab === 'materials' ? styles.tabButtonActive : {})
                             }}
                         >
-                            Materials
+                            Step Materials
                         </button>
                         <button 
                             onClick={() => state.setActiveTab('files')}
@@ -371,6 +373,9 @@ const ProjectStepsPage = () => {
                                 toolImageInputRef={toolImageInputRef}
                                 handleAddToolToCurrentStep={enhancedHandlers.handleAddToolToCurrentStep}
                                 removeToolFromCurrentStep={enhancedHandlers.removeToolFromCurrentStep}
+                                // Add direct state setters for repository items
+                                setCurrentStepTools={state.setCurrentStepTools}
+                                setCurrentStepMaterials={state.setCurrentStepMaterials}
                                 // Materials props
                                 currentStepMaterials={currentStepMaterials}
                                 currentStepMaterialName={currentStepMaterialName}
@@ -563,7 +568,16 @@ const ProjectStepsPage = () => {
                                             <button
                                                 onClick={() => {
                                                     if (videoRef.current) {
-                                                        state.setCurrentStepStartTime(videoRef.current.currentTime);
+                                                        const currentTime = videoRef.current.currentTime;
+                                                        console.log('Marking start time:', currentTime);
+                                                        console.log('Current step start time before setting:', currentStepStartTime);
+                                                        state.setCurrentStepStartTime(currentTime);
+                                                        console.log('setCurrentStepStartTime called with:', currentTime);
+                                                        setSuccessMessage(`Start time set to ${formatTime(currentTime)}`);
+                                                        setTimeout(() => setSuccessMessage(''), 2000);
+                                                    } else {
+                                                        console.log('Video ref not available');
+                                                        setErrorMessage("Video not ready. Please wait and try again.");
                                                     }
                                                 }}
                                                 style={{...styles.button, ...styles.buttonPrimary, fontSize: '0.8rem', padding: '6px 12px'}}
@@ -574,11 +588,19 @@ const ProjectStepsPage = () => {
                                                 onClick={() => {
                                                     if (videoRef.current) {
                                                         const currentTime = videoRef.current.currentTime;
+                                                        console.log('Marking end time:', currentTime, 'Start time:', currentStepStartTime);
+                                                        console.log('Current step end time before setting:', currentStepEndTime);
                                                         if (currentStepStartTime !== null && currentStepStartTime !== undefined && currentTime <= currentStepStartTime) {
                                                             setErrorMessage("End time must be after start time");
                                                             return;
                                                         }
                                                         state.setCurrentStepEndTime(currentTime);
+                                                        console.log('setCurrentStepEndTime called with:', currentTime);
+                                                        setSuccessMessage(`End time set to ${formatTime(currentTime)}`);
+                                                        setTimeout(() => setSuccessMessage(''), 2000);
+                                                    } else {
+                                                        console.log('Video ref not available');
+                                                        setErrorMessage("Video not ready. Please wait and try again.");
                                                     }
                                                 }}
                                                 style={{...styles.button, ...styles.buttonSecondary, fontSize: '0.8rem', padding: '6px 12px'}}
@@ -587,8 +609,11 @@ const ProjectStepsPage = () => {
                                             </button>
                                             <button
                                                 onClick={() => {
+                                                    console.log('Clearing video times');
                                                     state.setCurrentStepStartTime(null);
                                                     state.setCurrentStepEndTime(null);
+                                                    setSuccessMessage('Video times cleared');
+                                                    setTimeout(() => setSuccessMessage(''), 2000);
                                                 }}
                                                 style={{...styles.button, backgroundColor: '#dc3545', color: 'white', fontSize: '0.8rem', padding: '6px 12px'}}
                                             >

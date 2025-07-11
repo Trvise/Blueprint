@@ -48,8 +48,9 @@ const Register = () => {
 
                 console.log('Sending user data to backend:', backendUserData);
 
-                // Replace with your actual FastAPI backend URL
-                const backendApiUrl = 'http://localhost:8000/users/'; // Example URL
+                // Use consistent API URL helper
+                const getApiUrl = () => process.env.REACT_APP_API_URL || 'http://localhost:8000';
+                const backendApiUrl = `${getApiUrl()}/users/`;
 
                 const response = await fetch(backendApiUrl, {
                     method: 'POST',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { COLORS, LAYOUT, formatFileSize, COMPONENTS, getListItemBorder, TYPOGRAPHY } from './shared/styles';
+import { COLORS, LAYOUT, formatFileSize, COMPONENTS, TYPOGRAPHY } from './shared/styles';
 
 const ProjectOverviewTab = ({
     projectSteps,
@@ -96,7 +96,11 @@ const ProjectOverviewTab = ({
                                 key={step.id || index} 
                                 style={{
                                     padding: `${LAYOUT.sectionSpacing} ${LAYOUT.lg}`,
-                                    ...getListItemBorder(index, projectSteps.length)
+                                    marginBottom: LAYOUT.md,
+                                    backgroundColor: index % 2 === 0 ? '#f8f9fa' : '#ffffff',
+                                    borderRadius: '8px',
+                                    border: '2px solid #e2e8f0',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                                 }}
                             >
                                 <div style={{
@@ -133,7 +137,7 @@ const ProjectOverviewTab = ({
                                                 borderRadius: '4px',
                                                 border: '1px solid #000000'
                                             }}>
-                                                <strong>⚠️ Caution:</strong> {step.cautionary_notes}
+                                                <strong>Caution:</strong> {step.cautionary_notes}
                                             </div>
                             )}
                                         
@@ -147,7 +151,7 @@ const ProjectOverviewTab = ({
                                                 borderRadius: '4px',
                                                 border: '1px solid #000000'
                                             }}>
-                                                <strong>💡 Best Practice:</strong> {step.best_practice_notes}
+                                                <strong>Best Practice:</strong> {step.best_practice_notes}
                                             </div>
                             )}
                                         
@@ -192,7 +196,7 @@ const ProjectOverviewTab = ({
                                                 borderRadius: '4px',
                                                 border: '1px solid #000000'
                                             }}>
-                                                📍 Annotations ({step.annotations.length})
+                                                Annotations ({step.annotations.length})
                                             </summary>
                                             <ul style={{
                                                 listStyle: 'disc',
@@ -227,7 +231,7 @@ const ProjectOverviewTab = ({
                                                 borderRadius: '4px',
                                                 border: '1px solid #000000'
                                             }}>
-                                                🔧 Tools ({step.tools.length})
+                                                Tools ({step.tools.length})
                                     </summary>
                                             <ul style={{
                                                 listStyle: 'disc',
@@ -263,7 +267,7 @@ const ProjectOverviewTab = ({
                                                                     display: 'none',
                                                                     fontSize: '10px',
                                                                     color: '#666'
-                                                                }}>📷</div>
+                                                                }}>IMG</div>
                                                             </div>
                                                         )}
                                                         <span>
@@ -287,7 +291,7 @@ const ProjectOverviewTab = ({
                                                 borderRadius: '4px',
                                                 border: '1px solid #000000'
                                             }}>
-                                                🧱 Materials ({step.materials.length})
+                                                Materials ({step.materials.length})
                                     </summary>
                                             <ul style={{
                                                 listStyle: 'disc',
@@ -323,7 +327,7 @@ const ProjectOverviewTab = ({
                                                                     display: 'none',
                                                                     fontSize: '10px',
                                                                     color: '#666'
-                                                                }}>📷</div>
+                                                                }}>IMG</div>
                                                             </div>
                                                         )}
                                                         <span>
@@ -347,7 +351,7 @@ const ProjectOverviewTab = ({
                                                 borderRadius: '4px',
                                                 border: '1px solid #000000'
                                             }}>
-                                                📎 Files ({step.supplementary_files.length})
+                                                Files ({step.supplementary_files.length})
                                     </summary>
                                             <ul style={{
                                                 listStyle: 'disc',
@@ -376,7 +380,7 @@ const ProjectOverviewTab = ({
                                                 borderRadius: '4px',
                                                 border: '1px solid #000000'
                                             }}>
-                                                ✅ Validation
+                                                Validation
                                             </summary>
                                             <div style={{
                                                 paddingLeft: '20px',
@@ -399,7 +403,7 @@ const ProjectOverviewTab = ({
                                         backgroundColor: '#D9D9D9',
                                         borderRadius: '4px'
                                     }}>
-                                        <strong>📸 Result Image:</strong> {step.result_image_file_info.name}
+                                        <strong>Result Image:</strong> {step.result_image_file_info.name}
                                 </p>
                             )}
                             </div>
@@ -411,7 +415,7 @@ const ProjectOverviewTab = ({
             {projectBuyList && projectBuyList.length > 0 && (
                 <div>
                     <h3 style={{...styles.inputLabel, marginBottom: LAYOUT.sm}}>
-                        🛒 Shopping List ({projectBuyList.length} items)
+                        Shopping List ({projectBuyList.length} items)
                     </h3>
                     <div style={{
                         maxHeight: '200px',

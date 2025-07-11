@@ -103,37 +103,14 @@ export const createStepHandlers = (
         }
     };
 
-    const handleAnnotationSubmit = (newAnnotationFromLibrary) => {
-        const { geometry, data: libraryData } = newAnnotationFromLibrary; 
-        if (!geometry) { setErrorMessage("Annotation missing geometry."); return; }
-        
-        // Store coordinates in the display format (0-100 scale) for consistency
-        // This is the format expected by react-image-annotation library
-        const customDataForAnnotation = {
-            id: uuidv4(), 
-            text: libraryData?.text || `Annotation ${currentStepAnnotations.filter(a => a.data.frame_timestamp_ms === frameTimestampMs).length + 1}`, 
-            frame_timestamp_ms: frameTimestampMs,
-            // Store coordinates in percentage format (0-100 scale)
-            x: geometry.x,
-            y: geometry.y, 
-            width: geometry.width,
-            height: geometry.height,
-            type: geometry.type
+    const handleAnnotationSubmit = (annotationData) => {
+        const newAnnotation = {
+            id: `annotation_${uuidv4()}`,
+            timestamp_ms: frameTimestampMs,
+            coordinates: annotationData,
+            video_dimensions: videoDimensions,
         };
-        
-        // Store annotation with geometry in the same format as display
-        const annotationToAdd = { 
-            geometry: geometry, 
-            data: customDataForAnnotation 
-        };
-        
-        console.log('Adding new annotation:', {
-            geometry: geometry,
-            data: customDataForAnnotation
-        });
-        
-        setCurrentStepAnnotations(prev => [...prev, annotationToAdd]);
-        setCurrentAnnotationTool({}); 
+        setCurrentStepAnnotations(prev => [...prev, newAnnotation]);
     };
 
     const handleAddToolToCurrentStep = () => {
@@ -201,44 +178,147 @@ export const createStepHandlers = (
 
     const removeBuyListItem = (itemId) => setProjectBuyList(prev => prev.filter(item => item.id !== itemId));
 
-    const handleFinishProject = async (projectName) => {
-        if (!projectSteps.length) {
-            alert("Please add at least one step before finishing the project.");
+    // New function to fetch repository items and auto-populate buy list
+    const handleAutoPopulateBuyList = async () => {
+        if (!currentUser?.uid) {
+            setErrorMessage("User not authenticated");
             return;
         }
-        setIsLoading(true);
-        setErrorMessage('');
-        setSuccessMessage('Finalizing project... Uploading files...');
 
         try {
+            setIsLoading(true);
+            setErrorMessage('');
+            
+            const apiUrl = getApiUrl();
+            
+            // Fetch both tools and materials in parallel
+            const [toolsResponse, materialsResponse] = await Promise.all([
+                fetch(`${apiUrl}/users/${currentUser.uid}/tools`),
+                fetch(`${apiUrl}/users/${currentUser.uid}/materials`)
+            ]);
+
+            let allItems = [];
+
+            // Process tools
+            if (toolsResponse.ok) {
+                const tools = await toolsResponse.json();
+                console.log('Fetched tools for auto-populate:', tools);
+                
+                const toolItems = tools.map(tool => ({
+                    id: `buyitem_tool_${tool.tool_id || uuidv4()}`,
+                    name: tool.name,
+                    quantity: 1, // Default quantity
+                    specification: tool.specification || '',
+                    purchase_link: tool.purchase_link || '',
+                    imageFile: null, // Repository items already have uploaded images
+                    sourceType: 'tool', // Track source for reference
+                    sourceId: tool.tool_id
+                }));
+                
+                allItems = [...allItems, ...toolItems];
+            } else {
+                console.warn('Failed to fetch tools:', toolsResponse.status);
+            }
+
+            // Process materials
+            if (materialsResponse.ok) {
+                const materials = await materialsResponse.json();
+                console.log('Fetched materials for auto-populate:', materials);
+                
+                const materialItems = materials.map(material => ({
+                    id: `buyitem_material_${material.material_id || uuidv4()}`,
+                    name: material.name,
+                    quantity: 1, // Default quantity
+                    specification: material.specification || '',
+                    purchase_link: material.purchase_link || '',
+                    imageFile: null, // Repository items already have uploaded images
+                    sourceType: 'material', // Track source for reference
+                    sourceId: material.material_id
+                }));
+                
+                allItems = [...allItems, ...materialItems];
+            } else {
+                console.warn('Failed to fetch materials:', materialsResponse.status);
+            }
+
+            if (allItems.length === 0) {
+                setSuccessMessage('No items found in repository to add to buy list.');
+                setTimeout(() => setSuccessMessage(''), 3000);
+                return;
+            }
+
+            // Filter out items that are already in the buy list (by name to avoid duplicates)
+            const existingItemNames = new Set(projectBuyList.map(item => item.name.toLowerCase()));
+            const newItems = allItems.filter(item => !existingItemNames.has(item.name.toLowerCase()));
+
+            if (newItems.length === 0) {
+                setSuccessMessage('All repository items are already in the buy list.');
+                setTimeout(() => setSuccessMessage(''), 3000);
+                return;
+            }
+
+            // Add new items to the buy list
+            setProjectBuyList(prev => [...prev, ...newItems]);
+            
+            setSuccessMessage(`Successfully added ${newItems.length} items from repository to buy list!`);
+            setTimeout(() => setSuccessMessage(''), 5000);
+
+        } catch (error) {
+            console.error('Error auto-populating buy list:', error);
+            setErrorMessage(`Failed to fetch repository items: ${error.message}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // New function to clear the entire buy list
+    const handleClearBuyList = () => {
+        if (projectBuyList.length === 0) {
+            setSuccessMessage('Buy list is already empty.');
+            setTimeout(() => setSuccessMessage(''), 3000);
+            return;
+        }
+
+        const confirmed = window.confirm(`Are you sure you want to clear all ${projectBuyList.length} items from the buy list? This action cannot be undone.`);
+        if (confirmed) {
+            setProjectBuyList([]);
+            setSuccessMessage('Buy list cleared successfully.');
+            setTimeout(() => setSuccessMessage(''), 3000);
+        }
+    };
+
+    const handleFinishProject = async (projectName) => {
+        setIsLoading(true);
+        setErrorMessage('');
+        setSuccessMessage('');
+
+        try {
+            // Create project data payload
             const processedStepsPayload = [];
-            for (const step of projectSteps) {
+
+            for (let i = 0; i < projectSteps.length; i++) {
+                const step = projectSteps[i];
+                
+                // Build the video path
+                const videoPath = step.associated_video_path || (uploadedVideos[step.associated_video_index]?.path) || null;
+                
                 const stepPayload = {
                     name: step.name,
                     description: step.description,
-                    video_start_time_ms: step.video_start_time_ms,
-                    video_end_time_ms: step.video_end_time_ms,
+                    video_start_time_ms: Math.round(step.video_start_time_ms),
+                    video_end_time_ms: Math.round(step.video_end_time_ms),
                     cautionary_notes: step.cautionary_notes,
                     best_practice_notes: step.best_practice_notes,
-                    associated_video_path: step.associated_video_path,
+                    associated_video_path: videoPath,
                     step_order: step.step_order,
-                    annotations: step.annotations.map(ann => ({
-                        frame_timestamp_ms: ann.data.frame_timestamp_ms,
-                        annotation_type: ann.geometry.type,
-                        component_name: ann.data.text,
-                        data: {
-                            x: ann.data.x / 100,  // Convert from percentage to normalized (0-1)
-                            y: ann.data.y / 100,
-                            width: ann.data.width / 100,
-                            height: ann.data.height / 100,
-                            type: ann.data.type
-                        }
-                    })),
+                    annotations: step.annotations || [],
                     tools: [],
                     materials: [],
                     supplementary_files: [],
-                    validation_metric: step.validation_metric,
-                    result_image_url: null,
+                    validation_metric: step.validation_metric && step.validation_metric.question ? {
+                        question: step.validation_metric.question,
+                        expected_answer: step.validation_metric.expected_answer
+                    } : null,
                     result_image_path: null,
                 };
 
@@ -306,18 +386,25 @@ export const createStepHandlers = (
                 processedStepsPayload.push(stepPayload);
             }
 
-            // Upload Buy List Item Images
+            // Process Buy List Items
             const processedBuyListPayload = [];
             for (const item of projectBuyList) {
                 let itemImageUrl = null;
                 let itemImagePath = null;
+                
                 if (item.imageFile) {
+                    // New image file to upload
                     const uploaded = await uploadFileToFirebase(item.imageFile, `users/${currentUser.uid}/${projectId}/buy_list_images`, currentUser);
                     if (uploaded) {
                         itemImageUrl = uploaded.url;
                         itemImagePath = uploaded.path;
                     }
+                } else if (item.hasExistingImage && item.image_url && item.image_path) {
+                    // Preserve existing image from database
+                    itemImageUrl = item.image_url;
+                    itemImagePath = item.image_path;
                 }
+                
                 processedBuyListPayload.push({
                     name: item.name,
                     quantity: item.quantity,
@@ -383,6 +470,8 @@ export const createStepHandlers = (
         handleResultImageChange,
         handleAddBuyListItem,
         removeBuyListItem,
+        handleAutoPopulateBuyList,
+        handleClearBuyList,
         handleFinishProject
     };
 }; 

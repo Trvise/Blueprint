@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/authContext';
 import { doSignOut } from '../../firebase/auth';
-import { AiOutlineMenu, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineEye, AiOutlineArrowLeft, AiOutlineCheck, AiOutlineUser } from 'react-icons/ai';
+import { AiOutlineMenu, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineEye, AiOutlineArrowLeft, AiOutlineCheck, AiOutlineUser, AiOutlineDatabase } from 'react-icons/ai';
 import logo from '../../assets/trvise_logo.png';
 
 const Sidebar = ({ isCollapsed, toggleSidebar }) => {
@@ -92,6 +92,13 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                     >
                                         <AiOutlineEye size={24} />
                                         {!isCollapsed && <span className="ml-4">My Projects</span>}
+                                    </Link>
+                                    <Link
+                                        to="/repository"
+                                        className="flex items-center py-3 px-4 text-base font-normal hover:bg-[#0000FF]/20 transition-colors"
+                                    >
+                                        <AiOutlineDatabase size={24} />
+                                        {!isCollapsed && <span className="ml-4">Repository</span>}
                                     </Link>
                                     <Link
                                         to="/create"

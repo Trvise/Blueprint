@@ -39,11 +39,32 @@ export const createStepActions = (state) => {
 
     // Function to load step data for editing
     const loadStepForEditing = (step, index) => {
+        console.log('Loading step for editing:', step);
+        console.log('Video times - start_ms:', step.video_start_time_ms, 'end_ms:', step.video_end_time_ms);
+        
         setCurrentStepIndex(index);
         setCurrentStepName(step.name || '');
         setCurrentStepDescription(step.description || '');
-        setCurrentStepStartTime(step.video_start_time_ms !== null && step.video_start_time_ms !== undefined ? step.video_start_time_ms / 1000 : null);
-        setCurrentStepEndTime(step.video_end_time_ms !== null && step.video_end_time_ms !== undefined ? step.video_end_time_ms / 1000 : null);
+        
+        // Convert milliseconds to seconds with better validation
+        const startTimeMs = step.video_start_time_ms;
+        const endTimeMs = step.video_end_time_ms;
+        
+        let startTimeSeconds = null;
+        let endTimeSeconds = null;
+        
+        if (startTimeMs !== null && startTimeMs !== undefined && !isNaN(startTimeMs) && startTimeMs >= 0) {
+            startTimeSeconds = startTimeMs / 1000;
+        }
+        
+        if (endTimeMs !== null && endTimeMs !== undefined && !isNaN(endTimeMs) && endTimeMs >= 0) {
+            endTimeSeconds = endTimeMs / 1000;
+        }
+        
+        console.log('Converted times - start_sec:', startTimeSeconds, 'end_sec:', endTimeSeconds);
+        
+        setCurrentStepStartTime(startTimeSeconds);
+        setCurrentStepEndTime(endTimeSeconds);
         setCurrentCautionaryNotes(step.cautionary_notes || '');
         setCurrentBestPracticeNotes(step.best_practice_notes || '');
         // Transform existing annotations to library format expected by react-image-annotation
@@ -549,7 +570,7 @@ export const createStepActions = (state) => {
                             file_path: uploaded.path,
                             original_filename: uploaded.name,
                             mime_type: uploaded.type,
-                            file_size_bytes: uploaded.size,
+                            file_size_bytes: uploaded.size || 0, // Ensure it's always an integer
                         });
                     }
                     } catch (error) {
@@ -565,7 +586,7 @@ export const createStepActions = (state) => {
                         file_path: supFile.file_path,
                         original_filename: supFile.original_filename,
                         mime_type: supFile.mime_type,
-                        file_size_bytes: supFile.file_size_bytes,
+                        file_size_bytes: supFile.file_size_bytes || 0, // Ensure it's always an integer
                     });
                 }
 

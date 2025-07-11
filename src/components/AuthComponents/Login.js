@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
-import { Navigate, Link, useNavigate} from 'react-router-dom';
+import { useNavigate} from 'react-router-dom';
 import { doSignInWithEmailAndPassword, doSignInWithGoogle } from '../../firebase/auth';
-import { useAuth } from '../../contexts/authContext';
+
 
 const Login = () => {
-    const { userLoggedIn } = useAuth();
-
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSigningIn, setIsSigningIn] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
-    const [isSyncing, setIsSyncing] = useState(false);
+    const [, setIsSyncing] = useState(false);
     const navigate = useNavigate();
 
     const onSubmit = async (e) => {

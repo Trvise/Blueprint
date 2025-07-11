@@ -4,6 +4,7 @@ import Sidebar from "./components/Layout/Sidebar";
 import MyProjects from "./components/pages/MyProjects";
 import CreateProjectPage from "./components/pages/CreateProject";
 import ProjectStepsPage from "./components/pages/CreateSteps";
+import Repository from "./components/pages/Repository";
 import { AuthProvider} from "./contexts/authContext";
 import { useRoutes } from "react-router-dom";
 import {ProtectedRoute, ProtectedLogin} from "./components/Layout/ProtectedRoute";
@@ -17,6 +18,7 @@ function App() {
     { path: "/login", element: <ProtectedLogin /> },
     { path: "/register", element: <Register /> },
     { path: "/my-projects", element: (<ProtectedRoute><MyProjects /></ProtectedRoute>)},
+    { path: "/repository", element: (<ProtectedRoute><Repository /></ProtectedRoute>)},
     { path: "/create", element: (<ProtectedRoute><CreateProjectPage /></ProtectedRoute>)},
     {path: "/annotate", element: (<ProtectedRoute><ProjectStepsPage /></ProtectedRoute>)},
   ];

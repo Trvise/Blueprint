@@ -16,6 +16,8 @@ const FinalizeTab = ({
     buyListImageInputRef,
     handleAddBuyListItem,
     removeBuyListItem,
+    handleAutoPopulateBuyList,
+    handleClearBuyList,
     handleFinishProject,
     isLoading,
     formatTime,
@@ -29,6 +31,62 @@ const FinalizeTab = ({
                 <p style={{fontSize: '0.9rem', color: '#D9D9D9', marginBottom: '20px'}}>
                     Add items that users will need to purchase to complete this project.
                 </p>
+
+                {/* Auto-populate and Clear Controls */}
+                <div style={{
+                    backgroundColor: '#1a1a1a', 
+                    border: '1px solid #444444', 
+                    padding: '16px', 
+                    borderRadius: '8px', 
+                    marginBottom: '20px',
+                    display: 'flex',
+                    gap: '12px',
+                    alignItems: 'center',
+                    flexWrap: 'wrap'
+                }}>
+                    <span style={{fontSize: '0.9rem', color: '#D9D9D9', marginRight: '8px'}}>
+                        Quick Actions:
+                    </span>
+                    <button
+                        onClick={handleAutoPopulateBuyList}
+                        disabled={isLoading}
+                        style={{
+                            ...styles.button,
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            padding: '8px 16px',
+                            fontSize: '0.9rem',
+                            opacity: isLoading ? 0.6 : 1,
+                            cursor: isLoading ? 'not-allowed' : 'pointer',
+                            border: 'none',
+                            borderRadius: '6px'
+                        }}
+                    >
+                        {isLoading ? 'Loading...' : 'Add All Repository Items'}
+                    </button>
+                    {projectBuyList.length > 0 && (
+                        <button
+                            onClick={handleClearBuyList}
+                            disabled={isLoading}
+                            style={{
+                                ...styles.button,
+                                backgroundColor: '#dc2626',
+                                color: 'white',
+                                padding: '8px 16px',
+                                fontSize: '0.9rem',
+                                opacity: isLoading ? 0.6 : 1,
+                                cursor: isLoading ? 'not-allowed' : 'pointer',
+                                border: 'none',
+                                borderRadius: '6px'
+                            }}
+                        >
+                            Clear All Items
+                        </button>
+                    )}
+                    <span style={{fontSize: '0.8rem', color: '#9ca3af', fontStyle: 'italic'}}>
+                        Auto-populate will add all tools & materials from your repository (avoiding duplicates)
+                    </span>
+                </div>
                 
                 {/* Add Buy List Item Form */}
                 <div style={{backgroundColor: '#000000', border: '1px solid #444444', padding: '20px', borderRadius: '8px', marginBottom: '20px'}}>
@@ -107,7 +165,46 @@ const FinalizeTab = ({
                                     borderBottom: index < projectBuyList.length - 1 ? '1px solid #444444' : 'none',
                                     backgroundColor: index % 2 === 0 ? '#D9D9D9' : '#CCCCCC'
                                 }}>
-                                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
+                                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px'}}>
+                                        {/* Item Image */}
+                                        {(item.hasExistingImage && item.image_url) || item.imageFile ? (
+                                            <div style={{
+                                                width: '60px',
+                                                height: '60px',
+                                                borderRadius: '6px',
+                                                overflow: 'hidden',
+                                                border: '2px solid #666666',
+                                                flexShrink: 0
+                                            }}>
+                                                <img 
+                                                    src={item.hasExistingImage ? item.image_url : URL.createObjectURL(item.imageFile)}
+                                                    alt={item.name}
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        objectFit: 'cover'
+                                                    }}
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div style={{
+                                                width: '60px',
+                                                height: '60px',
+                                                borderRadius: '6px',
+                                                backgroundColor: '#888888',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                border: '2px solid #666666',
+                                                flexShrink: 0
+                                            }}>
+                                                <span style={{color: '#333333', fontSize: '0.7rem', textAlign: 'center'}}>
+                                                    IMG
+                                                </span>
+                                            </div>
+                                        )}
+                                        
+                                        {/* Item Details */}
                                         <div style={{flex: 1}}>
                                             <div style={{fontWeight: '600', color: '#000000', marginBottom: '4px'}}>
                                                 {item.name} (Qty: {item.quantity})
@@ -129,10 +226,20 @@ const FinalizeTab = ({
                                                     </a>
                                                 </div>
                                             )}
+                                            {item.sourceType === 'existing' && (
+                                                <div style={{fontSize: '0.75rem', color: '#666666', fontStyle: 'italic', marginTop: '2px'}}>
+                                                    Existing buy list item
+                                                </div>
+                                            )}
                                         </div>
+                                        
+                                        {/* Remove Button */}
                                         <button
                                             onClick={() => removeBuyListItem(item.id)}
-                                            style={styles.removeButton}
+                                            style={{
+                                                ...styles.removeButton,
+                                                flexShrink: 0
+                                            }}
                                         >
                                             Remove
                                         </button>
