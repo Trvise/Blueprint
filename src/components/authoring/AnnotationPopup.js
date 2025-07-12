@@ -51,7 +51,7 @@ const AnnotationPopup = ({
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backgroundColor: 'rgba(0, 0, 0, 0.95)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -59,35 +59,36 @@ const AnnotationPopup = ({
             padding: '20px'
         }}>
             <div style={{
-                backgroundColor: 'white',
+                backgroundColor: '#000000',
                 borderRadius: '12px',
                 maxWidth: '90vw',
                 maxHeight: '90vh',
                 overflow: 'auto',
                 position: 'relative',
-                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                boxShadow: '0 20px 25px -5px rgba(241,194,50,0.15), 0 10px 10px -5px rgba(0,0,0,0.4)',
+                border: '2px solid #F1C232'
             }}>
                 {/* Header */}
                 <div style={{
                     padding: '20px 24px 16px',
-                    borderBottom: '1px solid #e5e7eb',
+                    borderBottom: '1px solid #F1C232',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    backgroundColor: '#f8fafc'
+                    backgroundColor: '#000000'
                 }}>
                     <div>
                         <h2 style={{
                             fontSize: '1.5rem',
                             fontWeight: '600',
-                            color: '#1f2937',
+                            color: '#F1C232',
                             margin: 0
                         }}>
                             Annotate Frame
                         </h2>
                         <p style={{
                             fontSize: '0.875rem',
-                            color: '#6b7280',
+                            color: '#D9D9D9',
                             margin: '4px 0 0 0'
                         }}>
                             Time: {formatTime(frameTimestampMs / 1000)}
@@ -100,7 +101,7 @@ const AnnotationPopup = ({
                             border: 'none',
                             fontSize: '1.5rem',
                             cursor: 'pointer',
-                            color: '#6b7280',
+                            color: '#F1C232',
                             padding: '4px',
                             borderRadius: '4px'
                         }}
@@ -111,12 +112,14 @@ const AnnotationPopup = ({
 
                 {/* Content */}
                 <div style={{
-                    padding: '20px 24px'
+                    padding: '20px 24px',
+                    backgroundColor: '#000000',
+                    color: '#D9D9D9'
                 }}>
                     {/* How to annotate info box */}
                     <div style={{
-                        backgroundColor: '#eff6ff',
-                        border: '1px solid #bfdbfe',
+                        backgroundColor: '#222222',
+                        border: '1px solid #F1C232',
                         borderRadius: '8px',
                         padding: '12px',
                         marginBottom: '18px'
@@ -124,21 +127,21 @@ const AnnotationPopup = ({
                         <h4 style={{
                             fontSize: '0.95rem',
                             fontWeight: '600',
-                            color: '#1e40af',
+                            color: '#F1C232',
                             margin: '0 0 6px 0'
                         }}>
                             How to annotate:
                         </h4>
                         <ul style={{
                             fontSize: '0.88rem',
-                            color: '#1e40af',
+                            color: '#D9D9D9',
                             margin: 0,
                             paddingLeft: '18px',
                             lineHeight: 1.6
                         }}>
                             <li>Click and drag on the image to create a rectangle.</li>
                             <li>Enter a description in the text box above.</li>
-                            <li>Click <b>Submit Annotation</b> to save.</li>
+                            <li>Click <b style={{color:'#F1C232'}}>Submit Annotation</b> to save.</li>
                             <li>You can add multiple annotations to the same frame.</li>
                         </ul>
                     </div>
@@ -150,7 +153,7 @@ const AnnotationPopup = ({
                             fontWeight: 600,
                             fontSize: '1.1rem',
                             marginBottom: '6px',
-                            color: '#1e293b'
+                            color: '#F1C232'
                         }}>Annotation</label>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <input
@@ -168,10 +171,12 @@ const AnnotationPopup = ({
                                     flex: 1,
                                     padding: '8px 12px',
                                     fontSize: '1rem',
-                                    border: '1px solid #cbd5e1',
+                                    border: '1px solid #F1C232',
                                     borderRadius: '6px',
                                     minWidth: '180px',
-                                    marginBottom: '6px'
+                                    marginBottom: '6px',
+                                    backgroundColor: '#000000',
+                                    color: '#D9D9D9'
                                 }}
                             />
                             <button
@@ -182,8 +187,8 @@ const AnnotationPopup = ({
                                 }}
                                 disabled={!(currentAnnotationTool && currentAnnotationTool.geometry)}
                                 style={{
-                                    backgroundColor: '#3b82f6',
-                                    color: 'white',
+                                    backgroundColor: '#F1C232',
+                                    color: '#000000',
                                     border: 'none',
                                     borderRadius: '6px',
                                     padding: '8px 18px',
@@ -191,7 +196,8 @@ const AnnotationPopup = ({
                                     fontWeight: 600,
                                     cursor: (currentAnnotationTool && currentAnnotationTool.geometry) ? 'pointer' : 'not-allowed',
                                     opacity: (currentAnnotationTool && currentAnnotationTool.geometry) ? 1 : 0.6,
-                                    marginBottom: '6px'
+                                    marginBottom: '6px',
+                                    boxShadow: '0 2px 8px rgba(241,194,50,0.15)'
                                 }}
                             >
                                 Submit Annotation
@@ -201,14 +207,14 @@ const AnnotationPopup = ({
 
                     {/* Annotation Interface */}
                     <div style={{
-                        border: '2px solid #e5e7eb',
+                        border: '2px solid #F1C232',
                         borderRadius: '8px',
                         overflow: 'hidden',
                         marginBottom: '20px',
                         maxHeight: '60vh',
                         display: 'flex',
                         justifyContent: 'center',
-                        backgroundColor: '#f8fafc'
+                        backgroundColor: '#111111'
                     }}>
                         <Annotation
                             src={frameForAnnotation}
@@ -222,27 +228,28 @@ const AnnotationPopup = ({
                             style={{
                                 maxWidth: '100%',
                                 maxHeight: '60vh',
-                                objectFit: 'contain'
+                                objectFit: 'contain',
+                                backgroundColor: '#111111'
                             }}
                         />
                     </div>
 
                     {/* Current Annotations List */}
                     <div style={{
-                        backgroundColor: '#f8fafc',
-                        border: '1px solid #e5e7eb',
+                        backgroundColor: '#111111',
+                        border: '1px solid #F1C232',
                         borderRadius: '8px',
-                        padding: '16px'
+                        padding: '16px',
+                        color: '#D9D9D9'
                     }}>
                         <h4 style={{
                             fontSize: '1rem',
                             fontWeight: '600',
-                            color: '#374151',
+                            color: '#F1C232',
                             margin: '0 0 12px 0'
                         }}>
                             Annotations on this frame ({frameAnnotations.length})
                         </h4>
-                        
                         {frameAnnotations.length > 0 ? (
                             <div style={{
                                 maxHeight: '120px',
@@ -252,33 +259,33 @@ const AnnotationPopup = ({
                                     // Handle both data structures for displaying annotation text
                                     const annotationText = ann.component_name || ann.data?.text || 'Untitled annotation';
                                     const annotationId = ann.annotation_id || ann.data?.id;
-                                    
                                     return (
                                         <div
                                             key={annotationId || `annotation-${index}`}
                                             style={{
                                                 padding: '8px 12px',
-                                                backgroundColor: 'white',
-                                                border: '1px solid #d1d5db',
+                                                backgroundColor: '#222222',
+                                                border: '1px solid #F1C232',
                                                 borderRadius: '6px',
                                                 marginBottom: '8px',
                                                 display: 'flex',
                                                 justifyContent: 'space-between',
-                                                alignItems: 'center'
+                                                alignItems: 'center',
+                                                color: '#D9D9D9'
                                             }}
                                         >
                                             <div>
                                                 <p style={{
                                                     margin: '0 0 4px 0',
                                                     fontWeight: '500',
-                                                    color: '#374151'
+                                                    color: '#F1C232'
                                                 }}>
                                                     {annotationText}
                                                 </p>
                                                 <p style={{
                                                     margin: 0,
                                                     fontSize: '0.75rem',
-                                                    color: '#6b7280'
+                                                    color: '#D9D9D9'
                                                 }}>
                                                     Type: {ann.geometry?.type || ann.annotation_type || 'rectangle'} • 
                                                     Position: ({(ann.data?.x || ann.data?.normalized_geometry?.x * 100 || 0).toFixed(1)}%, {(ann.data?.y || ann.data?.normalized_geometry?.y * 100 || 0).toFixed(1)}%)
@@ -287,9 +294,9 @@ const AnnotationPopup = ({
                                             <button
                                                 onClick={() => removeAnnotation(annotationId)}
                                                 style={{
-                                                    backgroundColor: '#fecaca',
-                                                    color: '#dc2626',
-                                                    border: 'none',
+                                                    backgroundColor: '#222222',
+                                                    color: '#F1C232',
+                                                    border: '1px solid #F1C232',
                                                     borderRadius: '4px',
                                                     padding: '4px 8px',
                                                     fontSize: '0.75rem',
@@ -304,7 +311,7 @@ const AnnotationPopup = ({
                             </div>
                         ) : (
                             <p style={{
-                                color: '#6b7280',
+                                color: '#D9D9D9',
                                 fontStyle: 'italic',
                                 margin: 0
                             }}>
@@ -320,11 +327,11 @@ const AnnotationPopup = ({
                         alignItems: 'center',
                         marginTop: '24px',
                         paddingTop: '16px',
-                        borderTop: '1px solid #e5e7eb'
+                        borderTop: '1px solid #F1C232'
                     }}>
                         <div style={{
                             fontSize: '0.875rem',
-                            color: '#6b7280'
+                            color: '#D9D9D9'
                         }}>
                             💡 Tip: You can annotate multiple areas on the same frame
                         </div>
@@ -337,9 +344,9 @@ const AnnotationPopup = ({
                                 <button
                                     onClick={handleClearAnnotations}
                                     style={{
-                                        backgroundColor: '#dc2626',
-                                        color: 'white',
-                                        border: 'none',
+                                        backgroundColor: '#000000',
+                                        color: '#F1C232',
+                                        border: '1px solid #F1C232',
                                         borderRadius: '8px',
                                         padding: '8px 16px',
                                         fontSize: '0.875rem',
@@ -353,8 +360,8 @@ const AnnotationPopup = ({
                             <button
                                 onClick={onClose}
                                 style={{
-                                    backgroundColor: '#3b82f6',
-                                    color: 'white',
+                                    backgroundColor: '#0000FF',
+                                    color: '#D9D9D9',
                                     border: 'none',
                                     borderRadius: '8px',
                                     padding: '10px 20px',

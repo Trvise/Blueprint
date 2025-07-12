@@ -34,7 +34,7 @@ const ProjectOverviewTab = ({
                             textAlign: 'center',
                             border: `2px solid #000000`
                         }}>
-                            <div style={{fontSize: '2rem', fontWeight: 'bold', color: '#FFFFFF'}}>
+                            <div style={{fontSize: '2rem', fontWeight: 'bold', color: '#D9D9D9'}}>
                                 {totalSteps}
                             </div>
                             <div style={{fontSize: '0.9rem', color: '#D9D9D9'}}>
@@ -78,14 +78,14 @@ const ProjectOverviewTab = ({
                         }}>
                             <div style={{fontSize: '2rem', fontWeight: 'bold', color: '#D9D9D9'}}>
                                 {totalMaterials}
-                    </div>
+                            </div>
                             <div style={{fontSize: '0.9rem', color: '#D9D9D9'}}>
                                 Materials
-                    </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
         {projectSteps.length > 0 && (
             <div style={styles.card}>
@@ -97,10 +97,10 @@ const ProjectOverviewTab = ({
                                 style={{
                                     padding: `${LAYOUT.sectionSpacing} ${LAYOUT.lg}`,
                                     marginBottom: LAYOUT.md,
-                                    backgroundColor: index % 2 === 0 ? '#f8f9fa' : '#ffffff',
+                                    backgroundColor: index % 2 === 0 ? '#111111' : '#000000',
                                     borderRadius: '8px',
-                                    border: '2px solid #e2e8f0',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                    border: '2px solid #D9D9D9',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                 }}
                             >
                                 <div style={{
@@ -128,31 +128,31 @@ const ProjectOverviewTab = ({
                             </p>
                                         
                             {step.cautionary_notes && (
-                                            <div style={{
-                                                fontSize: '0.85rem',
-                                                color: '#000000',
-                                                marginBottom: LAYOUT.sm,
-                                                padding: LAYOUT.sm,
-                                                backgroundColor: '#F1C232',
-                                                borderRadius: '4px',
-                                                border: '1px solid #000000'
-                                            }}>
-                                                <strong>Caution:</strong> {step.cautionary_notes}
-                                            </div>
+                                <div style={{
+                                    fontSize: '0.85rem',
+                                    color: '#000000',
+                                    marginBottom: LAYOUT.sm,
+                                    padding: LAYOUT.sm,
+                                    backgroundColor: '#F1C232',
+                                    borderRadius: '4px',
+                                    border: '1px solid #000000'
+                                }}>
+                                    <strong>Caution:</strong> {step.cautionary_notes}
+                                </div>
                             )}
-                                        
+                            
                             {step.best_practice_notes && (
-                                            <div style={{
-                                                fontSize: '0.85rem',
-                                                color: '#FFFFFF',
-                                                marginBottom: LAYOUT.sm,
-                                                padding: LAYOUT.sm,
-                                                backgroundColor: '#0000FF',
-                                                borderRadius: '4px',
-                                                border: '1px solid #000000'
-                                            }}>
-                                                <strong>Best Practice:</strong> {step.best_practice_notes}
-                                            </div>
+                                <div style={{
+                                    fontSize: '0.85rem',
+                                    color: '#D9D9D9',
+                                    marginBottom: LAYOUT.sm,
+                                    padding: LAYOUT.sm,
+                                    backgroundColor: '#0000FF',
+                                    borderRadius: '4px',
+                                    border: '1px solid #000000'
+                                }}>
+                                    <strong>Best Practice:</strong> {step.best_practice_notes}
+                                </div>
                             )}
                                         
                                         <div style={{
@@ -421,7 +421,7 @@ const ProjectOverviewTab = ({
                         maxHeight: '200px',
                         overflowY: 'auto',
                         padding: LAYOUT.md,
-                        backgroundColor: '#D9D9D9',
+                        backgroundColor: '#000000',
                         borderRadius: '8px',
                         border: `1px solid ${COLORS.gray[400]}`
                     }}>
@@ -434,13 +434,13 @@ const ProjectOverviewTab = ({
                                     fontSize: '0.9rem'
                                 }}
                             >
-                                <strong style={{color: '#000000'}}>{item.name}</strong> <span style={{color: '#000000'}}>(Qty: {item.quantity})</span>
-                                {item.specification && <div style={{fontSize: '0.8rem', color: '#333333'}}>{item.specification}</div>}
+                                <strong style={{color: '#F1C232'}}>{item.name}</strong> <span style={{color: '#D9D9D9'}}>(Qty: {item.quantity})</span>
+                                {item.specification && <div style={{fontSize: '0.8rem', color: '#D9D9D9'}}>{item.specification}</div>}
                             </div>
-                    ))}
+                        ))}
                     </div>
-            </div>
-        )}
+                </div>
+            )}
     </div>
 );
 };

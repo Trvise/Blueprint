@@ -33,6 +33,8 @@ const styles = {
         maxWidth: '1200px',
         margin: '0 auto',
         fontFamily: "'Inter', sans-serif",
+        backgroundColor: '#000000',
+        color: '#D9D9D9',
     },
     header: {
         marginBottom: '2rem',
@@ -40,17 +42,17 @@ const styles = {
     title: {
         fontSize: '2.5rem',
         fontWeight: 'bold',
-        color: '#D9D9D9',
+        color: '#F1C232',
         marginBottom: '0.5rem',
     },
     subtitle: {
         fontSize: '1.1rem',
-        color: '#6b7280',
+        color: '#D9D9D9',
         marginBottom: '2rem',
     },
     createButton: {
-        backgroundColor: '#0000FF',
-        color: 'white',
+        backgroundColor: '#F1C232',
+        color: '#000000',
         padding: '0.75rem 1.5rem',
         borderRadius: '0.5rem',
         border: 'none',
@@ -60,13 +62,14 @@ const styles = {
         transition: 'all 0.2s',
         textDecoration: 'none',
         display: 'inline-block',
+        boxShadow: '0 2px 8px rgba(241,194,50,0.15)'
     },
     projectCard: {
-        backgroundColor: 'white',
+        backgroundColor: '#111111',
         borderRadius: '1rem',
         padding: '0',
-        boxShadow: '0 4px 12px -2px rgba(0, 0, 0, 0.1)',
-        border: '1px solid #e5e7eb',
+        boxShadow: '0 4px 12px -2px rgba(0, 0, 0, 0.3)',
+        border: '1px solid #D9D9D9',
         transition: 'all 0.3s',
         cursor: 'pointer',
         overflow: 'hidden',
@@ -74,13 +77,13 @@ const styles = {
     },
     projectCardHover: {
         transform: 'translateY(-4px)',
-        boxShadow: '0 12px 35px -5px rgba(0, 0, 0, 0.15)',
+        boxShadow: '0 12px 35px -5px rgba(241,194,50,0.15)',
     },
     projectThumbnail: {
         width: '100%',
         height: '160px',
         objectFit: 'cover',
-        backgroundColor: '#f3f4f6',
+        backgroundColor: '#222222',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -93,12 +96,12 @@ const styles = {
     projectName: {
         fontSize: '1.25rem',
         fontWeight: '600',
-        color: '#1f2937',
+        color: '#F1C232',
         marginBottom: '0.5rem',
     },
     projectDescription: {
         fontSize: '0.9rem',
-        color: '#6b7280',
+        color: '#D9D9D9',
         marginBottom: '1rem',
         lineHeight: '1.5',
         minHeight: '2.8rem',
@@ -113,7 +116,7 @@ const styles = {
         alignItems: 'center',
         marginBottom: '1rem',
         fontSize: '0.875rem',
-        color: '#9ca3af',
+        color: '#D9D9D9',
     },
     projectActions: {
         display: 'flex',
@@ -129,17 +132,18 @@ const styles = {
         transition: 'all 0.2s',
     },
     editButton: {
-        backgroundColor: '#000099',
-        color: 'white',
+        backgroundColor: '#0000FF',
+        color: '#D9D9D9',
     },
     deleteButton: {
         backgroundColor: '#ef4444',
-        color: 'white',
+        color: '#D9D9D9',
     },
     emptyState: {
         textAlign: 'center',
         padding: '4rem 2rem',
-        color: '#6b7280',
+        color: '#D9D9D9',
+        backgroundColor: '#000000',
     },
     emptyStateIcon: {
         marginBottom: '1rem',
@@ -149,6 +153,7 @@ const styles = {
     emptyStateText: {
         fontSize: '1.125rem',
         marginBottom: '1rem',
+        color: '#D9D9D9',
     },
     loading: {
         display: 'flex',
@@ -156,14 +161,15 @@ const styles = {
         alignItems: 'center',
         minHeight: '400px',
         fontSize: '1.125rem',
-        color: '#6b7280',
+        color: '#D9D9D9',
+        backgroundColor: '#000000',
     },
     error: {
-        backgroundColor: '#fef2f2',
+        backgroundColor: '#2d0000',
         color: '#dc2626',
         padding: '1rem',
         borderRadius: '0.5rem',
-        border: '1px solid #fecaca',
+        border: '1px solid #dc2626',
         marginBottom: '1rem',
     },
     statsContainer: {
@@ -176,7 +182,7 @@ const styles = {
         alignItems: 'center',
         gap: '0.375rem',
         fontSize: '0.875rem',
-        color: '#6b7280',
+        color: '#D9D9D9',
     },
 };
 

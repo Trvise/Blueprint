@@ -181,10 +181,10 @@ const MaterialsAndToolsTab = ({
         top: '100%',
         left: 0,
         right: 0,
-        backgroundColor: 'white',
+        backgroundColor: '#000000',
         border: '1px solid #D9D9D9',
         borderRadius: '4px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
         maxHeight: '300px',
         overflowY: 'auto',
         zIndex: 1000
@@ -192,12 +192,14 @@ const MaterialsAndToolsTab = ({
 
     const repoItemStyle = {
         padding: '12px',
-        borderBottom: '1px solid #f0f0f0',
+        borderBottom: '1px solid #D9D9D9',
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
-        transition: 'background-color 0.2s'
+        transition: 'background-color 0.2s',
+        backgroundColor: '#000000',
+        color: '#D9D9D9'
     };
 
     return (
@@ -226,7 +228,7 @@ const MaterialsAndToolsTab = ({
                             left: '12px',
                             top: '50%',
                             transform: 'translateY(-50%)',
-                            color: '#666'
+                            color: '#D9D9D9'
                         }} />
                         
                         {/* Repository Search Results */}
@@ -237,11 +239,11 @@ const MaterialsAndToolsTab = ({
                                         key={tool.tool_id}
                                         style={{
                                             ...repoItemStyle,
-                                            ':hover': { backgroundColor: '#f8f9fa' }
+                                            ':hover': { backgroundColor: '#D9D9D9' }
                                         }}
                                         onClick={() => addToolFromRepo(tool)}
-                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
-                                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#D9D9D9'}
+                                        onMouseLeave={(e) => e.target.style.backgroundColor = '#000000'}
                                     >
                                         {tool.image_file?.file_url && (
                                             <img 
@@ -258,7 +260,7 @@ const MaterialsAndToolsTab = ({
                                         <div style={{flex: 1}}>
                                             <p style={{margin: 0, fontWeight: '500'}}>{tool.name}</p>
                                             {tool.specification && (
-                                                <p style={{margin: 0, fontSize: '0.8rem', color: '#666'}}>
+                                                <p style={{margin: 0, fontSize: '0.8rem', color: '#D9D9D9'}}>
                                                     {tool.specification}
                                                 </p>
                                             )}
@@ -272,14 +274,14 @@ const MaterialsAndToolsTab = ({
                         {showToolRepo && toolSearchTerm && filteredRepoTools.length === 0 && (
                             <div style={repositorySearchStyle}>
                                 <div style={{...repoItemStyle, cursor: 'default'}}>
-                                    <p style={{margin: 0, color: '#666'}}>No tools found. Add to repository first.</p>
+                                    <p style={{margin: 0, color: '#D9D9D9'}}>No tools found. Add to repository first.</p>
                                 </div>
                             </div>
                         )}
                     </div>
                 </div>
 
-                <div style={{marginBottom: LAYOUT.inputSpacing, fontSize: '0.9rem', color: '#666', textAlign: 'center'}}>
+                <div style={{marginBottom: LAYOUT.inputSpacing, fontSize: '0.9rem', color: '#D9D9D9', textAlign: 'center'}}>
                     OR
                 </div>
 
@@ -341,7 +343,7 @@ const MaterialsAndToolsTab = ({
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                backgroundColor: '#f8f9fa'
+                                                backgroundColor: '#D9D9D9'
                                             }}>
                                                 {tool.imageFile ? (
                                                     <img 
@@ -363,7 +365,7 @@ const MaterialsAndToolsTab = ({
                                                 <div style={{
                                                     display: 'none',
                                                     fontSize: '12px',
-                                                    color: '#666'
+                                                    color: '#D9D9D9'
                                                 }}>📷</div>
                                             </div>
                                         )}
@@ -426,7 +428,7 @@ const MaterialsAndToolsTab = ({
                             left: '12px',
                             top: '50%',
                             transform: 'translateY(-50%)',
-                            color: '#666'
+                            color: '#D9D9D9'
                         }} />
                         
                         {/* Repository Search Results */}
@@ -437,11 +439,11 @@ const MaterialsAndToolsTab = ({
                                         key={material.material_id}
                                         style={{
                                             ...repoItemStyle,
-                                            ':hover': { backgroundColor: '#f8f9fa' }
+                                            ':hover': { backgroundColor: '#D9D9D9' }
                                         }}
                                         onClick={() => addMaterialFromRepo(material)}
-                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
-                                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#D9D9D9'}
+                                        onMouseLeave={(e) => e.target.style.backgroundColor = '#000000'}
                                     >
                                         {material.image_file?.file_url && (
                                             <img 
@@ -458,7 +460,7 @@ const MaterialsAndToolsTab = ({
                                         <div style={{flex: 1}}>
                                             <p style={{margin: 0, fontWeight: '500'}}>{material.name}</p>
                                             {material.specification && (
-                                                <p style={{margin: 0, fontSize: '0.8rem', color: '#666'}}>
+                                                <p style={{margin: 0, fontSize: '0.8rem', color: '#D9D9D9'}}>
                                                     {material.specification}
                                                 </p>
                                             )}
@@ -472,14 +474,14 @@ const MaterialsAndToolsTab = ({
                         {showMaterialRepo && materialSearchTerm && filteredRepoMaterials.length === 0 && (
                             <div style={repositorySearchStyle}>
                                 <div style={{...repoItemStyle, cursor: 'default'}}>
-                                    <p style={{margin: 0, color: '#666'}}>No materials found. Add to repository first.</p>
+                                    <p style={{margin: 0, color: '#D9D9D9'}}>No materials found. Add to repository first.</p>
                                 </div>
                             </div>
                         )}
                     </div>
                 </div>
 
-                <div style={{marginBottom: LAYOUT.inputSpacing, fontSize: '0.9rem', color: '#666', textAlign: 'center'}}>
+                <div style={{marginBottom: LAYOUT.inputSpacing, fontSize: '0.9rem', color: '#D9D9D9', textAlign: 'center'}}>
                     OR
                 </div>
 
@@ -541,7 +543,7 @@ const MaterialsAndToolsTab = ({
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                backgroundColor: '#f8f9fa'
+                                                backgroundColor: '#D9D9D9'
                                             }}>
                                                 {material.imageFile ? (
                                                     <img 
@@ -563,7 +565,7 @@ const MaterialsAndToolsTab = ({
                                                 <div style={{
                                                     display: 'none',
                                                     fontSize: '12px',
-                                                    color: '#666'
+                                                    color: '#D9D9D9'
                                                 }}>📷</div>
                 </div>
             )}

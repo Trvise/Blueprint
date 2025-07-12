@@ -34,8 +34,8 @@ const FinalizeTab = ({
 
                 {/* Auto-populate and Clear Controls */}
                 <div style={{
-                    backgroundColor: '#1a1a1a', 
-                    border: '1px solid #444444', 
+                    backgroundColor: '#000000', 
+                    border: '1px solid #D9D9D9', 
                     padding: '16px', 
                     borderRadius: '8px', 
                     marginBottom: '20px',
@@ -52,8 +52,8 @@ const FinalizeTab = ({
                         disabled={isLoading}
                         style={{
                             ...styles.button,
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
+                            backgroundColor: '#0000FF',
+                            color: '#D9D9D9',
                             padding: '8px 16px',
                             fontSize: '0.9rem',
                             opacity: isLoading ? 0.6 : 1,
@@ -158,12 +158,12 @@ const FinalizeTab = ({
                 {projectBuyList.length > 0 && (
                     <div>
                         <h3 style={styles.subSectionTitle}>Current Shopping List</h3>
-                        <div style={{border: '1px solid #444444', borderRadius: '8px', overflow: 'hidden'}}>
+                        <div style={{border: '1px solid #D9D9D9', borderRadius: '8px', overflow: 'hidden'}}>
                             {projectBuyList.map((item, index) => (
                                 <div key={item.id} style={{
                                     padding: '16px',
-                                    borderBottom: index < projectBuyList.length - 1 ? '1px solid #444444' : 'none',
-                                    backgroundColor: index % 2 === 0 ? '#D9D9D9' : '#CCCCCC'
+                                    borderBottom: index < projectBuyList.length - 1 ? '1px solid #D9D9D9' : 'none',
+                                    backgroundColor: index % 2 === 0 ? '#111111' : '#000000'
                                 }}>
                                     <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px'}}>
                                         {/* Item Image */}
@@ -254,17 +254,17 @@ const FinalizeTab = ({
             {/* Finalize Project Section */}
             <div style={{
                 ...styles.card,
-                backgroundColor: '#f0fff4',
+                backgroundColor: '#000000',
                 border: '2px solid #10b981',
                 boxShadow: '0 4px 12px rgba(16, 185, 129, 0.15)'
             }}>
-                <h2 style={{...styles.sectionTitle, color: '#065f46'}}>Ready to Finalize?</h2>
-                <p style={{fontSize: '1rem', color: '#047857', marginBottom: '20px'}}>
+                <h2 style={{...styles.sectionTitle, color: '#10b981'}}>Ready to Finalize?</h2>
+                <p style={{fontSize: '1rem', color: '#10b981', marginBottom: '20px'}}>
                     Once you finalize this project, all your steps, materials, and shopping list will be saved and published.
                 </p>
                 
-                <div style={{backgroundColor: 'white', padding: '16px', borderRadius: '8px', marginBottom: '20px'}}>
-                    <h3 style={{fontSize: '1.1rem', fontWeight: '600', color: '#065f46', marginBottom: '12px'}}>
+                <div style={{backgroundColor: '#111111', padding: '16px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #D9D9D9'}}>
+                    <h3 style={{fontSize: '1.1rem', fontWeight: '600', color: '#10b981', marginBottom: '12px'}}>
                         Final Checklist
                     </h3>
                     <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
@@ -272,13 +272,13 @@ const FinalizeTab = ({
                             <span style={{color: projectSteps.length > 0 ? '#10b981' : '#ef4444', fontSize: '1.2rem'}}>
                                 {projectSteps.length > 0 ? '✓' : '✗'}
                             </span>
-                            <span style={{color: projectSteps.length > 0 ? '#065f46' : '#7f1d1d'}}>
+                            <span style={{color: projectSteps.length > 0 ? '#10b981' : '#ef4444'}}>
                                 Project has at least one step ({projectSteps.length} steps)
                             </span>
                         </div>
                         <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                             <span style={{color: '#10b981', fontSize: '1.2rem'}}>✓</span>
-                            <span style={{color: '#065f46'}}>
+                            <span style={{color: '#10b981'}}>
                                 Shopping list configured ({projectBuyList.length} items)
                             </span>
                         </div>

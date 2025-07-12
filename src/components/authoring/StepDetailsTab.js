@@ -142,7 +142,7 @@ const StepDetailsTab = ({
                                             key={annotationId || `annotation-${index}`}
                                             style={{
                                                 padding: LAYOUT.sm,
-                                                backgroundColor: '#D9D9D9',
+                                                backgroundColor: '#111111',
                                                 border: `1px solid ${COLORS.gray[400]}`,
                                                 borderRadius: '4px',
                                                 marginBottom: LAYOUT.xs,
@@ -156,14 +156,14 @@ const StepDetailsTab = ({
                                                     margin: 0,
                                                     fontSize: '0.85rem',
                                                     fontWeight: '500',
-                                                    color: '#000000'
+                                                    color: '#D9D9D9'
                                                 }}>
                                                     {annotationText}
                                                 </p>
                                                 <p style={{
                                                     margin: '2px 0 0 0',
                                                     fontSize: '0.75rem',
-                                                    color: '#333333'
+                                                    color: '#D9D9D9'
                                                 }}>
                                                     {annotationTimestamp 
                                                         ? `At ${formatTime(annotationTimestamp / 1000)}`
@@ -175,7 +175,7 @@ const StepDetailsTab = ({
                                                 onClick={() => onEditAnnotation && onEditAnnotation(annotation)}
                                                 style={{
                                                     backgroundColor: COLORS.primary,
-                                                    color: 'white',
+                                                    color: '#D9D9D9',
                                                     border: 'none',
                                                     borderRadius: '4px',
                                                     padding: '4px 8px',
@@ -224,4 +224,4 @@ const StepDetailsTab = ({
     </div>
 )};
 
-export default StepDetailsTab; 
+export default StepDetailsTab;

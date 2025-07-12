@@ -25,7 +25,7 @@ export const styles = {
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: '#000000',
-        borderRight: '1px solid #e2e8f0',
+        borderRight: '1px solid #D9D9D9',
     },
     rightPanel: {
         width: '60%',
@@ -45,13 +45,13 @@ export const styles = {
         alignItems: 'center',
         padding: '20px 30px',
         backgroundColor: '#000000',
-        borderBottom: '1px solid #e2e8f0',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        borderBottom: '1px solid #D9D9D9',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
     },
     pageTitle: {
         fontSize: '1.8rem', 
         fontWeight: 'bold',
-        color: '#2c3e50',
+        color: '#F1C232', // Gold for main title
     },
     projectNameHighlight: {
         color: '#F1C232', 
@@ -62,13 +62,14 @@ export const styles = {
         textDecoration: 'none',
         padding: '8px 16px',
         borderRadius: '6px',
-        backgroundColor: '#f0f9ff',
+        backgroundColor: '#000000',
+        border: '1px solid #0000FF',
         transition: 'all 0.2s',
     },
     timelineContainer: {
         padding: '20px 30px',
         backgroundColor: '#000000',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid #D9D9D9',
         minHeight: '120px',
     },
     timeline: {
@@ -80,7 +81,7 @@ export const styles = {
     stepCard: {
         minWidth: '200px',
         backgroundColor: '#000000',
-        border: '2px solid #e2e8f0',
+        border: '2px solid #D9D9D9',
         borderRadius: '8px',
         padding: '12px',
         cursor: 'pointer',
@@ -89,19 +90,19 @@ export const styles = {
     },
     stepCardActive: {
         border: '2px solid #0000FF',
-        backgroundColor: '#e3f2fd',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        backgroundColor: '#1a1a1a',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
     },
     stepCardEmpty: {
         minWidth: '200px',
-        backgroundColor: '#f1f5f9',
-        border: '2px dashed #cbd5e1',
+        backgroundColor: '#222222',
+        border: '2px dashed #D9D9D9',
         borderRadius: '8px',
         padding: '20px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#64748b',
+        color: '#D9D9D9',
         fontSize: '0.9rem',
         cursor: 'pointer',
         transition: 'all 0.2s',
@@ -119,7 +120,7 @@ export const styles = {
     },
     errorMessage: {
         padding: '12px',
-        backgroundColor: '#FFF0F0', 
+        backgroundColor: '#2d0000', 
         border: '1px solid #FFCCCC',
         color: '#D8000C',
         borderRadius: '8px',
@@ -128,9 +129,9 @@ export const styles = {
     },
     successMessage: {
         padding: '12px',
-        backgroundColor: '#F0FFF0', 
+        backgroundColor: '#003300', 
         border: '1px solid #CCFFCC',
-        color: '#008000',
+        color: '#10b981',
         borderRadius: '8px',
         fontSize: '0.9rem',
         marginBottom: '20px',
@@ -138,19 +139,19 @@ export const styles = {
     },
     card: {
         padding: '20px',
-        border: '1px solid #e2e8f0', 
+        border: '1px solid #D9D9D9', 
         borderRadius: '12px',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
         backgroundColor: '#000000',
         marginBottom: '20px',
     },
     sectionTitle: {
         fontSize: '1.4rem',
         fontWeight: '600',
-        color: '#D9D9D9',
+        color: '#F1C232', // Gold for section titles
         marginBottom: '16px',
         paddingBottom: '8px',
-        borderBottom: '1px solid #eee'
+        borderBottom: '1px solid #D9D9D9'
     },
     inputLabel: {
         display: 'block',
@@ -165,9 +166,9 @@ export const styles = {
         fontSize: '0.9rem',
         color: '#D9D9D9',
         backgroundColor: '#000000', 
-        border: '1px solid #cbd5e1', 
+        border: '1px solid #D9D9D9', 
         borderRadius: '8px',
-        boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)',
+        boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.15)',
         transition: 'border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
         boxSizing: 'border-box', 
     },
@@ -177,9 +178,9 @@ export const styles = {
         fontSize: '0.9rem',
         color: '#D9D9D9',
         backgroundColor: '#000000',
-        border: '1px solid #cbd5e1',
+        border: '1px solid #D9D9D9',
         borderRadius: '8px',
-        boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)',
+        boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.15)',
         transition: 'border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
         minHeight: '80px',
         boxSizing: 'border-box',
@@ -192,25 +193,25 @@ export const styles = {
         border: 'none',
         cursor: 'pointer',
         transition: 'background-color 0.2s ease-in-out, transform 0.1s ease',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
     },
     buttonPrimary: {
-        backgroundColor: '#0000FF', 
-        color: 'white',
+        backgroundColor: '#F1C232', // Gold for primary actions
+        color: '#000000',
     },
     buttonSecondary: {
-        backgroundColor: '#6c757d', 
-        color: 'white',
+        backgroundColor: '#0000FF', 
+        color: '#D9D9D9',
     },
     buttonSecondarySm: {
         padding: '6px 12px',
         fontSize: '0.8rem',
-        backgroundColor: '#6c757d',
-        color: 'white',
+        backgroundColor: '#0000FF',
+        color: '#D9D9D9',
     },
     buttonDisabled: {
-        backgroundColor: '#e9ecef', 
-        color: '#6c757d',
+        backgroundColor: '#222222', 
+        color: '#D9D9D9',
         cursor: 'not-allowed',
         opacity: 0.7,
     },
@@ -220,11 +221,13 @@ export const styles = {
         color: '#D9D9D9',
         padding: '8px 0',
         boxSizing: 'border-box',
+        backgroundColor: '#000000',
+        border: '1px solid #D9D9D9',
     },
     videoPlayer: {
         width: '100%',
         borderRadius: '8px',
-        backgroundColor: '#000',
+        backgroundColor: '#000000',
         aspectRatio: '16 / 9',
         minHeight: '300px', 
     },
@@ -243,7 +246,7 @@ export const styles = {
     },
     tabNavigation: {
         display: 'flex',
-        borderBottom: '2px solid #e2e8f0',
+        borderBottom: '2px solid #D9D9D9',
         backgroundColor: '#000000',
         borderTopLeftRadius: '8px',
         borderTopRightRadius: '8px',
@@ -265,14 +268,14 @@ export const styles = {
     },
     tabButtonActive: {
         color: '#000000',
-        backgroundColor: '#D9D9D9',
+        backgroundColor: '#F1C232',
         borderBottomColor: '#0000FF',
         fontWeight: '600',
         borderRadius: '6px 6px 0 0',
     },
     videoSection: {
         padding: '20px',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid #D9D9D9',
     },
     videoContainer: {
         marginBottom: '16px',
@@ -287,16 +290,16 @@ export const styles = {
         padding: '6px 12px',
         fontSize: '0.8rem',
         fontWeight: '500',
-        border: '1px solid #e2e8f0',
+        border: '1px solid #D9D9D9',
         borderRadius: '6px',
         backgroundColor: '#000000',
-        color: '#6b7280',
+        color: '#D9D9D9',
         cursor: 'pointer',
         transition: 'all 0.2s',
     },
     videoSelectButtonActive: {
         backgroundColor: '#0000FF',
-        color: 'white',
+        color: '#D9D9D9',
         border: '1px solid #0000FF',
     },
     videoControls: {
@@ -308,7 +311,8 @@ export const styles = {
     noVideoMessage: {
         padding: '40px',
         textAlign: 'center',
-        color: '#6b7280',
+        color: '#D9D9D9',
+        backgroundColor: '#000000',
         fontSize: '0.9rem',
     },
     stepsSection: {
@@ -325,7 +329,7 @@ export const styles = {
     stepsSectionTitle: {
         fontSize: '1.1rem',
         fontWeight: '600',
-        color: '#D9D9D9',
+        color: '#F1C232',
     },
     stepsList: {
         display: 'flex',
@@ -334,7 +338,7 @@ export const styles = {
     },
     stepItem: {
         padding: '12px',
-        border: '1px solid #e2e8f0',
+        border: '1px solid #D9D9D9',
         borderRadius: '8px',
         backgroundColor: '#000000',
         cursor: 'pointer',
@@ -342,8 +346,9 @@ export const styles = {
     },
     stepItemActive: {
         border: '1px solid #0000FF',
-        backgroundColor: '#D9D9D9',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+        backgroundColor: '#F1C232',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+        color: '#000000',
     },
     stepItemHeader: {
         display: 'flex',
@@ -354,7 +359,7 @@ export const styles = {
     stepItemNumber: {
         fontSize: '0.9rem',
         fontWeight: '600',
-        color: '#D9D9D9',
+        color: '#F1C232',
     },
     stepItemNumberActive: {
         fontSize: '0.9rem',
@@ -363,11 +368,11 @@ export const styles = {
     },
     stepItemTime: {
         fontSize: '0.8rem',
-        color: '#6b7280',
+        color: '#D9D9D9',
     },
     stepItemTimeActive: {
         fontSize: '0.8rem',
-        color: '#333333',
+        color: '#000000',
     },
     stepItemName: {
         fontSize: '0.9rem',
@@ -382,6 +387,10 @@ export const styles = {
         bottom: '30px',
         right: '30px',
         zIndex: 1000,
+        backgroundColor: '#F1C232',
+        color: '#000000',
+        border: 'none',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
     },
     // Video timeline (under video)
     videoTimelineUnderVideo: {
