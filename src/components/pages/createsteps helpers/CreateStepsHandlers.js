@@ -104,13 +104,48 @@ export const createStepHandlers = (
     };
 
     const handleAnnotationSubmit = (annotationData) => {
+        console.log('Annotation submitted:', annotationData);
+        console.log('Current frameTimestampMs:', frameTimestampMs);
+        
+        // Validate that we have a valid timestamp
+        if (!frameTimestampMs || frameTimestampMs <= 0) {
+            alert('Please capture a frame first before creating annotations.');
+            return;
+        }
+        
+        // The annotationData from react-image-annotation comes with geometry and data
+        // We need to ensure it has the correct structure for our system
         const newAnnotation = {
-            id: `annotation_${uuidv4()}`,
-            timestamp_ms: frameTimestampMs,
-            coordinates: annotationData,
-            video_dimensions: videoDimensions,
+            geometry: annotationData.geometry,
+            data: {
+                text: annotationData.data?.text || 'Untitled annotation',
+                id: `annotation_${uuidv4()}`,
+                frame_timestamp_ms: frameTimestampMs,
+            }
         };
+        
+        console.log('Creating annotation:', newAnnotation);
         setCurrentStepAnnotations(prev => [...prev, newAnnotation]);
+        
+        // Clear the annotation tool after successful submission
+        setCurrentAnnotationTool({});
+    };
+
+    // Function to clear all annotations for the current step
+    const handleClearAnnotations = () => {
+        if (currentStepAnnotations.length === 0) {
+            setSuccessMessage('No annotations to clear.');
+            setTimeout(() => setSuccessMessage(''), 2000);
+            return;
+        }
+
+        const confirmed = window.confirm(`Are you sure you want to clear all ${currentStepAnnotations.length} annotations? This action cannot be undone.`);
+        if (confirmed) {
+            setCurrentStepAnnotations([]);
+            setCurrentAnnotationTool({});
+            setSuccessMessage('All annotations cleared successfully.');
+            setTimeout(() => setSuccessMessage(''), 3000);
+        }
     };
 
     const handleAddToolToCurrentStep = () => {
@@ -461,6 +496,7 @@ export const createStepHandlers = (
         handleVideoSelection,
         markTime,
         handleAnnotationSubmit,
+        handleClearAnnotations,
         handleAddToolToCurrentStep,
         removeToolFromCurrentStep,
         handleAddMaterialToCurrentStep,

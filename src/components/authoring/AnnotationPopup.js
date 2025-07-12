@@ -28,6 +28,7 @@ const AnnotationPopup = ({
     setCurrentAnnotationTool,
     handleAnnotationSubmit,
     removeAnnotation,
+    handleClearAnnotations,
     formatTime,
     styles
 }) => {
@@ -112,32 +113,90 @@ const AnnotationPopup = ({
                 <div style={{
                     padding: '20px 24px'
                 }}>
+                    {/* How to annotate info box */}
                     <div style={{
                         backgroundColor: '#eff6ff',
                         border: '1px solid #bfdbfe',
                         borderRadius: '8px',
                         padding: '12px',
-                        marginBottom: '20px'
+                        marginBottom: '18px'
                     }}>
                         <h4 style={{
-                            fontSize: '0.875rem',
+                            fontSize: '0.95rem',
                             fontWeight: '600',
                             color: '#1e40af',
-                            margin: '0 0 8px 0'
+                            margin: '0 0 6px 0'
                         }}>
                             How to annotate:
                         </h4>
                         <ul style={{
-                            fontSize: '0.8rem',
+                            fontSize: '0.88rem',
                             color: '#1e40af',
                             margin: 0,
-                            paddingLeft: '16px'
+                            paddingLeft: '18px',
+                            lineHeight: 1.6
                         }}>
-                            <li>Click and drag to create a rectangular annotation</li>
-                            <li>Type a description for the highlighted area</li>
-                            <li>Press Enter or click Submit to save the annotation</li>
-                            <li>You can add multiple annotations to the same frame</li>
+                            <li>Click and drag on the image to create a rectangle.</li>
+                            <li>Enter a description in the text box above.</li>
+                            <li>Click <b>Submit Annotation</b> to save.</li>
+                            <li>You can add multiple annotations to the same frame.</li>
                         </ul>
+                    </div>
+
+                    {/* Annotation label and textbox */}
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{
+                            display: 'block',
+                            fontWeight: 600,
+                            fontSize: '1.1rem',
+                            marginBottom: '6px',
+                            color: '#1e293b'
+                        }}>Annotation</label>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <input
+                                type="text"
+                                placeholder="Enter annotation content..."
+                                value={currentAnnotationTool?.data?.text || ''}
+                                onChange={e => setCurrentAnnotationTool({
+                                    ...currentAnnotationTool,
+                                    data: {
+                                        ...currentAnnotationTool.data,
+                                        text: e.target.value
+                                    }
+                                })}
+                                style={{
+                                    flex: 1,
+                                    padding: '8px 12px',
+                                    fontSize: '1rem',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '6px',
+                                    minWidth: '180px',
+                                    marginBottom: '6px'
+                                }}
+                            />
+                            <button
+                                onClick={() => {
+                                    if (currentAnnotationTool && currentAnnotationTool.geometry) {
+                                        handleAnnotationSubmit(currentAnnotationTool);
+                                    }
+                                }}
+                                disabled={!(currentAnnotationTool && currentAnnotationTool.geometry)}
+                                style={{
+                                    backgroundColor: '#3b82f6',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    padding: '8px 18px',
+                                    fontSize: '1rem',
+                                    fontWeight: 600,
+                                    cursor: (currentAnnotationTool && currentAnnotationTool.geometry) ? 'pointer' : 'not-allowed',
+                                    opacity: (currentAnnotationTool && currentAnnotationTool.geometry) ? 1 : 0.6,
+                                    marginBottom: '6px'
+                                }}
+                            >
+                                Submit Annotation
+                            </button>
+                        </div>
                     </div>
 
                     {/* Annotation Interface */}
@@ -157,7 +216,9 @@ const AnnotationPopup = ({
                             annotations={transformedAnnotations}
                             value={currentAnnotationTool}
                             onChange={setCurrentAnnotationTool}
-                            onSubmit={handleAnnotationSubmit}
+                            // Remove the default editor overlay
+                            disableEditor
+                            onSubmit={() => {}}
                             style={{
                                 maxWidth: '100%',
                                 maxHeight: '60vh',
@@ -267,21 +328,44 @@ const AnnotationPopup = ({
                         }}>
                             💡 Tip: You can annotate multiple areas on the same frame
                         </div>
-                        <button
-                            onClick={onClose}
-                            style={{
-                                backgroundColor: '#3b82f6',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '8px',
-                                padding: '10px 20px',
-                                fontSize: '0.875rem',
-                                fontWeight: '600',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            Done Annotating
-                        </button>
+                        <div style={{
+                            display: 'flex',
+                            gap: '12px',
+                            alignItems: 'center'
+                        }}>
+                            {currentStepAnnotations.length > 0 && (
+                                <button
+                                    onClick={handleClearAnnotations}
+                                    style={{
+                                        backgroundColor: '#dc2626',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        padding: '8px 16px',
+                                        fontSize: '0.875rem',
+                                        fontWeight: '600',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Clear All
+                                </button>
+                            )}
+                            <button
+                                onClick={onClose}
+                                style={{
+                                    backgroundColor: '#3b82f6',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    padding: '10px 20px',
+                                    fontSize: '0.875rem',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Done Annotating
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

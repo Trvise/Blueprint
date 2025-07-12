@@ -730,6 +730,7 @@ const ProjectStepsPage = () => {
                 setCurrentAnnotationTool={state.setCurrentAnnotationTool}
                 handleAnnotationSubmit={handlers.handleAnnotationSubmit}
                 removeAnnotation={enhancedHandlers.removeAnnotation}
+                handleClearAnnotations={handlers.handleClearAnnotations}
                 formatTime={formatTime}
                 styles={styles}
             />

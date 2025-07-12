@@ -101,6 +101,10 @@ export const captureFrameForAnnotation = (videoRef, setFrameForAnnotation, setFr
         }
         if (!video.paused) { video.pause(); }
         const timestamp = Math.round(video.currentTime * 1000); 
+        
+        console.log('Capturing frame - video currentTime:', video.currentTime);
+        console.log('Capturing frame - calculated timestamp (ms):', timestamp);
+        
         const canvas = document.createElement("canvas");
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -118,16 +122,18 @@ export const captureFrameForAnnotation = (videoRef, setFrameForAnnotation, setFr
                 setSuccessMessage(`Frame captured at ${formatTime(timestamp / 1000)}.`);
             }
 
-                            // This part remains to update the UI for annotation
-                setFrameForAnnotation(dataURL);
-                setFrameTimestampMs(timestamp);
-                // Don't clear existing annotations - keep them for this frame
-                setCurrentAnnotationTool({});
-                
-                // Open the annotation popup
-                if (setIsAnnotationPopupOpen) {
-                    setIsAnnotationPopupOpen(true);
-                }
+            // This part remains to update the UI for annotation
+            setFrameForAnnotation(dataURL);
+            setFrameTimestampMs(timestamp);
+            console.log('Setting frameTimestampMs to:', timestamp);
+            
+            // Don't clear existing annotations - keep them for this frame
+            setCurrentAnnotationTool({});
+            
+            // Open the annotation popup
+            if (setIsAnnotationPopupOpen) {
+                setIsAnnotationPopupOpen(true);
+            }
         } catch (e) {
             console.error("Error capturing frame:", e);
             setErrorMessage("Could not capture frame. Check browser permissions or video source.");
