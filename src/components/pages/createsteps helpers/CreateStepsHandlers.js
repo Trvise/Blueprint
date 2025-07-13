@@ -158,11 +158,13 @@ export const createStepHandlers = (
 
     const handleAddToolToCurrentStep = () => {
         if (!currentStepToolName.trim()) { alert("Tool name is required."); return; }
+        // Only store serializable data
+        const safeImageFile = currentStepToolImageFile instanceof File ? currentStepToolImageFile : null;
         setCurrentStepTools(prev => [...prev, { 
             id: `tool_${uuidv4()}`, name: currentStepToolName, 
             specification: currentStepToolSpec, 
             quantity: parseInt(currentStepToolQuantity) || 1,
-            imageFile: currentStepToolImageFile,
+            imageFile: safeImageFile,
             purchase_link: currentStepToolPurchaseLink
         }]);
         setCurrentStepToolName(''); 
@@ -177,11 +179,13 @@ export const createStepHandlers = (
 
     const handleAddMaterialToCurrentStep = () => {
         if (!currentStepMaterialName.trim()) { alert("Material name is required."); return; }
+        // Only store serializable data
+        const safeImageFile = currentStepMaterialImageFile instanceof File ? currentStepMaterialImageFile : null;
         setCurrentStepMaterials(prev => [...prev, { 
             id: `material_${uuidv4()}`, name: currentStepMaterialName, 
             specification: currentStepMaterialSpec, 
             quantity: parseInt(currentStepMaterialQuantity) || 1,
-            imageFile: currentStepMaterialImageFile,
+            imageFile: safeImageFile,
             purchase_link: currentStepMaterialPurchaseLink
         }]);
         setCurrentStepMaterialName(''); 
@@ -199,7 +203,7 @@ export const createStepHandlers = (
         if (file) {
             setCurrentStepSupFiles(prev => [...prev, {
                 id: `supfile_${uuidv4()}`,
-                fileObject: file, 
+                fileObject: file, // Only store the File object
                 displayName: currentStepSupFileName || file.name
             }]);
             setCurrentStepSupFileName(''); 
@@ -223,10 +227,12 @@ export const createStepHandlers = (
 
     const handleAddBuyListItem = () => {
         if (!buyListItemName.trim()) { alert("Item name is required for buy list."); return; }
+        // Only store serializable data
+        const safeImageFile = buyListItemImageFile instanceof File ? buyListItemImageFile : null;
         setProjectBuyList(prev => [...prev, {
             id: `buyitem_${uuidv4()}`, name: buyListItemName,
             quantity: parseInt(buyListItemQty, 10) || 1, specification: buyListItemSpec,
-            purchase_link: buyListItemLink, imageFile: buyListItemImageFile,
+            purchase_link: buyListItemLink, imageFile: safeImageFile,
             hasExistingImage: false // Mark as new item for proper image display
         }]);
         setBuyListItemName(''); setBuyListItemQty(1); setBuyListItemSpec('');

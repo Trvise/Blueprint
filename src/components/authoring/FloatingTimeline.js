@@ -25,7 +25,6 @@ const FloatingTimeline = ({
     
     // Calculate timeline dimensions based on zoom
     const timelineWidth = Math.max(1000 * zoomLevel, window.innerWidth - 256); // 256px for sidebar
-    const pixelsPerSecond = timelineWidth / videoDuration;
     
     // Generate ruler marks
     const generateRulerMarks = () => {
@@ -150,7 +149,7 @@ const FloatingTimeline = ({
             left: Math.max(0, scrollTo),
             behavior: 'smooth'
         });
-    }, [currentTime, videoDuration, timelineWidth]);
+    }, [currentTime, videoDuration, timelineWidth, videoRef]);
     
     if (!isVisible) return null;
     

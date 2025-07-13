@@ -802,7 +802,7 @@ const ProjectOverviewTab = ({
                                                     </li>
                                                 );
                                             })}
-                                        </ul>
+                                    </ul>
                                     </div>
                                 </div>
                             )}

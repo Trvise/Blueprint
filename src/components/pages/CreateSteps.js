@@ -784,7 +784,7 @@ const ProjectStepsPage = () => {
             />
             
             {/* Floating Timeline - always visible on video steps page */}
-            {activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' && (
+            {activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' && !isAnnotationPopupOpen && (
                 <FloatingTimeline
                     videoRef={videoRef}
                     projectSteps={projectSteps}
