@@ -11,6 +11,23 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     const { userLoggedIn, currentUser } = useAuth();
     const [activeTab, setActiveTab] = useState('details');
 
+    // Add CSS animation for gradient
+    useEffect(() => {
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes gradientShift {
+                0% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+                100% { background-position: 0% 50%; }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        return () => {
+            document.head.removeChild(style);
+        };
+    }, []);
+
     // Check if we're on the CreateSteps page
     const isCreateStepsPage = location.pathname.includes('/create-steps') || location.pathname.includes('/steps') || location.pathname.includes('/annotate');
 
@@ -44,10 +61,12 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                 className="w-14 h-14"
                             />
                             <h1 className="text-2xl font-semibold whitespace-nowrap" style={{
-                                background: 'linear-gradient(45deg, #0000FF 0%, #F1C232 100%)',
+                                background: 'linear-gradient(45deg, #0000FF 0%, #F1C232 25%, #0000FF 50%, #F1C232 75%, #0000FF 100%)',
+                                backgroundSize: '200% 200%',
                                 WebkitBackgroundClip: 'text',
                                 WebkitTextFillColor: 'transparent',
-                                backgroundClip: 'text'
+                                backgroundClip: 'text',
+                                animation: 'gradientShift 3s ease-in-out infinite'
                             }}>
                                 Blueprint
                             </h1>
