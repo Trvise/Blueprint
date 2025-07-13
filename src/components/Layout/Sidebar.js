@@ -10,6 +10,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     const location = useLocation();
     const { userLoggedIn, currentUser } = useAuth();
     const [activeTab, setActiveTab] = useState('details');
+    const [isAnimating, setIsAnimating] = useState(false);
 
     // Add CSS animation for gradient
     useEffect(() => {
@@ -27,6 +28,19 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
             document.head.removeChild(style);
         };
     }, []);
+
+    // Trigger animation when user logs in
+    useEffect(() => {
+        if (userLoggedIn && currentUser) {
+            setIsAnimating(true);
+            // Stop animation after 3 seconds
+            const timer = setTimeout(() => {
+                setIsAnimating(false);
+            }, 3000);
+            
+            return () => clearTimeout(timer);
+        }
+    }, [userLoggedIn, currentUser]);
 
     // Check if we're on the CreateSteps page
     const isCreateStepsPage = location.pathname.includes('/create-steps') || location.pathname.includes('/steps') || location.pathname.includes('/annotate');
@@ -61,12 +75,14 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                 className="w-14 h-14"
                             />
                             <h1 className="text-2xl font-semibold whitespace-nowrap" style={{
-                                background: 'linear-gradient(45deg, #0000FF 0%, #F1C232 25%, #0000FF 50%, #F1C232 75%, #0000FF 100%)',
-                                backgroundSize: '200% 200%',
+                                background: isAnimating 
+                                    ? 'linear-gradient(45deg, #0000FF 0%, #F1C232 40%, #0000FF 80%, #F1C232 90%, #0000FF 100%)'
+                                    : 'linear-gradient(45deg, #0000FF 0%, #F1C232 100%)',
+                                backgroundSize: isAnimating ? '200% 200%' : '100% 100%',
                                 WebkitBackgroundClip: 'text',
                                 WebkitTextFillColor: 'transparent',
                                 backgroundClip: 'text',
-                                animation: 'gradientShift 3s ease-in-out infinite'
+                                animation: isAnimating ? 'gradientShift 3s ease-in-out infinite' : 'none'
                             }}>
                                 Blueprint
                             </h1>
