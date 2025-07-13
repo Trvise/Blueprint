@@ -15,6 +15,7 @@ const ProjectOverviewTab = ({
     const totalMaterials = projectSteps.reduce((sum, step) => sum + (step.materials?.length || 0), 0);
     const totalFiles = projectSteps.reduce((sum, step) => sum + (step.supplementary_files?.length || 0), 0);
 
+    // Update overviewStyles for improved readability
     const overviewStyles = {
         container: {
             maxWidth: '1200px',
@@ -32,15 +33,19 @@ const ProjectOverviewTab = ({
             border: '2px solid #F1C232',
         },
         title: {
-            fontSize: '2.5rem',
+            fontSize: '2.7rem',
             fontWeight: 'bold',
             color: '#F1C232',
-            marginBottom: '10px',
+            marginBottom: '14px',
+            letterSpacing: '0.01em',
+            textShadow: '0 2px 8px #000',
         },
         subtitle: {
-            fontSize: '1.1rem',
-            color: '#D9D9D9',
-            marginBottom: '20px',
+            fontSize: '1.18rem',
+            color: '#F5F5F5',
+            marginBottom: '26px',
+            lineHeight: 1.7,
+            fontWeight: 500,
         },
         statsGrid: {
             display: 'grid',
@@ -60,26 +65,32 @@ const ProjectOverviewTab = ({
             transform: 'translateY(-2px)',
         },
         statNumber: {
-            fontSize: '2.5rem',
+            fontSize: '2.7rem',
             fontWeight: 'bold',
-            marginBottom: '8px',
+            marginBottom: '10px',
+            color: '#F1C232',
+            textShadow: '0 2px 8px #000',
         },
         statLabel: {
-            fontSize: '1rem',
-            fontWeight: '500',
+            fontSize: '1.08rem',
+            fontWeight: '600',
+            color: '#F5F5F5',
+            letterSpacing: '0.01em',
         },
         stepsSection: {
             marginBottom: '40px',
         },
         sectionTitle: {
-            fontSize: '1.8rem',
+            fontSize: '2rem',
             fontWeight: 'bold',
             color: '#F1C232',
-            marginBottom: '20px',
-            padding: '15px 20px',
-            backgroundColor: '#111111',
-            borderRadius: '8px',
-            border: '1px solid #D9D9D9',
+            marginBottom: '24px',
+            padding: '18px 24px',
+            backgroundColor: '#18181b',
+            borderRadius: '10px',
+            border: '1.5px solid #F1C232',
+            letterSpacing: '0.01em',
+            textShadow: '0 2px 8px #000',
         },
         stepCard: {
             marginBottom: '25px',
@@ -104,10 +115,12 @@ const ProjectOverviewTab = ({
             alignItems: 'flex-start',
         },
         stepTitle: {
-            fontSize: '1.3rem',
+            fontSize: '1.35rem',
             fontWeight: 'bold',
             color: '#F1C232',
-            marginBottom: '8px',
+            marginBottom: '10px',
+            letterSpacing: '0.01em',
+            textShadow: '0 2px 8px #000',
         },
         stepVideo: {
             fontSize: '0.9rem',
@@ -141,11 +154,12 @@ const ProjectOverviewTab = ({
             padding: '20px',
         },
         stepDescription: {
-            fontSize: '1rem',
-            color: '#D9D9D9',
-            marginBottom: '20px',
-            lineHeight: '1.6',
-            whiteSpace: 'pre-wrap',
+            fontSize: '1.08rem',
+            color: '#F5F5F5',
+            marginBottom: '22px',
+            lineHeight: 1.7,
+            fontWeight: 500,
+            letterSpacing: '0.01em',
         },
         notesContainer: {
             display: 'flex',
@@ -199,16 +213,20 @@ const ProjectOverviewTab = ({
             alignItems: 'center',
         },
         detailTitle: {
-            fontSize: '0.9rem',
-            fontWeight: '600',
+            fontSize: '1.08rem',
+            fontWeight: '700',
             color: '#F1C232',
+            letterSpacing: '0.01em',
+            textShadow: '0 2px 8px #000',
         },
         detailCount: {
-            fontSize: '0.8rem',
-            color: '#D9D9D9',
-            backgroundColor: '#0000FF',
-            padding: '2px 6px',
-            borderRadius: '4px',
+            fontSize: '0.95rem',
+            color: '#0000FF',
+            backgroundColor: '#F1C232',
+            padding: '3px 10px',
+            borderRadius: '6px',
+            fontWeight: 700,
+            marginLeft: '8px',
         },
         detailContent: {
             padding: '15px',
@@ -231,30 +249,45 @@ const ProjectOverviewTab = ({
             borderBottom: 'none',
         },
         itemImage: {
-            width: '24px',
-            height: '24px',
-            borderRadius: '4px',
-            border: '1px solid #D9D9D9',
+            width: '80px',
+            height: '80px',
+            borderRadius: '8px',
+            border: '2px solid #D9D9D9',
             overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: '#111111',
             flexShrink: '0',
+            marginRight: '18px',
         },
         itemText: {
-            fontSize: '0.85rem',
-            color: '#D9D9D9',
+            fontSize: '1.01rem',
+            color: '#F5F5F5',
             flex: '1',
+            lineHeight: 1.6,
+            fontWeight: 500,
         },
         itemName: {
-            fontWeight: '600',
+            fontWeight: '900',
             color: '#F1C232',
+            fontSize: '1.35rem',
+            letterSpacing: '0.01em',
+            textShadow: '0 2px 8px #000',
+            marginBottom: '2px',
         },
         itemSpec: {
-            fontSize: '0.8rem',
-            color: '#999999',
-            marginTop: '2px',
+            fontSize: '0.97rem',
+            color: '#BDBDBD',
+            marginTop: '4px',
+            fontWeight: 400,
+        },
+        itemQuantity: {
+            fontSize: '1.18rem',
+            color: '#fff',
+            fontWeight: '700',
+            marginTop: '6px',
+            letterSpacing: '0.01em',
         },
         buyListSection: {
             marginTop: '40px',
@@ -285,35 +318,41 @@ const ProjectOverviewTab = ({
             gap: '12px',
         },
         buyListImage: {
-            width: '40px',
-            height: '40px',
-            borderRadius: '6px',
-            border: '1px solid #D9D9D9',
+            width: '80px',
+            height: '80px',
+            borderRadius: '8px',
+            border: '2px solid #D9D9D9',
             overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: '#111111',
             flexShrink: '0',
+            marginRight: '18px',
         },
         buyListContent: {
             flex: '1',
         },
         buyListName: {
-            fontSize: '1rem',
-            fontWeight: '600',
+            fontSize: '1.35rem',
+            fontWeight: '900',
             color: '#F1C232',
-            marginBottom: '4px',
+            marginBottom: '2px',
+            letterSpacing: '0.01em',
+            textShadow: '0 2px 8px #000',
         },
         buyListSpec: {
-            fontSize: '0.85rem',
-            color: '#D9D9D9',
+            fontSize: '0.97rem',
+            color: '#BDBDBD',
             marginBottom: '2px',
+            fontWeight: 400,
         },
         buyListQuantity: {
-            fontSize: '0.8rem',
-            color: '#0000FF',
-            fontWeight: '500',
+            fontSize: '1.18rem',
+            color: '#fff',
+            fontWeight: '700',
+            marginTop: '6px',
+            letterSpacing: '0.01em',
         },
         emptyState: {
             textAlign: 'center',
@@ -353,32 +392,32 @@ const ProjectOverviewTab = ({
                     }}>
                         <div style={overviewStyles.statNumber}>{totalSteps}</div>
                         <div style={overviewStyles.statLabel}>Total Steps</div>
-                    </div>
-                    <div style={{
+                        </div>
+                        <div style={{
                         ...overviewStyles.statCard,
-                        backgroundColor: '#F1C232',
+                            backgroundColor: '#F1C232',
                         color: '#000000'
                     }}>
                         <div style={overviewStyles.statNumber}>{totalAnnotations}</div>
                         <div style={overviewStyles.statLabel}>Annotations</div>
-                    </div>
-                    <div style={{
+                        </div>
+                        <div style={{
                         ...overviewStyles.statCard,
-                        backgroundColor: '#D9D9D9',
+                            backgroundColor: '#D9D9D9',
                         color: '#000000'
                     }}>
                         <div style={overviewStyles.statNumber}>{totalTools}</div>
                         <div style={overviewStyles.statLabel}>Tools</div>
-                    </div>
-                    <div style={{
+                        </div>
+                        <div style={{
                         ...overviewStyles.statCard,
-                        backgroundColor: '#000000',
+                            backgroundColor: '#000000',
                         color: '#D9D9D9',
                         border: '2px solid #D9D9D9'
                     }}>
                         <div style={overviewStyles.statNumber}>{totalMaterials}</div>
                         <div style={overviewStyles.statLabel}>Materials</div>
-                    </div>
+                            </div>
                     <div style={{
                         ...overviewStyles.statCard,
                         backgroundColor: '#111111',
@@ -407,8 +446,8 @@ const ProjectOverviewTab = ({
                     </div>
                 ) : (
                     projectSteps.map((step, index) => (
-                        <div 
-                            key={step.id || index} 
+                            <div 
+                                key={step.id || index} 
                             style={overviewStyles.stepCard}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.borderColor = '#F1C232';
@@ -423,18 +462,18 @@ const ProjectOverviewTab = ({
                         >
                             {/* Step Header */}
                             <div style={overviewStyles.stepHeader}>
-                                <div style={{flex: 1}}>
+                                    <div style={{flex: 1}}>
                                     <h3 style={overviewStyles.stepTitle}>
                                         Step {index + 1}: {step.name}
-                                    </h3>
+                            </h3>
                                     <div style={overviewStyles.stepVideo}>
                                         Video {step.associated_video_index + 1}
-                                    </div>
+                                </div>
                                     <div style={overviewStyles.stepTime}>
                                         {formatTime(step.video_start_time_ms / 1000)} - {formatTime(step.video_end_time_ms / 1000)}
+                                        </div>
                                     </div>
-                                </div>
-                                
+                                    
                                 <div style={{display: 'flex', gap: '10px'}}>
                                     {onEditStep && (
                                         <button
@@ -528,17 +567,17 @@ const ProjectOverviewTab = ({
                                     {step.annotations?.length > 0 && (
                                         <div style={overviewStyles.detailCard}>
                                             <div style={overviewStyles.detailHeader}>
-                                                <span style={overviewStyles.detailTitle}>📝 Annotations</span>
+                                                <span style={overviewStyles.detailTitle}>Annotations</span>
                                                 <span style={overviewStyles.detailCount}>{step.annotations.length}</span>
                                             </div>
                                             <div style={overviewStyles.detailContent}>
                                                 <ul style={overviewStyles.detailList}>
-                                                    {step.annotations.map((ann, annIndex) => {
-                                                        const annotationText = ann.component_name || ann.data?.text || 'Untitled annotation';
-                                                        const annotationTimestamp = ann.frame_timestamp_ms || ann.data?.frame_timestamp_ms;
-                                                        const annotationId = ann.annotation_id || ann.data?.id;
-                                                        
-                                                        return (
+                                                {step.annotations.map((ann, annIndex) => {
+                                                    const annotationText = ann.component_name || ann.data?.text || 'Untitled annotation';
+                                                    const annotationTimestamp = ann.frame_timestamp_ms || ann.data?.frame_timestamp_ms;
+                                                    const annotationId = ann.annotation_id || ann.data?.id;
+                                                    
+                                                    return (
                                                             <li 
                                                                 key={annotationId || `annotation-${annIndex}`}
                                                                 style={{
@@ -552,19 +591,19 @@ const ProjectOverviewTab = ({
                                                                         {formatTime(annotationTimestamp / 1000)}
                                                                     </div>
                                                                 </div>
-                                                            </li>
-                                                        );
-                                                    })}
-                                                </ul>
+                                                        </li>
+                                                    );
+                                                })}
+                                            </ul>
                                             </div>
                                         </div>
                                     )}
-
+                                    
                                     {/* Tools */}
                                     {step.tools?.length > 0 && (
                                         <div style={overviewStyles.detailCard}>
                                             <div style={overviewStyles.detailHeader}>
-                                                <span style={overviewStyles.detailTitle}>🔧 Tools</span>
+                                                <span style={overviewStyles.detailTitle}>Tools</span>
                                                 <span style={overviewStyles.detailCount}>{step.tools.length}</span>
                                             </div>
                                             <div style={overviewStyles.detailContent}>
@@ -586,53 +625,48 @@ const ProjectOverviewTab = ({
                                                                     <div style={overviewStyles.itemImage}>
                                                                         <img 
                                                                             src={tool.image_url || tool.image_file?.file_url} 
-                                                                            alt={tool.name}
-                                                                            style={{width: '100%', height: '100%', objectFit: 'cover'}}
-                                                                            onError={(e) => {
-                                                                                e.target.style.display = 'none';
-                                                                                e.target.nextSibling.style.display = 'flex';
-                                                                            }}
-                                                                        />
-                                                                        <div style={{
-                                                                            display: 'none',
-                                                                            fontSize: '10px',
+                                                                    alt={tool.name}
+                                                                    style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                                                                    onError={(e) => {
+                                                                        e.target.style.display = 'none';
+                                                                        e.target.nextSibling.style.display = 'flex';
+                                                                    }}
+                                                                />
+                                                                <div style={{
+                                                                    display: 'none',
+                                                                    fontSize: '10px',
                                                                             color: '#666',
                                                                             alignItems: 'center',
                                                                             justifyContent: 'center',
                                                                             width: '100%',
                                                                             height: '100%'
                                                                         }}>🔧</div>
-                                                                    </div>
-                                                                )}
+                                                            </div>
+                                                        )}
                                                                 <div style={overviewStyles.itemText}>
                                                                     <div style={overviewStyles.itemName}>
                                                                         {tool.name}
                                                                     </div>
-                                                                    <div style={{
-                                                                        fontSize: '0.8rem',
-                                                                        color: '#0000FF',
-                                                                        fontWeight: '500',
-                                                                        marginTop: '2px'
-                                                                    }}>
+                                                                    <div style={overviewStyles.itemQuantity}>
                                                                         Quantity: {quantity}
                                                                     </div>
                                                                     {tool.specification && (
                                                                         <div style={overviewStyles.itemSpec}>{tool.specification}</div>
                                                                     )}
                                                                 </div>
-                                                            </li>
+                                            </li>
                                                         );
                                                     })}
-                                                </ul>
+                                    </ul>
                                             </div>
                                         </div>
-                                    )}
-
+                            )}
+                                    
                                     {/* Materials */}
-                                    {step.materials?.length > 0 && (
+                            {step.materials?.length > 0 && (
                                         <div style={overviewStyles.detailCard}>
                                             <div style={overviewStyles.detailHeader}>
-                                                <span style={overviewStyles.detailTitle}>📦 Materials</span>
+                                                <span style={overviewStyles.detailTitle}>Materials</span>
                                                 <span style={overviewStyles.detailCount}>{step.materials.length}</span>
                                             </div>
                                             <div style={overviewStyles.detailContent}>
@@ -654,69 +688,78 @@ const ProjectOverviewTab = ({
                                                                     <div style={overviewStyles.itemImage}>
                                                                         <img 
                                                                             src={material.image_url || material.image_file?.file_url} 
-                                                                            alt={material.name}
-                                                                            style={{width: '100%', height: '100%', objectFit: 'cover'}}
-                                                                            onError={(e) => {
-                                                                                e.target.style.display = 'none';
-                                                                                e.target.nextSibling.style.display = 'flex';
-                                                                            }}
-                                                                        />
-                                                                        <div style={{
-                                                                            display: 'none',
-                                                                            fontSize: '10px',
+                                                                    alt={material.name}
+                                                                    style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                                                                    onError={(e) => {
+                                                                        e.target.style.display = 'none';
+                                                                        e.target.nextSibling.style.display = 'flex';
+                                                                    }}
+                                                                />
+                                                                <div style={{
+                                                                    display: 'none',
+                                                                    fontSize: '10px',
                                                                             color: '#666',
                                                                             alignItems: 'center',
                                                                             justifyContent: 'center',
                                                                             width: '100%',
                                                                             height: '100%'
                                                                         }}>📦</div>
-                                                                    </div>
-                                                                )}
+                                                            </div>
+                                                        )}
                                                                 <div style={overviewStyles.itemText}>
                                                                     <div style={overviewStyles.itemName}>
                                                                         {material.name}
                                                                     </div>
-                                                                    <div style={{
-                                                                        fontSize: '0.8rem',
-                                                                        color: '#0000FF',
-                                                                        fontWeight: '500',
-                                                                        marginTop: '2px'
-                                                                    }}>
+                                                                    <div style={overviewStyles.itemQuantity}>
                                                                         Quantity: {quantity}
                                                                     </div>
                                                                     {material.specification && (
                                                                         <div style={overviewStyles.itemSpec}>{material.specification}</div>
                                                                     )}
                                                                 </div>
-                                                            </li>
+                                            </li>
                                                         );
                                                     })}
-                                                </ul>
+                                    </ul>
                                             </div>
                                         </div>
-                                    )}
-
+                            )}
+                                    
                                     {/* Files */}
-                                    {step.supplementary_files?.length > 0 && (
-                                        <div style={overviewStyles.detailCard}>
-                                            <div style={overviewStyles.detailHeader}>
-                                                <span style={overviewStyles.detailTitle}>📁 Files</span>
-                                                <span style={overviewStyles.detailCount}>{step.supplementary_files.length}</span>
-                                            </div>
-                                            <div style={overviewStyles.detailContent}>
-                                                <ul style={overviewStyles.detailList}>
-                                                    {step.supplementary_files.map((file, fileIndex) => (
-                                                        <li 
-                                                            key={file.id || `file-${fileIndex}`}
-                                                            style={{
-                                                                ...overviewStyles.detailItem,
-                                                                ...(fileIndex === step.supplementary_files.length - 1 ? overviewStyles.detailItemLast : {})
-                                                            }}
-                                                        >
+                            {step.supplementary_files?.length > 0 && (
+                                <div style={overviewStyles.detailCard}>
+                                    <div style={overviewStyles.detailHeader}>
+                                        <span style={overviewStyles.detailTitle}>Files</span>
+                                        <span style={overviewStyles.detailCount}>{step.supplementary_files.length}</span>
+                                    </div>
+                                    <div style={overviewStyles.detailContent}>
+                                        <ul style={overviewStyles.detailList}>
+                                            {step.supplementary_files.map((file, fileIndex) => {
+                                                const fileUrl = file.file?.file_url || file.file_url;
+                                                const fileName = file.display_name || file.displayName || 'File';
+                                                const isImage = fileUrl && /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(fileUrl);
+                                                return (
+                                                    <li
+                                                        key={file.id || `file-${fileIndex}`}
+                                                        style={{
+                                                            ...overviewStyles.detailItem,
+                                                            ...(fileIndex === step.supplementary_files.length - 1 ? overviewStyles.detailItemLast : {})
+                                                        }}
+                                                    >
+                                                        {isImage && fileUrl ? (
+                                                            <div style={overviewStyles.itemImage}>
+                                                                <img
+                                                                    src={fileUrl}
+                                                                    alt={fileName}
+                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }}
+                                                                    onError={e => { e.target.style.display = 'none'; }}
+                                                                />
+                                                            </div>
+                                                        ) : (
                                                             <div style={overviewStyles.itemImage}>
                                                                 <div style={{
-                                                                    fontSize: '12px',
-                                                                    color: '#666',
+                                                                    fontSize: '2rem',
+                                                                    color: '#F1C232',
                                                                     display: 'flex',
                                                                     alignItems: 'center',
                                                                     justifyContent: 'center',
@@ -724,28 +767,51 @@ const ProjectOverviewTab = ({
                                                                     height: '100%'
                                                                 }}>📄</div>
                                                             </div>
-                                                            <div style={overviewStyles.itemText}>
-                                                                <div style={overviewStyles.itemName}>
-                                                                    {file.display_name || file.displayName}
+                                                        )}
+                                                        <div style={overviewStyles.itemText}>
+                                                            <div style={overviewStyles.itemName}>{fileName}</div>
+                                                            {fileUrl && !isImage && (
+                                                                <a
+                                                                    href={fileUrl}
+                                                                    download={fileName}
+                                                                    style={{
+                                                                        display: 'inline-block',
+                                                                        marginTop: '6px',
+                                                                        color: '#0000FF',
+                                                                        background: '#18181b',
+                                                                        border: '1.5px solid #F1C232',
+                                                                        borderRadius: '6px',
+                                                                        padding: '6px 16px',
+                                                                        fontWeight: 600,
+                                                                        textDecoration: 'none',
+                                                                        fontSize: '1rem',
+                                                                        transition: 'background 0.2s, color 0.2s',
+                                                                    }}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                >
+                                                                    Download
+                                                                </a>
+                                                            )}
+                                                            {file.file && (
+                                                                <div style={overviewStyles.itemSpec}>
+                                                                    {formatFileSize(file.file.file_size_bytes)}
                                                                 </div>
-                                                                {file.file && (
-                                                                    <div style={overviewStyles.itemSpec}>
-                                                                        {formatFileSize(file.file.file_size_bytes)}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    )}
-
+                                                            )}
+                                                        </div>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    </div>
+                                </div>
+                            )}
+                                    
                                     {/* Validation */}
                                     {step.validation_metric?.question && (
                                         <div style={overviewStyles.detailCard}>
                                             <div style={overviewStyles.detailHeader}>
-                                                <span style={overviewStyles.detailTitle}>✅ Validation</span>
+                                                <span style={overviewStyles.detailTitle}>Validation</span>
                                             </div>
                                             <div style={overviewStyles.detailContent}>
                                                 <div style={overviewStyles.itemText}>
@@ -762,21 +828,40 @@ const ProjectOverviewTab = ({
                                     {step.result_image_file_info && (
                                         <div style={overviewStyles.detailCard}>
                                             <div style={overviewStyles.detailHeader}>
-                                                <span style={overviewStyles.detailTitle}>🖼️ Result Image</span>
+                                                <span style={overviewStyles.detailTitle}>Result Image</span>
                                             </div>
                                             <div style={overviewStyles.detailContent}>
-                                                <div style={overviewStyles.itemText}>
-                                                    <div style={overviewStyles.itemName}>{step.result_image_file_info.name}</div>
-                                                </div>
+                                                {step.result_image_file_info.file_url || step.result_image_file_info.image_url ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                                                        <img
+                                                            src={step.result_image_file_info.file_url || step.result_image_file_info.image_url}
+                                                            alt="Result"
+                                                            style={{
+                                                                width: '200px',
+                                                                height: '200px',
+                                                                objectFit: 'contain',
+                                                                borderRadius: '12px',
+                                                                border: '2px solid #F1C232',
+                                                                background: '#18181b',
+                                                                boxShadow: '0 2px 12px #0008',
+                                                            }}
+                                                            onError={e => { e.target.style.display = 'none'; }}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div style={overviewStyles.itemText}>
+                                                        <div style={overviewStyles.itemSpec}>No image available.</div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     )}
                                 </div>
                             </div>
-                        </div>
+                    </div>
                     ))
                 )}
-            </div>
+                </div>
 
             {/* Buy List Section */}
             {projectBuyList && projectBuyList.length > 0 && (
@@ -788,8 +873,8 @@ const ProjectOverviewTab = ({
                         {projectBuyList.map((item, index) => {
                             
                             return (
-                                <div 
-                                    key={item.id || index}
+                            <div 
+                                key={item.id || index}
                                     style={overviewStyles.buyListItem}
                                 >
                                 {(item.image_url || item.image_path || item.hasExistingImage) && (
@@ -829,8 +914,8 @@ const ProjectOverviewTab = ({
                     </div>
                 </div>
             )}
-        </div>
-    );
+    </div>
+);
 };
 
 export default ProjectOverviewTab; 

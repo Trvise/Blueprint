@@ -11,6 +11,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
     const { userLoggedIn, currentUser } = useAuth();
     const [activeTab, setActiveTab] = useState('details');
     const [isAnimating, setIsAnimating] = useState(false);
+    const [profileData, setProfileData] = useState(null);
 
     // Add CSS animation for gradient
     useEffect(() => {
@@ -40,6 +41,25 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
 
     // Check if we're on the CreateSteps page
     const isCreateStepsPage = location.pathname.includes('/create-steps') || location.pathname.includes('/steps') || location.pathname.includes('/annotate');
+
+    // Fetch profile data for consistent profile picture
+    useEffect(() => {
+        const fetchProfileData = async () => {
+            if (!currentUser?.uid) return;
+            
+            try {
+                const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/users/${currentUser.uid}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setProfileData(data);
+                }
+            } catch (error) {
+                console.error('Error fetching profile data for sidebar:', error);
+            }
+        };
+
+        fetchProfileData();
+    }, [currentUser?.uid]);
 
     // Expose setActiveTab globally for CreateSteps component
     useEffect(() => {
@@ -232,17 +252,33 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                     )}
                     
                     {userLoggedIn && (
-                        <button
-                            onClick={() => {
-                                doSignOut().then(() => {
-                                    navigate('/login');
-                                });
-                            }}
-                            className="w-full flex items-center py-4 px-5 text-base font-medium text-red-400 hover:bg-gray-700 hover:text-red-300 transition-colors"
-                        >
-                            <AiOutlineLogout size={20} />
-                            {!isCollapsed && <span className="ml-3">Logout</span>}
-                        </button>
+                        <>
+                            <Link
+                                to="/profile"
+                                className="w-full flex items-center py-4 px-5 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                            >
+                                <img
+                                    src={profileData?.profile_photo_url || currentUser.photoURL || `https://api.dicebear.com/7.x/adventurer/png?seed=${currentUser.email}&backgroundColor=b6e3f4&size=32`}
+                                    alt="Profile"
+                                    className="w-8 h-8 rounded-full object-cover"
+                                    onError={(e) => {
+                                        e.target.src = `https://api.dicebear.com/7.x/adventurer/png?seed=${currentUser.email}&backgroundColor=b6e3f4&size=32`;
+                                    }}
+                                />
+                                {!isCollapsed && <span className="ml-3">My Profile</span>}
+                            </Link>
+                            <button
+                                onClick={() => {
+                                    doSignOut().then(() => {
+                                        navigate('/login');
+                                    });
+                                }}
+                                className="w-full flex items-center py-4 px-5 text-base font-medium text-red-400 hover:bg-gray-700 hover:text-red-300 transition-colors"
+                            >
+                                <AiOutlineLogout size={20} />
+                                {!isCollapsed && <span className="ml-3">Logout</span>}
+                            </button>
+                        </>
                     )}
                 </div>
 

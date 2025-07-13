@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/authContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { isImageUrl, isVideoUrl, formatDate, createApiCall } from './createsteps helpers/CreateStepsUtils';
 import { LazyImage, VideoThumbnail } from './createsteps helpers/CommonComponents';
 
@@ -362,6 +362,7 @@ const ProjectCard = React.memo(({
 const MyProjects = () => {
     const { currentUser } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     
     const [activeTab, setActiveTab] = useState('published');
     const [publishedProjects, setPublishedProjects] = useState([]);
@@ -395,6 +396,13 @@ const MyProjects = () => {
     useEffect(() => {
         fetchMyProjects();
     }, [fetchMyProjects]);
+
+    // Handle navigation state from profile page
+    useEffect(() => {
+        if (location.state?.activeTab) {
+            setActiveTab(location.state.activeTab);
+        }
+    }, [location.state]);
 
     const handleTogglePublication = async (projectId, isCurrentlyPublished) => {
         if (!window.confirm(`Are you sure you want to ${isCurrentlyPublished ? 'unpublish' : 'publish'} this project?`)) {
@@ -587,8 +595,8 @@ const MyProjects = () => {
                     Published ({publishedProjects.length})
                 </button>
                 <button
-                    style={{ ...styles.tabButton, ...(activeTab === 'drafts' && styles.activeTabButton) }}
-                    onClick={() => setActiveTab('drafts')}
+                    style={{ ...styles.tabButton, ...(activeTab === 'draft' && styles.activeTabButton) }}
+                    onClick={() => setActiveTab('draft')}
                 >
                     Drafts ({draftProjects.length})
                 </button>
