@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { isImageUrl, isVideoUrl, formatDate, createApiCall } from './createsteps helpers/CreateStepsUtils';
 import { LazyImage, VideoThumbnail } from './createsteps helpers/CommonComponents';
 
-// Add responsive CSS for the grid
 const responsiveGridCSS = `
 .projects-grid {
     display: grid;
@@ -26,7 +25,6 @@ const responsiveGridCSS = `
 }
 `;
 
-// Styles object moved outside component for shared access
 const styles = {
     container: {
         padding: '2rem',
@@ -63,6 +61,34 @@ const styles = {
         textDecoration: 'none',
         display: 'inline-block',
         boxShadow: '0 2px 8px rgba(241,194,50,0.15)'
+    },
+    tabsContainer: {
+        display: 'flex',
+        borderBottom: '1px solid #333',
+        marginBottom: '2rem',
+    },
+    tabButton: {
+        padding: '1rem 1.5rem',
+        cursor: 'pointer',
+        border: 'none',
+        backgroundColor: 'transparent',
+        color: '#D9D9D9',
+        fontSize: '1rem',
+        fontWeight: '500',
+        borderBottom: '2px solid transparent',
+        transition: 'all 0.2s',
+    },
+    activeTabButton: {
+        color: '#F1C232',
+        borderBottom: '2px solid #F1C232',
+    },
+    publishButton: {
+        backgroundColor: '#22c55e', // Green
+        color: '#ffffff',
+    },
+    unpublishButton: {
+        backgroundColor: '#6b7280', // Gray
+        color: '#ffffff',
     },
     projectCard: {
         backgroundColor: '#111111',
@@ -121,6 +147,7 @@ const styles = {
     projectActions: {
         display: 'flex',
         gap: '0.5rem',
+        flexWrap: 'wrap',
     },
     actionButton: {
         padding: '0.5rem 1rem',
@@ -186,22 +213,24 @@ const styles = {
     },
 };
 
-// Memoized project card component for better performance
-const ProjectCard = React.memo(({ project, onEdit, onDelete, onGenerateThumbnail, deleteLoading, formatDate }) => {
+const ProjectCard = React.memo(({ 
+    project, 
+    onEdit, 
+    onDelete, 
+    onGenerateThumbnail, 
+    deleteLoading, 
+    formatDate,
+    isPublished,
+    onTogglePublication,
+    toggleLoading
+}) => {
     return (
         <div
             style={styles.projectCard}
-            onMouseEnter={(e) => {
-                Object.assign(e.currentTarget.style, styles.projectCardHover);
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(0, 0, 0, 0.1)';
-            }}
+            onMouseEnter={(e) => { Object.assign(e.currentTarget.style, styles.projectCardHover); }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(0, 0, 0, 0.1)'; }}
         >
-            {/* Thumbnail */}
             <div style={styles.projectThumbnail}>
-
                 {project.thumbnail_url && isImageUrl(project.thumbnail_url) ? (
                     <LazyImage
                         src={project.thumbnail_url} 
@@ -240,7 +269,6 @@ const ProjectCard = React.memo(({ project, onEdit, onDelete, onGenerateThumbnail
                 )}
             </div>
 
-            {/* Content */}
             <div style={styles.projectContent}>
                 <div style={styles.projectName}>{project.name}</div>
                 <div style={styles.projectDescription}>
@@ -297,6 +325,22 @@ const ProjectCard = React.memo(({ project, onEdit, onDelete, onGenerateThumbnail
                         {(project.thumbnail_url || project.frame_url) ? 'Replace Thumbnail' : 'Upload Thumbnail'}
                     </button>
                     <button
+                        style={{
+                            ...styles.actionButton,
+                            ...(isPublished ? styles.unpublishButton : styles.publishButton)
+                        }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onTogglePublication(project.project_id, isPublished);
+                        }}
+                        disabled={toggleLoading === project.project_id}
+                    >
+                        {toggleLoading === project.project_id 
+                            ? (isPublished ? 'Unpublishing...' : 'Publishing...')
+                            : (isPublished ? 'Unpublish' : 'Publish')
+                        }
+                    </button>
+                    <button
                         style={{ ...styles.actionButton, ...styles.deleteButton }}
                         onClick={(e) => {
                             e.stopPropagation();
@@ -317,10 +361,14 @@ const ProjectCard = React.memo(({ project, onEdit, onDelete, onGenerateThumbnail
 const MyProjects = () => {
     const { currentUser } = useAuth();
     const navigate = useNavigate();
-    const [projects, setProjects] = useState([]);
+    
+    const [activeTab, setActiveTab] = useState('published');
+    const [publishedProjects, setPublishedProjects] = useState([]);
+    const [unpublishedProjects, setUnpublishedProjects] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [deleteLoading, setDeleteLoading] = useState(null);
+    const [toggleLoading, setToggleLoading] = useState(null);
 
     const fetchMyProjects = useCallback(async () => {
         if (!currentUser) {
@@ -330,13 +378,11 @@ const MyProjects = () => {
         
         try {
             setLoading(true);
-            const data = await createApiCall(`/projects/?current_firebase_uid=${currentUser.uid}`);
+            setError('');
+            const data = await createApiCall(`/users/${currentUser.uid}/projects`);
             
-
-            
-            // Since the API should filter by current user when we pass current_firebase_uid,
-            // we might not need client-side filtering. Let's try without filtering first.
-            setProjects(data);
+            setPublishedProjects(data.published || []);
+            setUnpublishedProjects(data.unpublished || []);
         } catch (err) {
             console.error('Error fetching projects:', err);
             setError('Failed to load projects');
@@ -349,6 +395,40 @@ const MyProjects = () => {
         fetchMyProjects();
     }, [fetchMyProjects]);
 
+    const handleTogglePublication = async (projectId, isCurrentlyPublished) => {
+        if (!window.confirm(`Are you sure you want to ${isCurrentlyPublished ? 'unpublish' : 'publish'} this project?`)) {
+            return;
+        }
+
+        try {
+            setToggleLoading(projectId);
+            const response = await createApiCall(`/projects/${projectId}/toggle-publication`, {
+                method: 'POST',
+                body: JSON.stringify({ firebase_uid: currentUser.uid }),
+            });
+
+            const projectToMove = isCurrentlyPublished
+                ? publishedProjects.find(p => p.project_id === projectId)
+                : unpublishedProjects.find(p => p.project_id === projectId);
+
+            if (projectToMove) {
+                if (isCurrentlyPublished) {
+                    setPublishedProjects(prev => prev.filter(p => p.project_id !== projectId));
+                    setUnpublishedProjects(prev => [projectToMove, ...prev]);
+                } else {
+                    setUnpublishedProjects(prev => prev.filter(p => p.project_id !== projectId));
+                    setPublishedProjects(prev => [projectToMove, ...prev]);
+                }
+            }
+            alert(response.message);
+        } catch (err) {
+            console.error('Error toggling publication status:', err);
+            alert('Failed to update project status.');
+        } finally {
+            setToggleLoading(null);
+        }
+    };
+
     const handleDeleteProject = async (projectId, projectName) => {
         if (!window.confirm(`Are you sure you want to delete "${projectName}"? This action cannot be undone.`)) {
             return;
@@ -360,8 +440,8 @@ const MyProjects = () => {
                 method: 'DELETE',
             });
 
-            // Remove the project from local state
-            setProjects(projects.filter(project => project.project_id !== projectId));
+            setPublishedProjects(projects => projects.filter(project => project.project_id !== projectId));
+            setUnpublishedProjects(projects => projects.filter(project => project.project_id !== projectId));
             alert('Project deleted successfully');
         } catch (err) {
             console.error('Error deleting project:', err);
@@ -377,7 +457,6 @@ const MyProjects = () => {
 
     const handleGenerateThumbnail = async (projectId) => {
         try {
-            // Create a file input element
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
             fileInput.accept = 'image/*';
@@ -387,27 +466,21 @@ const MyProjects = () => {
                 const file = e.target.files[0];
                 if (!file) return;
                 
-                // Validate file type
                 if (!file.type.startsWith('image/')) {
                     alert('Please select an image file');
                     return;
                 }
                 
-                // Validate file size (max 5MB)
                 if (file.size > 5 * 1024 * 1024) {
                     alert('Image file too large. Please select a file under 5MB.');
                     return;
                 }
                 
                 try {
-                    // Import upload function
                     const { uploadFileToFirebase } = await import('./createsteps helpers/CreateStepsUtils');
-                    
-                    // Show uploading state
-                    const project = projects.find(p => p.project_id === projectId);
+                    const project = [...publishedProjects, ...unpublishedProjects].find(p => p.project_id === projectId);
                     const projectName = project?.name || 'Unknown Project';
                     
-                    // Upload the thumbnail
                     const uploadedThumbnailInfo = await uploadFileToFirebase(
                         file,
                         `users/${currentUser.uid}/${projectId}/thumbnails`,
@@ -415,18 +488,11 @@ const MyProjects = () => {
                     );
                     
                     if (uploadedThumbnailInfo) {
-                        // Update the backend with the new thumbnail using the dedicated endpoint
                         try {
                             const { getApiUrl } = await import('./createsteps helpers/CreateStepsUtils');
-                            
-
-                            
-                            // Use the new dedicated thumbnail update endpoint
                             const response = await fetch(`${getApiUrl()}/projects/${projectId}/thumbnail`, {
                                 method: 'PATCH',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
+                                headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                     firebase_uid: currentUser.uid,
                                     thumbnail_path: uploadedThumbnailInfo.path
@@ -438,31 +504,26 @@ const MyProjects = () => {
                                 throw new Error(`Backend update failed: ${response.status} - ${errorText}`);
                             }
                             
-
-
-                            // Update the project in local state
-                            setProjects(prevProjects => 
-                                prevProjects.map(p => 
-                                    p.project_id === projectId 
-                                        ? { ...p, thumbnail_url: uploadedThumbnailInfo.url }
-                                        : p
-                                )
+                            const updateProjectList = (projects) => projects.map(p => 
+                                p.project_id === projectId 
+                                    ? { ...p, thumbnail_url: uploadedThumbnailInfo.url }
+                                    : p
                             );
+                            setPublishedProjects(updateProjectList);
+                            setUnpublishedProjects(updateProjectList);
                             
                             alert(`Thumbnail uploaded successfully for "${projectName}"!`);
                         } catch (backendError) {
                             console.error('Error updating backend with thumbnail:', backendError);
                             
-                            // Still update local state even if backend fails
-                            setProjects(prevProjects => 
-                                prevProjects.map(p => 
-                                    p.project_id === projectId 
-                                        ? { ...p, thumbnail_url: uploadedThumbnailInfo.url }
-                                        : p
-                                )
+                            const updateProjectList = (projects) => projects.map(p => 
+                                p.project_id === projectId 
+                                    ? { ...p, thumbnail_url: uploadedThumbnailInfo.url }
+                                    : p
                             );
+                            setPublishedProjects(updateProjectList);
+                            setUnpublishedProjects(updateProjectList);
                             
-                            // Provide more specific error message based on the type of error
                             const errorMessage = backendError.message?.includes('steps') 
                                 ? 'Failed to fetch existing project data. Thumbnail uploaded but database not updated.'
                                 : 'Database update failed but thumbnail is uploaded. It will appear after next project finalization.';
@@ -477,11 +538,9 @@ const MyProjects = () => {
                     alert('Failed to upload thumbnail: ' + error.message);
                 }
                 
-                // Clean up
                 document.body.removeChild(fileInput);
             };
             
-            // Add to DOM and trigger click
             document.body.appendChild(fileInput);
             fileInput.click();
             
@@ -491,8 +550,6 @@ const MyProjects = () => {
         }
     };
 
-
-
     if (loading) {
         return (
             <div style={styles.loading}>
@@ -500,6 +557,8 @@ const MyProjects = () => {
             </div>
         );
     }
+
+    const projectsToDisplay = activeTab === 'published' ? publishedProjects : unpublishedProjects;
 
     return (
         <div style={styles.container}>
@@ -518,6 +577,21 @@ const MyProjects = () => {
                     + Create New Project
                 </button>
             </div>
+            
+            <div style={styles.tabsContainer}>
+                <button
+                    style={{ ...styles.tabButton, ...(activeTab === 'published' && styles.activeTabButton) }}
+                    onClick={() => setActiveTab('published')}
+                >
+                    Published ({publishedProjects.length})
+                </button>
+                <button
+                    style={{ ...styles.tabButton, ...(activeTab === 'unpublished' && styles.activeTabButton) }}
+                    onClick={() => setActiveTab('unpublished')}
+                >
+                    Unpublished ({unpublishedProjects.length})
+                </button>
+            </div>
 
             {error && (
                 <div style={styles.error}>
@@ -525,19 +599,19 @@ const MyProjects = () => {
                 </div>
             )}
 
-            {projects.length === 0 ? (
+            {projectsToDisplay.length === 0 && !loading ? (
                 <div style={styles.emptyState}>
                     <div style={styles.emptyStateIcon}>
                         <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" style={{color: '#9ca3af'}}>
                             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"/>
                         </svg>
                     </div>
-                    <div style={styles.emptyStateText}>No projects yet</div>
-                    <p>Create your first instructional project to get started!</p>
+                    <div style={styles.emptyStateText}>No {activeTab} projects yet.</div>
+                    {activeTab === 'unpublished' && <p>Create a new project or unpublish an existing one to see it here.</p>}
                 </div>
             ) : (
                 <div className="projects-grid">
-                    {projects.map((project) => (
+                    {projectsToDisplay.map((project) => (
                         <ProjectCard
                             key={project.project_id}
                             project={project}
@@ -546,6 +620,9 @@ const MyProjects = () => {
                             onGenerateThumbnail={handleGenerateThumbnail}
                             deleteLoading={deleteLoading}
                             formatDate={formatDate}
+                            isPublished={activeTab === 'published'}
+                            onTogglePublication={handleTogglePublication}
+                            toggleLoading={toggleLoading}
                         />
                     ))}
                 </div>
@@ -554,4 +631,4 @@ const MyProjects = () => {
     );
 };
 
-export default MyProjects; 
+export default MyProjects;
