@@ -43,7 +43,14 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                 alt="Blueprint Logo" 
                                 className="w-14 h-14"
                             />
-                            <h1 className="text-2xl font-semibold whitespace-nowrap" style={{color: '#F1C232'}}>Blueprint</h1>
+                            <h1 className="text-2xl font-semibold whitespace-nowrap" style={{
+                                background: 'linear-gradient(45deg, #0000FF 0%, #F1C232 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text'
+                            }}>
+                                Blueprint
+                            </h1>
                         </div>
                     )}
                     <button 
