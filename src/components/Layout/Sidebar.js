@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/authContext';
 import { doSignOut } from '../../firebase/auth';
-import { AiOutlineMenu, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineEye, AiOutlineArrowLeft, AiOutlineCheck, AiOutlineUser, AiOutlineDatabase } from 'react-icons/ai';
+import { AiOutlineMenu, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineEye, AiOutlineArrowLeft, AiOutlineCheck, AiOutlineUser, AiOutlineDatabase, AiOutlineFolder, AiOutlineBarChart } from 'react-icons/ai';
 import logo from '../../assets/trvise_logo.png';
 
 const Sidebar = ({ isCollapsed, toggleSidebar }) => {
@@ -121,6 +121,30 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                                     >
                                         <AiOutlineVideo size={20} />
                                         {!isCollapsed && <span className="ml-3">Video Steps</span>}
+                                    </button>
+                                    
+                                    <button
+                                        onClick={() => handleTabClick('repository')}
+                                        className={`w-full flex items-center py-4 px-5 text-base font-medium transition-all duration-200 border-l-3 ${
+                                            activeTab === 'repository' 
+                                                ? 'text-[#F1C232] bg-black border-[#F1C232]' 
+                                                : 'text-[#D9D9D9] border-transparent hover:bg-[#0000FF]/20 hover:text-[#D9D9D9]'
+                                        }`}
+                                    >
+                                        <AiOutlineFolder size={20} />
+                                        {!isCollapsed && <span className="ml-3">Repository</span>}
+                                    </button>
+                                    
+                                    <button
+                                        onClick={() => handleTabClick('overview')}
+                                        className={`w-full flex items-center py-4 px-5 text-base font-medium transition-all duration-200 border-l-3 ${
+                                            activeTab === 'overview' 
+                                                ? 'text-[#F1C232] bg-black border-[#F1C232]' 
+                                                : 'text-[#D9D9D9] border-transparent hover:bg-[#0000FF]/20 hover:text-[#D9D9D9]'
+                                        }`}
+                                    >
+                                        <AiOutlineBarChart size={20} />
+                                        {!isCollapsed && <span className="ml-3">Overview</span>}
                                     </button>
                                     
                                     <button

@@ -16,6 +16,7 @@ import ResultTab from '../authoring/ResultTab';
 import ProjectOverviewTab from '../authoring/ProjectOverviewTab';
 import SignOffTab from '../authoring/SignOffTab';
 import FinalizeTab from '../authoring/FinalizeTab';
+import ProjectRepositoryTab from '../authoring/ProjectRepositoryTab';
 import AnnotationPopup from '../authoring/AnnotationPopup';
 
 const ProjectStepsPage = () => {
@@ -68,6 +69,8 @@ const ProjectStepsPage = () => {
         setCurrentStepToolSpec,
         currentStepToolImageFile,
         setCurrentStepToolImageFile,
+        currentStepToolPurchaseLink,
+        setCurrentStepToolPurchaseLink,
         toolImageInputRef,
         // Materials data
         currentStepMaterials,
@@ -77,6 +80,8 @@ const ProjectStepsPage = () => {
         setCurrentStepMaterialSpec,
         currentStepMaterialImageFile,
         setCurrentStepMaterialImageFile,
+        currentStepMaterialPurchaseLink,
+        setCurrentStepMaterialPurchaseLink,
         materialImageInputRef,
         // Files data
         currentStepSupFiles,
@@ -236,10 +241,15 @@ const ProjectStepsPage = () => {
                 {/* Header */}
             <header style={styles.header}>
                 <h1 style={styles.pageTitle}>
-                    Authoring: <span style={styles.projectNameHighlight}>{projectName || `Project ${projectId}`}</span>
+                    {activeTab === 'repository' ? 'Repository Management' : 
+                     activeTab === 'finalize' ? 'Finalize Project' :
+                     `Authoring: ${projectName || `Project ${projectId}`}`}
+                    {activeTab !== 'repository' && activeTab !== 'finalize' && (
+                        <span style={styles.projectNameHighlight}>{projectName || `Project ${projectId}`}</span>
+                    )}
                 </h1>
                     <div style={{display: 'flex', gap: '12px', alignItems: 'center'}}>
-                        {currentStepIndex >= 0 && (
+                        {currentStepIndex >= 0 && activeTab !== 'repository' && activeTab !== 'finalize' && (
                             <span style={{color: '#6b7280', fontSize: '0.9rem'}}>
                                 Editing Step {currentStepIndex + 1}
                             </span>
@@ -272,10 +282,30 @@ const ProjectStepsPage = () => {
                         handleAddBuyListItem={enhancedHandlers.handleAddBuyListItem}
                         removeBuyListItem={enhancedHandlers.removeBuyListItem}
                         handleAutoPopulateBuyList={enhancedHandlers.handleAutoPopulateBuyList}
+                        handleUpdateBuyListFromProject={enhancedHandlers.handleUpdateBuyListFromProject}
                         handleClearBuyList={enhancedHandlers.handleClearBuyList}
                         handleFinishProject={enhancedHandlers.handleFinishProject}
                         isLoading={isLoading}
                         formatTime={formatTime}
+                        styles={styles}
+                    />
+                </div>
+            ) : activeTab === 'repository' ? (
+                // Repository page - dedicated layout
+                <div style={styles.finalizeContainer}>
+                    <ProjectRepositoryTab 
+                        styles={styles}
+                        onRepositoryUpdate={() => state.setRepositoryRefreshTrigger(prev => prev + 1)}
+                    />
+                </div>
+            ) : activeTab === 'overview' ? (
+                // Overview page - dedicated layout
+                <div style={styles.finalizeContainer}>
+                    <ProjectOverviewTab 
+                        projectSteps={projectSteps}
+                        projectBuyList={projectBuyList}
+                        formatTime={formatTime}
+                        onEditStep={enhancedHandlers.onEditStep}
                         styles={styles}
                     />
                 </div>
@@ -332,15 +362,6 @@ const ProjectStepsPage = () => {
                         >
                             Sign Off
                         </button>
-                        <button 
-                            onClick={() => state.setActiveTab('overview')}
-                            style={{
-                                ...styles.tabButton,
-                                ...(activeTab === 'overview' ? styles.tabButtonActive : {})
-                            }}
-                        >
-                            Overview
-                        </button>
                             </div>
 
                 {/* Tab content */}
@@ -370,6 +391,8 @@ const ProjectStepsPage = () => {
                                 setCurrentStepToolSpec={setCurrentStepToolSpec}
                                 currentStepToolImageFile={currentStepToolImageFile}
                                 setCurrentStepToolImageFile={setCurrentStepToolImageFile}
+                                currentStepToolPurchaseLink={currentStepToolPurchaseLink}
+                                setCurrentStepToolPurchaseLink={setCurrentStepToolPurchaseLink}
                                 toolImageInputRef={toolImageInputRef}
                                 handleAddToolToCurrentStep={enhancedHandlers.handleAddToolToCurrentStep}
                                 removeToolFromCurrentStep={enhancedHandlers.removeToolFromCurrentStep}
@@ -384,9 +407,13 @@ const ProjectStepsPage = () => {
                                 setCurrentStepMaterialSpec={setCurrentStepMaterialSpec}
                                 currentStepMaterialImageFile={currentStepMaterialImageFile}
                                 setCurrentStepMaterialImageFile={setCurrentStepMaterialImageFile}
+                                currentStepMaterialPurchaseLink={currentStepMaterialPurchaseLink}
+                                setCurrentStepMaterialPurchaseLink={setCurrentStepMaterialPurchaseLink}
                                 materialImageInputRef={materialImageInputRef}
                                 handleAddMaterialToCurrentStep={enhancedHandlers.handleAddMaterialToCurrentStep}
                                 removeMaterialFromCurrentStep={enhancedHandlers.removeMaterialFromCurrentStep}
+                                // Repository refresh trigger
+                                repositoryRefreshTrigger={state.repositoryRefreshTrigger}
                                 styles={styles}
                             />
                         )}
@@ -423,16 +450,6 @@ const ProjectStepsPage = () => {
                                 setCurrentStepValidationQuestion={state.setCurrentStepValidationQuestion}
                                 currentStepValidationAnswer={currentStepValidationAnswer}
                                 setCurrentStepValidationAnswer={state.setCurrentStepValidationAnswer}
-                                styles={styles}
-                            />
-                        )}
-
-                        {activeTab === 'overview' && (
-                            <ProjectOverviewTab 
-                                projectSteps={projectSteps}
-                                projectBuyList={projectBuyList}
-                                formatTime={formatTime}
-                                onEditStep={enhancedHandlers.onEditStep}
                                 styles={styles}
                             />
                         )}

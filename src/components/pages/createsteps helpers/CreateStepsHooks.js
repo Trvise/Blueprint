@@ -44,12 +44,14 @@ export const useCreateStepsState = () => {
     const [currentStepToolName, setCurrentStepToolName] = useState('');
     const [currentStepToolSpec, setCurrentStepToolSpec] = useState('');
     const [currentStepToolImageFile, setCurrentStepToolImageFile] = useState(null); 
+    const [currentStepToolPurchaseLink, setCurrentStepToolPurchaseLink] = useState('');
     
     // Materials state
     const [currentStepMaterials, setCurrentStepMaterials] = useState([]);
     const [currentStepMaterialName, setCurrentStepMaterialName] = useState('');
     const [currentStepMaterialSpec, setCurrentStepMaterialSpec] = useState('');
     const [currentStepMaterialImageFile, setCurrentStepMaterialImageFile] = useState(null);
+    const [currentStepMaterialPurchaseLink, setCurrentStepMaterialPurchaseLink] = useState('');
     
     // Files state
     const [currentStepSupFiles, setCurrentStepSupFiles] = useState([]); 
@@ -84,6 +86,9 @@ export const useCreateStepsState = () => {
     
     // Annotation popup state
     const [isAnnotationPopupOpen, setIsAnnotationPopupOpen] = useState(false);
+    
+    // Repository refresh trigger
+    const [repositoryRefreshTrigger, setRepositoryRefreshTrigger] = useState(0);
     
     // Refs
     const videoRef = useRef(null);
@@ -153,6 +158,8 @@ export const useCreateStepsState = () => {
         setCurrentStepToolSpec,
         currentStepToolImageFile,
         setCurrentStepToolImageFile,
+        currentStepToolPurchaseLink,
+        setCurrentStepToolPurchaseLink,
         
         // Materials state
         currentStepMaterials,
@@ -163,6 +170,8 @@ export const useCreateStepsState = () => {
         setCurrentStepMaterialSpec,
         currentStepMaterialImageFile,
         setCurrentStepMaterialImageFile,
+        currentStepMaterialPurchaseLink,
+        setCurrentStepMaterialPurchaseLink,
         
         // Files state
         currentStepSupFiles,
@@ -218,6 +227,10 @@ export const useCreateStepsState = () => {
         isAnnotationPopupOpen,
         setIsAnnotationPopupOpen,
         
+        // Repository refresh trigger
+        repositoryRefreshTrigger,
+        setRepositoryRefreshTrigger,
+        
         // Refs
         videoRef,
         toolImageInputRef,
@@ -230,27 +243,30 @@ export const useCreateStepsState = () => {
 
 export const useCreateStepsEffects = (state) => {
     const {
-        setActiveTab,
-        setIsLargeScreen,
         currentUser,
-        navigate,
-        location,
         projectId,
+        location,
+        navigate,
         setProjectName,
         setUploadedVideos,
         setActiveVideoUrl,
         setActiveVideoIndex,
         setErrorMessage,
         setProjectSteps,
-        activeVideoUrl,
-        videoRef,
-        setVideoDimensions,
         setCapturedAnnotationFrames,
         setSuccessMessage,
         setExistingThumbnailUrl,
         setProjectBuyList,
-        projectBuyList
+        projectBuyList,
+        setIsLargeScreen,
+        videoRef,
+        setVideoDimensions,
+        setActiveTab,
+        activeVideoUrl
     } = state;
+
+    // Add a ref to track if we've already loaded the buy list
+    const buyListLoadedRef = useRef(false);
 
     // Expose setActiveTab globally for sidebar navigation
     useEffect(() => {
@@ -332,8 +348,8 @@ export const useCreateStepsEffects = (state) => {
                         });
                     });
                     
-                    // Process and load existing buy list
-                    if (buyListResponse.ok) {
+                    // Process and load existing buy list (only if not already loaded)
+                    if (buyListResponse.ok && !buyListLoadedRef.current) {
                         const buyListData = await buyListResponse.json();
                         console.log('Buy list data from API:', buyListData);
                         console.log('Number of buy list items:', buyListData.length);
@@ -354,6 +370,7 @@ export const useCreateStepsEffects = (state) => {
                         }));
                         
                         setProjectBuyList(transformedBuyList);
+                        buyListLoadedRef.current = true; // Mark as loaded
                         console.log('Loaded existing buy list:', transformedBuyList);
                         
                         // Show success message if items were loaded
@@ -361,8 +378,9 @@ export const useCreateStepsEffects = (state) => {
                             setSuccessMessage(`Loaded existing buy list with ${transformedBuyList.length} item${transformedBuyList.length !== 1 ? 's' : ''}.`);
                             setTimeout(() => setSuccessMessage(''), 3000);
                         }
-                    } else {
+                    } else if (!buyListLoadedRef.current) {
                         console.log('No existing buy list found or failed to fetch buy list');
+                        buyListLoadedRef.current = true; // Mark as loaded even if empty
                     }
                     
                     // Extract unique video files from steps
@@ -424,8 +442,8 @@ export const useCreateStepsEffects = (state) => {
                     console.warn('Could not fetch steps data, using placeholder');
                     setUploadedVideos([]);
                     
-                    // Still try to load buy list even if steps failed
-                    if (buyListResponse.ok) {
+                    // Still try to load buy list even if steps failed (only if not already loaded)
+                    if (buyListResponse.ok && !buyListLoadedRef.current) {
                         const buyListData = await buyListResponse.json();
                         console.log('Buy list data from API (steps failed):', buyListData);
                         
@@ -444,6 +462,7 @@ export const useCreateStepsEffects = (state) => {
                         }));
                         
                         setProjectBuyList(transformedBuyList);
+                        buyListLoadedRef.current = true; // Mark as loaded
                         console.log('Loaded existing buy list (steps failed):', transformedBuyList);
                         
                         // Show success message if items were loaded
@@ -451,6 +470,8 @@ export const useCreateStepsEffects = (state) => {
                             setSuccessMessage(`Loaded existing buy list with ${transformedBuyList.length} item${transformedBuyList.length !== 1 ? 's' : ''}.`);
                             setTimeout(() => setSuccessMessage(''), 3000);
                         }
+                    } else if (!buyListLoadedRef.current) {
+                        buyListLoadedRef.current = true; // Mark as loaded even if empty
                     }
                 }
                 
@@ -493,7 +514,7 @@ export const useCreateStepsEffects = (state) => {
         } else {
             setErrorMessage("Project ID not found. Please start from project creation.");
         }
-    }, [projectId, location.state, currentUser, navigate, setProjectName, setUploadedVideos, setActiveVideoUrl, setActiveVideoIndex, setErrorMessage, setProjectSteps, setCapturedAnnotationFrames, setSuccessMessage, setExistingThumbnailUrl, setProjectBuyList, projectBuyList.length]);
+    }, [projectId, location.state, currentUser, navigate, setProjectName, setUploadedVideos, setActiveVideoUrl, setActiveVideoIndex, setErrorMessage, setProjectSteps, setCapturedAnnotationFrames, setSuccessMessage, setExistingThumbnailUrl, setProjectBuyList]);
 
     // Handle video metadata loading
     useEffect(() => {

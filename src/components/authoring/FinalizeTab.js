@@ -17,6 +17,7 @@ const FinalizeTab = ({
     handleAddBuyListItem,
     removeBuyListItem,
     handleAutoPopulateBuyList,
+    handleUpdateBuyListFromProject,
     handleClearBuyList,
     handleFinishProject,
     isLoading,
@@ -62,7 +63,24 @@ const FinalizeTab = ({
                             borderRadius: '6px'
                         }}
                     >
-                        {isLoading ? 'Loading...' : 'Add All Repository Items'}
+                        {isLoading ? 'Loading...' : 'Add Project Items'}
+                    </button>
+                    <button
+                        onClick={handleUpdateBuyListFromProject}
+                        disabled={isLoading}
+                        style={{
+                            ...styles.button,
+                            backgroundColor: '#059669',
+                            color: '#D9D9D9',
+                            padding: '8px 16px',
+                            fontSize: '0.9rem',
+                            opacity: isLoading ? 0.6 : 1,
+                            cursor: isLoading ? 'not-allowed' : 'pointer',
+                            border: 'none',
+                            borderRadius: '6px'
+                        }}
+                    >
+                        {isLoading ? 'Updating...' : 'Update from Project'}
                     </button>
                     {projectBuyList.length > 0 && (
                         <button
@@ -84,7 +102,7 @@ const FinalizeTab = ({
                         </button>
                     )}
                     <span style={{fontSize: '0.8rem', color: '#9ca3af', fontStyle: 'italic'}}>
-                        Auto-populate will add all tools & materials from your repository (avoiding duplicates)
+                        "Add Project Items" adds tools & materials from your project steps (avoiding duplicates). "Update from Project" refreshes the entire list with current project state.
                     </span>
                 </div>
                 
@@ -206,11 +224,11 @@ const FinalizeTab = ({
                                         
                                         {/* Item Details */}
                                         <div style={{flex: 1}}>
-                                            <div style={{fontWeight: '600', color: '#000000', marginBottom: '4px'}}>
+                                            <div style={{fontWeight: '600', color: '#D9D9D9', marginBottom: '4px'}}>
                                                 {item.name} (Qty: {item.quantity})
                                             </div>
                                             {item.specification && (
-                                                <div style={{fontSize: '0.85rem', color: '#333333', marginBottom: '4px'}}>
+                                                <div style={{fontSize: '0.85rem', color: '#D9D9D9', marginBottom: '4px'}}>
                                                     {item.specification}
                                                 </div>
                                             )}
@@ -220,10 +238,15 @@ const FinalizeTab = ({
                                                         href={item.purchase_link} 
                                                         target="_blank" 
                                                         rel="noopener noreferrer"
-                                                        style={{color: '#0000FF', textDecoration: 'none'}}
+                                                        style={{color: '#007bff', textDecoration: 'none'}}
                                                     >
                                                         View Product Link
                                                     </a>
+                                                </div>
+                                            )}
+                                            {item.sourceStep && (
+                                                <div style={{fontSize: '0.75rem', color: '#007bff', fontStyle: 'italic', marginTop: '2px'}}>
+                                                    From Step {item.sourceStep}: {item.sourceStepName}
                                                 </div>
                                             )}
                                             {item.sourceType === 'existing' && (

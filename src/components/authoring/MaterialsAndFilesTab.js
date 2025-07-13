@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/authContext';
+import { storage } from '../../firebase/firebase'; // Fixed import path
+import { ref, uploadBytes } from 'firebase/storage'; // Added import for Firebase storage functions
 
 import { COMPONENTS, TYPOGRAPHY, LAYOUT, getListItemBorder } from './shared/styles';
 import { AiOutlineSearch, AiOutlinePlus } from 'react-icons/ai';
@@ -18,6 +20,8 @@ const MaterialsAndToolsTab = ({
     setCurrentStepToolSpec,
     currentStepToolImageFile,
     setCurrentStepToolImageFile,
+    currentStepToolPurchaseLink,
+    setCurrentStepToolPurchaseLink,
     toolImageInputRef,
     handleAddToolToCurrentStep,
     removeToolFromCurrentStep,
@@ -32,9 +36,13 @@ const MaterialsAndToolsTab = ({
     setCurrentStepMaterialSpec,
     currentStepMaterialImageFile,
     setCurrentStepMaterialImageFile,
+    currentStepMaterialPurchaseLink,
+    setCurrentStepMaterialPurchaseLink,
     materialImageInputRef,
     handleAddMaterialToCurrentStep,
     removeMaterialFromCurrentStep,
+    // Repository refresh trigger
+    repositoryRefreshTrigger,
     styles
 }) => {
     const { currentUser } = useAuth();
@@ -44,6 +52,8 @@ const MaterialsAndToolsTab = ({
     const [materialSearchTerm, setMaterialSearchTerm] = useState('');
     const [showToolRepo, setShowToolRepo] = useState(false);
     const [showMaterialRepo, setShowMaterialRepo] = useState(false);
+    const [isSavingTool, setIsSavingTool] = useState(false);
+    const [isSavingMaterial, setIsSavingMaterial] = useState(false);
 
     const fetchRepoItems = useCallback(async () => {
         try {
@@ -71,7 +81,7 @@ const MaterialsAndToolsTab = ({
         if (currentUser?.uid) {
             fetchRepoItems();
         }
-    }, [currentUser, fetchRepoItems]);
+    }, [currentUser, fetchRepoItems, repositoryRefreshTrigger]);
 
     // Filter repository items based on search
     const filteredRepoTools = repoTools.filter(tool =>
@@ -102,9 +112,9 @@ const MaterialsAndToolsTab = ({
             tool_id: repoTool.tool_id, // Reference to repository tool - IMPORTANT for backend
             name: repoTool.name,
             specification: repoTool.specification || '',
+            purchase_link: repoTool.purchase_link || null,
             hasExistingImage: repoTool.image_file ? true : false,
             image_url: repoTool.image_file?.file_url,
-            purchase_link: repoTool.purchase_link,
             // Mark this as from repository so we can handle it differently
             fromRepository: true
         };
@@ -148,9 +158,9 @@ const MaterialsAndToolsTab = ({
             material_id: repoMaterial.material_id, // Reference to repository material - IMPORTANT for backend
             name: repoMaterial.name,
             specification: repoMaterial.specification || '',
+            purchase_link: repoMaterial.purchase_link || null,
             hasExistingImage: repoMaterial.image_file ? true : false,
             image_url: repoMaterial.image_file?.file_url,
-            purchase_link: repoMaterial.purchase_link,
             // Mark this as from repository so we can handle it differently
             fromRepository: true
         };
@@ -174,6 +184,250 @@ const MaterialsAndToolsTab = ({
         // Clear the search interface
         setShowMaterialRepo(false);
         setMaterialSearchTerm('');
+    };
+
+    // Save new tool to repository
+    const saveToolToRepository = async (toolName, toolSpec, toolImageFile, toolPurchaseLink) => {
+        try {
+            let imagePath = null;
+            
+            // Upload image to Firebase if provided
+            if (toolImageFile) {
+                try {
+                    const storageRef = ref(storage, `tools/${currentUser.uid}/${Date.now()}_${toolImageFile.name}`);
+                    const uploadResult = await uploadBytes(storageRef, toolImageFile);
+                    imagePath = uploadResult.metadata.fullPath;
+                    console.log('Tool image uploaded to Firebase:', imagePath);
+                } catch (uploadError) {
+                    console.error('Error uploading tool image:', uploadError);
+                    alert('Failed to upload image. Tool will be saved without image.');
+                }
+            }
+
+            // Validate purchase link URL
+            let validatedPurchaseLink = null;
+            if (toolPurchaseLink && toolPurchaseLink.trim() !== '') {
+                try {
+                    // Basic URL validation - ensure it starts with http:// or https://
+                    const url = toolPurchaseLink.trim();
+                    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                        alert('Purchase link must be a valid URL starting with http:// or https://');
+                        return null;
+                    }
+                    validatedPurchaseLink = url;
+                } catch (error) {
+                    console.error('Invalid purchase link URL:', error);
+                    alert('Invalid purchase link URL. Please enter a valid URL.');
+                    return null;
+                }
+            }
+
+            const toolData = {
+                name: toolName,
+                specification: toolSpec || '',
+                purchase_link: validatedPurchaseLink,
+                image_path: imagePath
+            };
+
+            console.log('Sending tool data to backend:', toolData);
+
+            const response = await fetch(`${getApiUrl()}/users/${currentUser.uid}/tools`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(toolData),
+            });
+
+            if (response.ok) {
+                const newTool = await response.json();
+                setRepoTools(prev => [...prev, newTool]);
+                console.log('Tool saved to repository:', newTool);
+                return newTool;
+            } else {
+                const errorData = await response.json();
+                console.error('Failed to save tool to repository:', response.status, errorData);
+                return null;
+            }
+        } catch (error) {
+            console.error('Error saving tool to repository:', error);
+            return null;
+        }
+    };
+
+    // Save new material to repository
+    const saveMaterialToRepository = async (materialName, materialSpec, materialImageFile, materialPurchaseLink) => {
+        try {
+            let imagePath = null;
+            
+            // Upload image to Firebase if provided
+            if (materialImageFile) {
+                try {
+                    const storageRef = ref(storage, `materials/${currentUser.uid}/${Date.now()}_${materialImageFile.name}`);
+                    const uploadResult = await uploadBytes(storageRef, materialImageFile);
+                    imagePath = uploadResult.metadata.fullPath;
+                    console.log('Material image uploaded to Firebase:', imagePath);
+                } catch (uploadError) {
+                    console.error('Error uploading material image:', uploadError);
+                    alert('Failed to upload image. Material will be saved without image.');
+                }
+            }
+
+            // Validate purchase link URL
+            let validatedPurchaseLink = null;
+            if (materialPurchaseLink && materialPurchaseLink.trim() !== '') {
+                try {
+                    // Basic URL validation - ensure it starts with http:// or https://
+                    const url = materialPurchaseLink.trim();
+                    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                        alert('Purchase link must be a valid URL starting with http:// or https://');
+                        return null;
+                    }
+                    validatedPurchaseLink = url;
+                } catch (error) {
+                    console.error('Invalid purchase link URL:', error);
+                    alert('Invalid purchase link URL. Please enter a valid URL.');
+                    return null;
+                }
+            }
+
+            const materialData = {
+                name: materialName,
+                specification: materialSpec || '',
+                purchase_link: validatedPurchaseLink,
+                image_path: imagePath
+            };
+
+            console.log('Sending material data to backend:', materialData);
+
+            const response = await fetch(`${getApiUrl()}/users/${currentUser.uid}/materials`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(materialData),
+            });
+
+            if (response.ok) {
+                const newMaterial = await response.json();
+                setRepoMaterials(prev => [...prev, newMaterial]);
+                console.log('Material saved to repository:', newMaterial);
+                return newMaterial;
+            } else {
+                const errorData = await response.json();
+                console.error('Failed to save material to repository:', response.status, errorData);
+                return null;
+            }
+        } catch (error) {
+            console.error('Error saving material to repository:', error);
+            return null;
+        }
+    };
+
+    // Enhanced tool handler that saves to repository first
+    const handleAddToolWithRepository = async () => {
+        if (!currentStepToolName.trim()) {
+            alert('Please enter a tool name');
+            return;
+        }
+
+        setIsSavingTool(true);
+        try {
+            // First save to repository
+            const savedTool = await saveToolToRepository(
+                currentStepToolName, 
+                currentStepToolSpec, 
+                currentStepToolImageFile,
+                currentStepToolPurchaseLink
+            );
+
+            if (savedTool) {
+                            // Create step tool object with repository reference
+            const stepTool = {
+                id: `tool_${Date.now()}_${Math.random()}`,
+                tool_id: savedTool.tool_id, // Use the correct tool_id from saved tool
+                name: currentStepToolName,
+                specification: currentStepToolSpec || '',
+                purchase_link: currentStepToolPurchaseLink || null,
+                imageFile: currentStepToolImageFile,
+                hasExistingImage: false,
+                fromRepository: true
+            };
+
+                // Add to current step
+                if (setCurrentStepTools && typeof setCurrentStepTools === 'function') {
+                    setCurrentStepTools(prev => [...prev, stepTool]);
+                } else if (typeof handleAddToolToCurrentStep === 'function') {
+                    handleAddToolToCurrentStep();
+                }
+
+                // Clear form
+                setCurrentStepToolName('');
+                setCurrentStepToolSpec('');
+                setCurrentStepToolImageFile(null);
+                setCurrentStepToolPurchaseLink(null); // Clear purchase link
+                if (toolImageInputRef.current) {
+                    toolImageInputRef.current.value = '';
+                }
+            } else {
+                alert('Failed to save tool to repository. Please try again.');
+            }
+        } finally {
+            setIsSavingTool(false);
+        }
+    };
+
+    // Enhanced material handler that saves to repository first
+    const handleAddMaterialWithRepository = async () => {
+        if (!currentStepMaterialName.trim()) {
+            alert('Please enter a material name');
+            return;
+        }
+
+        setIsSavingMaterial(true);
+        try {
+            // First save to repository
+            const savedMaterial = await saveMaterialToRepository(
+                currentStepMaterialName, 
+                currentStepMaterialSpec, 
+                currentStepMaterialImageFile,
+                currentStepMaterialPurchaseLink
+            );
+
+            if (savedMaterial) {
+                // Create step material object with repository reference
+                const stepMaterial = {
+                    id: `material_${Date.now()}_${Math.random()}`,
+                    material_id: savedMaterial.material_id, // Use the ID from saved material
+                    name: currentStepMaterialName,
+                    specification: currentStepMaterialSpec || '',
+                    purchase_link: currentStepMaterialPurchaseLink || null,
+                    imageFile: currentStepMaterialImageFile,
+                    hasExistingImage: false,
+                    fromRepository: true
+                };
+
+                // Add to current step
+                if (setCurrentStepMaterials && typeof setCurrentStepMaterials === 'function') {
+                    setCurrentStepMaterials(prev => [...prev, stepMaterial]);
+                } else if (typeof handleAddMaterialToCurrentStep === 'function') {
+                    handleAddMaterialToCurrentStep();
+                }
+
+                // Clear form
+                setCurrentStepMaterialName('');
+                setCurrentStepMaterialSpec('');
+                setCurrentStepMaterialImageFile(null);
+                setCurrentStepMaterialPurchaseLink(null); // Clear purchase link
+                if (materialImageInputRef.current) {
+                    materialImageInputRef.current.value = '';
+                }
+            } else {
+                alert('Failed to save material to repository. Please try again.');
+            }
+        } finally {
+            setIsSavingMaterial(false);
+        }
     };
 
     const repositorySearchStyle = {
@@ -264,6 +518,19 @@ const MaterialsAndToolsTab = ({
                                                     {tool.specification}
                                                 </p>
                                             )}
+                                            {tool.purchase_link && (
+                                                <p style={{margin: 0, fontSize: '0.8rem', color: '#007bff'}}>
+                                                    <a 
+                                                        href={tool.purchase_link} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        style={{color: '#007bff', textDecoration: 'underline'}}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        Purchase Link
+                                                    </a>
+                                                </p>
+                                            )}
                                         </div>
                                         <AiOutlinePlus style={{color: '#007bff'}} />
                                     </div>
@@ -312,11 +579,28 @@ const MaterialsAndToolsTab = ({
                         style={styles.fileInput}
                     />
                 </div>
+                <div style={{marginTop: LAYOUT.inputSpacing}}>
+                    <label style={{...styles.inputLabel, fontSize: '0.8rem'}}>Tool Purchase Link (Optional)</label>
+                    <input 
+                        type="url" 
+                        value={currentStepToolPurchaseLink} 
+                        onChange={(e) => setCurrentStepToolPurchaseLink(e.target.value)} 
+                        placeholder="https://example.com/tool" 
+                        style={styles.inputField}
+                    />
+                </div>
                 <button 
-                    onClick={handleAddToolToCurrentStep} 
-                    style={{...styles.button, ...styles.buttonSecondarySm, marginTop: LAYOUT.inputSpacing}}
+                    onClick={handleAddToolWithRepository} 
+                    disabled={isSavingTool}
+                    style={{
+                        ...styles.button, 
+                        ...styles.buttonSecondarySm, 
+                        marginTop: LAYOUT.inputSpacing,
+                        opacity: isSavingTool ? 0.7 : 1,
+                        cursor: isSavingTool ? 'not-allowed' : 'pointer'
+                    }}
                 >
-                    Add New Tool to Step
+                    {isSavingTool ? 'Saving to Repository...' : 'Add New Tool to Step & Repository'}
                 </button>
                 
                 {/* Current Step Tools Display */}
@@ -380,6 +664,19 @@ const MaterialsAndToolsTab = ({
                                                 {tool.tool_id && ' • From Repository'}
                                                 {tool.imageFile && ` • New image: ${tool.imageFile.name.substring(0, 20)}...`}
                                                 {tool.hasExistingImage && !tool.imageFile && ` • Has image`}
+                                                {tool.purchase_link && (
+                                                    <span>
+                                                        {' • '}
+                                                        <a 
+                                                            href={tool.purchase_link} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                            style={{color: '#007bff', textDecoration: 'underline'}}
+                                                        >
+                                                            Purchase Link
+                                                        </a>
+                                                    </span>
+                                                )}
                                             </p>
                                         </div>
                                     </div>
@@ -464,6 +761,19 @@ const MaterialsAndToolsTab = ({
                                                     {material.specification}
                                                 </p>
                                             )}
+                                            {material.purchase_link && (
+                                                <p style={{margin: 0, fontSize: '0.8rem', color: '#007bff'}}>
+                                                    <a 
+                                                        href={material.purchase_link} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        style={{color: '#007bff', textDecoration: 'underline'}}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        Purchase Link
+                                                    </a>
+                                                </p>
+                                            )}
                                         </div>
                                         <AiOutlinePlus style={{color: '#007bff'}} />
                                     </div>
@@ -512,11 +822,28 @@ const MaterialsAndToolsTab = ({
                     style={styles.fileInput}
                 />
             </div>
+            <div style={{marginTop: LAYOUT.inputSpacing}}>
+                <label style={{...styles.inputLabel, fontSize: '0.8rem'}}>Material Purchase Link (Optional)</label>
+                <input 
+                    type="url" 
+                    value={currentStepMaterialPurchaseLink} 
+                    onChange={(e) => setCurrentStepMaterialPurchaseLink(e.target.value)} 
+                    placeholder="https://example.com/material" 
+                    style={styles.inputField}
+                />
+            </div>
             <button 
-                onClick={handleAddMaterialToCurrentStep} 
-                    style={{...styles.button, ...styles.buttonSecondarySm, marginTop: LAYOUT.inputSpacing}}
+                onClick={handleAddMaterialWithRepository} 
+                disabled={isSavingMaterial}
+                style={{
+                    ...styles.button, 
+                    ...styles.buttonSecondarySm, 
+                    marginTop: LAYOUT.inputSpacing,
+                    opacity: isSavingMaterial ? 0.7 : 1,
+                    cursor: isSavingMaterial ? 'not-allowed' : 'pointer'
+                }}
             >
-                    Add New Material to Step
+                {isSavingMaterial ? 'Saving to Repository...' : 'Add New Material to Step & Repository'}
             </button>
                 
                 {/* Current Step Materials Display */}
@@ -580,6 +907,19 @@ const MaterialsAndToolsTab = ({
                                                 {material.material_id && ' • From Repository'}
                                                 {material.imageFile && ` • New image: ${material.imageFile.name.substring(0, 20)}...`}
                                                 {material.hasExistingImage && !material.imageFile && ` • Has image`}
+                                                {material.purchase_link && (
+                                                    <span>
+                                                        {' • '}
+                                                        <a 
+                                                            href={material.purchase_link} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                            style={{color: '#007bff', textDecoration: 'underline'}}
+                                                        >
+                                                            Purchase Link
+                                                        </a>
+                                                    </span>
+                                                )}
                                             </p>
                                         </div>
         </div>

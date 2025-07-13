@@ -1,4 +1,29 @@
-# Getting Started with Create React App
+# VortexHub - Project Management Platform
+
+A comprehensive project management platform for creating, organizing, and sharing instructional content with tools and materials management.
+
+## Features
+
+### Project Management
+- Create and manage instructional projects
+- Step-by-step video authoring with annotations
+- Materials and tools tracking per project
+- Project finalization with buy lists
+
+### Repository Management
+- **Global Repository**: Access from the main navigation to manage all tools and materials
+- **Project Repository Tab**: Add tools and materials directly from within any project
+- Search and filter repository items
+- Upload images for tools and materials
+- Add purchase links for easy procurement
+
+### User Experience
+- Dark theme with gold and blue accent colors
+- Responsive design for desktop and mobile
+- Real-time search and filtering
+- Intuitive tab-based navigation
+
+## Getting Started
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
