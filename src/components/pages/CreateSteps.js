@@ -18,6 +18,7 @@ import SignOffTab from '../authoring/SignOffTab';
 import FinalizeTab from '../authoring/FinalizeTab';
 import ProjectRepositoryTab from '../authoring/ProjectRepositoryTab';
 import AnnotationPopup from '../authoring/AnnotationPopup';
+import FloatingTimeline from '../authoring/FloatingTimeline';
 
 const ProjectStepsPage = () => {
     // Initialize state using custom hook
@@ -237,16 +238,17 @@ const ProjectStepsPage = () => {
     }
 
     return (
-        <div style={styles.videoTimelineContainer}>
+        <div style={{
+            ...styles.videoTimelineContainer,
+            ...(activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' && styles.contentPadding)
+        }}>
                 {/* Header */}
             <header style={styles.header}>
                 <h1 style={styles.pageTitle}>
                     {activeTab === 'repository' ? 'Repository Management' : 
                      activeTab === 'finalize' ? 'Finalize Project' :
+                     activeTab === 'overview' ? 'Project Overview' :
                      `Authoring: ${projectName || `Project ${projectId}`}`}
-                    {activeTab !== 'repository' && activeTab !== 'finalize' && (
-                        <span style={styles.projectNameHighlight}>{projectName || `Project ${projectId}`}</span>
-                    )}
                 </h1>
                     <div style={{display: 'flex', gap: '12px', alignItems: 'center'}}>
                         {currentStepIndex >= 0 && activeTab !== 'repository' && activeTab !== 'finalize' && (
@@ -306,6 +308,11 @@ const ProjectStepsPage = () => {
                         projectBuyList={projectBuyList}
                         formatTime={formatTime}
                         onEditStep={enhancedHandlers.onEditStep}
+                        onDeleteStep={(index) => {
+                            stepActions.deleteStep(index);
+                            setSuccessMessage(`Step deleted successfully!`);
+                            setTimeout(() => setSuccessMessage(''), 3000);
+                        }}
                         styles={styles}
                     />
                 </div>
@@ -498,146 +505,6 @@ const ProjectStepsPage = () => {
                                             setErrorMessage(`Error loading video: ${uploadedVideos[activeVideoIndex]?.name || 'Unknown video'}`); 
                                         }}
                                     />
-                                    
-                                    {/* Timeline under video */}
-                                    <div style={styles.videoTimelineUnderVideo}>
-                                        <div style={styles.videoTimelineTrack} onClick={(e) => {
-                                            if (videoRef.current) {
-                                                const rect = e.currentTarget.getBoundingClientRect();
-                                                const clickX = e.clientX - rect.left;
-                                                const timelineWidth = rect.width;
-                                                const videoDuration = videoRef.current.duration || 0;
-                                                const clickedTime = (clickX / timelineWidth) * videoDuration;
-                                                videoRef.current.currentTime = clickedTime;
-                                            }
-                                        }}>
-                                            {/* Background track */}
-                                            <div style={styles.timelineBackground}></div>
-                                            
-                                            {/* Current time indicator */}
-                                            <div 
-                                                style={{
-                                                    ...styles.currentTimeIndicator,
-                                                    left: `${videoRef.current ? ((videoRef.current.currentTime || 0) / (videoRef.current.duration || 1)) * 100 : 0}%`
-                                                }}
-                                            ></div>
-                                            
-                                            {/* Existing steps on timeline */}
-                                            {projectSteps.map((step, index) => (
-                                                <div
-                                                    key={step.id || index}
-                                                    style={{
-                                                        ...styles.timelineStep,
-                                                        left: `${videoRef.current ? ((step.video_start_time_ms / 1000) / (videoRef.current.duration || 1)) * 100 : 0}%`,
-                                                        width: `${videoRef.current ? (((step.video_end_time_ms - step.video_start_time_ms) / 1000) / (videoRef.current.duration || 1)) * 100 : 0}%`
-                                                    }}
-                                                    title={`Step ${index + 1}: ${step.name}`}
-                                                >
-                                                    <div style={styles.timelineStepLabel}>
-                                                        {index + 1}
-            </div>
-                                                </div>
-                                            ))}
-                                            
-                                            {/* Start time marker */}
-                                            {(currentStepStartTime !== null && currentStepStartTime !== undefined) && (
-                                                <div
-                                                    style={{
-                                                        ...styles.timelineMarker,
-                                                        ...styles.startMarker,
-                                                        left: `${videoRef.current ? (currentStepStartTime / (videoRef.current.duration || 1)) * 100 : 0}%`
-                                                    }}
-                                                >
-                                                    <div style={styles.markerHandle}>S</div>
-                                                    <div style={styles.markerTime}>{formatTime(currentStepStartTime)}</div>
-                                                </div>
-                                            )}
-                                            
-                                            {/* End time marker */}
-                                            {(currentStepEndTime !== null && currentStepEndTime !== undefined) && (
-                                                <div
-                                                    style={{
-                                                        ...styles.timelineMarker,
-                                                        ...styles.endMarker,
-                                                        left: `${videoRef.current ? (currentStepEndTime / (videoRef.current.duration || 1)) * 100 : 0}%`
-                                                    }}
-                                                >
-                                                    <div style={styles.markerHandle}>E</div>
-                                                    <div style={styles.markerTime}>{formatTime(currentStepEndTime)}</div>
-                    </div>
-                                            )}
-                                            
-                                            {/* Selection area between start and end */}
-                                            {(currentStepStartTime !== null && currentStepStartTime !== undefined) && 
-                                             (currentStepEndTime !== null && currentStepEndTime !== undefined) && (
-                                                <div
-                                                    style={{
-                                                        ...styles.selectionArea,
-                                                        left: `${videoRef.current ? (currentStepStartTime / (videoRef.current.duration || 1)) * 100 : 0}%`,
-                                                        width: `${videoRef.current ? ((currentStepEndTime - currentStepStartTime) / (videoRef.current.duration || 1)) * 100 : 0}%`
-                                                    }}
-                                                ></div>
-                                            )}
-                                        </div>
-                                        
-                                        {/* Timeline controls */}
-                                        <div style={styles.videoTimelineControls}>
-                                            <button
-                                                onClick={() => {
-                                                    if (videoRef.current) {
-                                                        const currentTime = videoRef.current.currentTime;
-                                                        console.log('Marking start time:', currentTime);
-                                                        console.log('Current step start time before setting:', currentStepStartTime);
-                                                        state.setCurrentStepStartTime(currentTime);
-                                                        console.log('setCurrentStepStartTime called with:', currentTime);
-                                                        setSuccessMessage(`Start time set to ${formatTime(currentTime)}`);
-                                                        setTimeout(() => setSuccessMessage(''), 2000);
-                                                    } else {
-                                                        console.log('Video ref not available');
-                                                        setErrorMessage("Video not ready. Please wait and try again.");
-                                                    }
-                                                }}
-                                                style={{...styles.button, ...styles.buttonPrimary, fontSize: '0.8rem', padding: '6px 12px'}}
-                                            >
-                                                Mark Start
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    if (videoRef.current) {
-                                                        const currentTime = videoRef.current.currentTime;
-                                                        console.log('Marking end time:', currentTime, 'Start time:', currentStepStartTime);
-                                                        console.log('Current step end time before setting:', currentStepEndTime);
-                                                        if (currentStepStartTime !== null && currentStepStartTime !== undefined && currentTime <= currentStepStartTime) {
-                                                            setErrorMessage("End time must be after start time");
-                                                            return;
-                                                        }
-                                                        state.setCurrentStepEndTime(currentTime);
-                                                        console.log('setCurrentStepEndTime called with:', currentTime);
-                                                        setSuccessMessage(`End time set to ${formatTime(currentTime)}`);
-                                                        setTimeout(() => setSuccessMessage(''), 2000);
-                                                    } else {
-                                                        console.log('Video ref not available');
-                                                        setErrorMessage("Video not ready. Please wait and try again.");
-                                                    }
-                                                }}
-                                                style={{...styles.button, ...styles.buttonSecondary, fontSize: '0.8rem', padding: '6px 12px'}}
-                                            >
-                                                Mark End
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    console.log('Clearing video times');
-                                                    state.setCurrentStepStartTime(null);
-                                                    state.setCurrentStepEndTime(null);
-                                                    setSuccessMessage('Video times cleared');
-                                                    setTimeout(() => setSuccessMessage(''), 2000);
-                                                }}
-                                                style={{...styles.button, backgroundColor: '#dc3545', color: 'white', fontSize: '0.8rem', padding: '6px 12px'}}
-                                            >
-                                                Clear
-                                            </button>
-                </div>
-            </div>
             
                                     {/* Video controls */}
                                     <div style={styles.videoControls}>
@@ -685,19 +552,54 @@ const ProjectStepsPage = () => {
                             {projectSteps.map((step, index) => (
                                 <div
                                     key={step.id || `step-${index}`}
-                                    onClick={() => stepActions.loadStepForEditing(step, index)}
-                        style={{
+                                    style={{
                                         ...styles.stepItem,
-                                        ...(currentStepIndex === index ? styles.stepItemActive : {})
+                                        ...(currentStepIndex === index ? styles.stepItemActive : {}),
+                                        position: 'relative'
                                     }}
                                 >
-                                    <div style={styles.stepItemHeader}>
-                                        <span style={currentStepIndex === index ? styles.stepItemNumberActive : styles.stepItemNumber}>Step {index + 1}</span>
-                                        <span style={currentStepIndex === index ? styles.stepItemTimeActive : styles.stepItemTime}>
-                                            {formatTime(step.video_start_time_ms / 1000)} - {formatTime(step.video_end_time_ms / 1000)}
-                                        </span>
+                                    <div
+                                        onClick={() => stepActions.loadStepForEditing(step, index)}
+                                        style={{flex: 1, cursor: 'pointer'}}
+                                    >
+                                        <div style={styles.stepItemHeader}>
+                                            <span style={currentStepIndex === index ? styles.stepItemNumberActive : styles.stepItemNumber}>Step {index + 1}</span>
+                                            <span style={currentStepIndex === index ? styles.stepItemTimeActive : styles.stepItemTime}>
+                                                {formatTime(step.video_start_time_ms / 1000)} - {formatTime(step.video_end_time_ms / 1000)}
+                                            </span>
+                                        </div>
+                                        <div style={currentStepIndex === index ? styles.stepItemNameActive : styles.stepItemName}>{step.name}</div>
                                     </div>
-                                    <div style={currentStepIndex === index ? styles.stepItemNameActive : styles.stepItemName}>{step.name}</div>
+                                    
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (window.confirm(`Are you sure you want to delete "Step ${index + 1}: ${step.name}"? This action cannot be undone.`)) {
+                                                stepActions.deleteStep(index);
+                                                setSuccessMessage(`Step "${step.name}" deleted successfully!`);
+                                                setTimeout(() => setSuccessMessage(''), 3000);
+                                            }
+                                        }}
+                                        style={{
+                                            position: 'absolute',
+                                            bottom: '8px',
+                                            right: '8px',
+                                            backgroundColor: '#ef4444',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            padding: '4px 8px',
+                                            fontSize: '0.75rem',
+                                            cursor: 'pointer',
+                                            opacity: 0.7,
+                                            transition: 'opacity 0.2s ease'
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.opacity = 1}
+                                        onMouseLeave={(e) => e.target.style.opacity = 0.7}
+                                        title="Delete step"
+                                    >
+                                        ×
+                                    </button>
                                 </div>
                             ))}
                         </div>
@@ -751,6 +653,21 @@ const ProjectStepsPage = () => {
                 formatTime={formatTime}
                 styles={styles}
             />
+            
+            {/* Floating Timeline - always visible on video steps page */}
+            {activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' && (
+                <FloatingTimeline
+                    videoRef={videoRef}
+                    projectSteps={projectSteps}
+                    currentStepStartTime={currentStepStartTime}
+                    currentStepEndTime={currentStepEndTime}
+                    setCurrentStepStartTime={state.setCurrentStepStartTime}
+                    setCurrentStepEndTime={state.setCurrentStepEndTime}
+                    formatTime={formatTime}
+                    styles={styles}
+                    isVisible={true}
+                />
+            )}
         </div>
     );
 };

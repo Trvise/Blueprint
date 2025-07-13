@@ -6,6 +6,7 @@ const ProjectOverviewTab = ({
     formatTime,
     projectBuyList,
     onEditStep,
+    onDeleteStep,
     styles
 }) => {
     const totalSteps = projectSteps.length;
@@ -434,22 +435,56 @@ const ProjectOverviewTab = ({
                                     </div>
                                 </div>
                                 
-                                {onEditStep && (
+                                <div style={{display: 'flex', gap: '10px'}}>
+                                    {onEditStep && (
+                                        <button
+                                            onClick={() => onEditStep(step, index)}
+                                            style={overviewStyles.editButton}
+                                            onMouseEnter={(e) => {
+                                                e.target.style.backgroundColor = '#D4AF37';
+                                                e.target.style.transform = 'scale(1.05)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.target.style.backgroundColor = '#F1C232';
+                                                e.target.style.transform = 'scale(1)';
+                                            }}
+                                        >
+                                            Edit Step
+                                        </button>
+                                    )}
+                                    
                                     <button
-                                        onClick={() => onEditStep(step, index)}
-                                        style={overviewStyles.editButton}
+                                        onClick={() => {
+                                            if (window.confirm(`Are you sure you want to delete "Step ${index + 1}: ${step.name}"? This action cannot be undone.`)) {
+                                                // We need to pass the delete function from the parent component
+                                                if (onDeleteStep) {
+                                                    onDeleteStep(index);
+                                                }
+                                            }
+                                        }}
+                                        style={{
+                                            backgroundColor: '#ef4444',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            padding: '8px 16px',
+                                            fontSize: '0.9rem',
+                                            cursor: 'pointer',
+                                            fontWeight: '600',
+                                            transition: 'all 0.2s ease'
+                                        }}
                                         onMouseEnter={(e) => {
-                                            e.target.style.backgroundColor = '#D4AF37';
+                                            e.target.style.backgroundColor = '#dc2626';
                                             e.target.style.transform = 'scale(1.05)';
                                         }}
                                         onMouseLeave={(e) => {
-                                            e.target.style.backgroundColor = '#F1C232';
+                                            e.target.style.backgroundColor = '#ef4444';
                                             e.target.style.transform = 'scale(1)';
                                         }}
                                     >
-                                        Edit Step
+                                        Delete Step
                                     </button>
-                                )}
+                                </div>
                             </div>
 
                             {/* Step Content */}
