@@ -247,10 +247,10 @@ export const createStepHandlers = (
                     step.tools.forEach(tool => {
                         allProjectItems.push({
                             id: `buyitem_tool_${stepIndex}_${tool.id || uuidv4()}`,
-                            name: tool.name,
-                            quantity: 1, // Default quantity
-                            specification: tool.specification || '',
-                            purchase_link: tool.purchase_link || '',
+                    name: tool.name,
+                    quantity: 1, // Default quantity
+                    specification: tool.specification || '',
+                    purchase_link: tool.purchase_link || '',
                             imageFile: tool.imageFile || null,
                             image_url: tool.image_url || null,
                             sourceType: 'tool',
@@ -265,10 +265,10 @@ export const createStepHandlers = (
                     step.materials.forEach(material => {
                         allProjectItems.push({
                             id: `buyitem_material_${stepIndex}_${material.id || uuidv4()}`,
-                            name: material.name,
-                            quantity: 1, // Default quantity
-                            specification: material.specification || '',
-                            purchase_link: material.purchase_link || '',
+                    name: material.name,
+                    quantity: 1, // Default quantity
+                    specification: material.specification || '',
+                    purchase_link: material.purchase_link || '',
                             imageFile: material.imageFile || null,
                             image_url: material.image_url || null,
                             sourceType: 'material',

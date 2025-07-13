@@ -281,7 +281,7 @@ const ProjectCard = React.memo(({ project, onEdit, onDelete, onGenerateThumbnail
                             onEdit(project.project_id);
                         }}
                         onMouseEnter={(e) => e.target.style.backgroundColor = '#000099'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = '#000099'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = '#0000FF'}
                     >
                         Edit Steps
                     </button>
@@ -512,8 +512,8 @@ const MyProjects = () => {
                 <button
                     style={styles.createButton}
                     onClick={() => navigate('/create')}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#0000FF'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = '#0000FF'}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#E6B800'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#F1C232'}
                 >
                     + Create New Project
                 </button>
