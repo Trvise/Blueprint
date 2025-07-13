@@ -18,6 +18,7 @@ const FinalizeTab = ({
     removeBuyListItem,
     handleAutoPopulateBuyList,
     handleUpdateBuyListFromProject,
+    handleReplaceBuyList,
     handleClearBuyList,
     handleFinishProject,
     isLoading,
@@ -82,6 +83,23 @@ const FinalizeTab = ({
                     >
                         {isLoading ? 'Updating...' : 'Update from Project'}
                     </button>
+                    <button
+                        onClick={handleReplaceBuyList}
+                        disabled={isLoading}
+                        style={{
+                            ...styles.button,
+                            backgroundColor: '#f59e0b',
+                            color: '#D9D9D9',
+                            padding: '8px 16px',
+                            fontSize: '0.9rem',
+                            opacity: isLoading ? 0.6 : 1,
+                            cursor: isLoading ? 'not-allowed' : 'pointer',
+                            border: 'none',
+                            borderRadius: '6px'
+                        }}
+                    >
+                        {isLoading ? 'Replacing...' : 'Replace with Project Items'}
+                    </button>
                     {projectBuyList.length > 0 && (
                         <button
                             onClick={handleClearBuyList}
@@ -102,7 +120,7 @@ const FinalizeTab = ({
                         </button>
                     )}
                     <span style={{fontSize: '0.8rem', color: '#9ca3af', fontStyle: 'italic'}}>
-                        "Add Project Items" adds tools & materials from your project steps (avoiding duplicates). "Update from Project" refreshes the entire list with current project state.
+                        "Add Project Items" appends tools & materials from your project steps (avoiding duplicates). "Update from Project" refreshes the entire list with current project state. "Replace with Project Items" clears the list and adds only project items.
                     </span>
                 </div>
                 
@@ -195,14 +213,30 @@ const FinalizeTab = ({
                                                 flexShrink: 0
                                             }}>
                                                 <img 
-                                                    src={item.hasExistingImage ? item.image_url : URL.createObjectURL(item.imageFile)}
+                                                    src={item.hasExistingImage && item.image_url ? item.image_url : (item.imageFile ? URL.createObjectURL(item.imageFile) : null)}
                                                     alt={item.name}
                                                     style={{
                                                         width: '100%',
                                                         height: '100%',
                                                         objectFit: 'cover'
                                                     }}
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        e.target.nextSibling.style.display = 'flex';
+                                                    }}
                                                 />
+                                                <div style={{
+                                                    display: 'none',
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    backgroundColor: '#888888',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: '0.7rem',
+                                                    color: '#333333'
+                                                }}>
+                                                    IMG
+                                                </div>
                                             </div>
                                         ) : (
                                             <div style={{

@@ -22,6 +22,8 @@ const MaterialsAndToolsTab = ({
     setCurrentStepToolImageFile,
     currentStepToolPurchaseLink,
     setCurrentStepToolPurchaseLink,
+    currentStepToolQuantity,
+    setCurrentStepToolQuantity,
     toolImageInputRef,
     handleAddToolToCurrentStep,
     removeToolFromCurrentStep,
@@ -38,6 +40,8 @@ const MaterialsAndToolsTab = ({
     setCurrentStepMaterialImageFile,
     currentStepMaterialPurchaseLink,
     setCurrentStepMaterialPurchaseLink,
+    currentStepMaterialQuantity,
+    setCurrentStepMaterialQuantity,
     materialImageInputRef,
     handleAddMaterialToCurrentStep,
     removeMaterialFromCurrentStep,
@@ -54,6 +58,10 @@ const MaterialsAndToolsTab = ({
     const [showMaterialRepo, setShowMaterialRepo] = useState(false);
     const [isSavingTool, setIsSavingTool] = useState(false);
     const [isSavingMaterial, setIsSavingMaterial] = useState(false);
+    const [selectedToolForQuantity, setSelectedToolForQuantity] = useState(null);
+    const [selectedMaterialForQuantity, setSelectedMaterialForQuantity] = useState(null);
+    const [tempToolQuantity, setTempToolQuantity] = useState(1);
+    const [tempMaterialQuantity, setTempMaterialQuantity] = useState(1);
 
     const fetchRepoItems = useCallback(async () => {
         try {
@@ -106,38 +114,45 @@ const MaterialsAndToolsTab = ({
             return;
         }
 
+        // Set the selected tool for quantity input
+        setSelectedToolForQuantity(repoTool);
+        setTempToolQuantity(1);
+        setShowToolRepo(false);
+        setToolSearchTerm('');
+    };
+
+    // Confirm tool addition with quantity
+    const confirmAddToolWithQuantity = () => {
+        if (!selectedToolForQuantity) return;
+
         // Create a step tool object that includes repository reference
         const stepTool = {
             id: `tool_${Date.now()}_${Math.random()}`, // Temporary ID for UI purposes
-            tool_id: repoTool.tool_id, // Reference to repository tool - IMPORTANT for backend
-            name: repoTool.name,
-            specification: repoTool.specification || '',
-            purchase_link: repoTool.purchase_link || null,
-            hasExistingImage: repoTool.image_file ? true : false,
-            image_url: repoTool.image_file?.file_url,
+            tool_id: selectedToolForQuantity.tool_id, // Reference to repository tool - IMPORTANT for backend
+            name: selectedToolForQuantity.name,
+            specification: selectedToolForQuantity.specification || '',
+            quantity: parseInt(tempToolQuantity) || 1,
+            purchase_link: selectedToolForQuantity.purchase_link || null,
+            hasExistingImage: selectedToolForQuantity.image_file ? true : false,
+            image_url: selectedToolForQuantity.image_file?.file_url,
             // Mark this as from repository so we can handle it differently
             fromRepository: true
         };
 
-        // Directly add to current step tools without using form validation
-        // This preserves the tool_id which is crucial for backend linking
+        // Add to current step tools
         if (setCurrentStepTools && typeof setCurrentStepTools === 'function') {
             setCurrentStepTools(prev => [...prev, stepTool]);
-        } else {
-            // Fallback: try the form-based approach but it won't preserve tool_id
-            setCurrentStepToolName(repoTool.name);
-            setCurrentStepToolSpec(repoTool.specification || '');
-            
-            requestAnimationFrame(() => {
-                if (typeof handleAddToolToCurrentStep === 'function') {
-                    handleAddToolToCurrentStep();
-                }
-            });
         }
-        
-        // Clear the search interface
-        setShowToolRepo(false);
-        setToolSearchTerm('');
+
+        // Clear the quantity input
+        setSelectedToolForQuantity(null);
+        setTempToolQuantity(1);
+    };
+
+    // Cancel tool quantity input
+    const cancelAddTool = () => {
+        setSelectedToolForQuantity(null);
+        setTempToolQuantity(1);
     };
 
     // Add material from repository to current step
@@ -152,38 +167,45 @@ const MaterialsAndToolsTab = ({
             return;
         }
 
+        // Set the selected material for quantity input
+        setSelectedMaterialForQuantity(repoMaterial);
+        setTempMaterialQuantity(1);
+        setShowMaterialRepo(false);
+        setMaterialSearchTerm('');
+    };
+
+    // Confirm material addition with quantity
+    const confirmAddMaterialWithQuantity = () => {
+        if (!selectedMaterialForQuantity) return;
+
         // Create a step material object that includes repository reference
         const stepMaterial = {
             id: `material_${Date.now()}_${Math.random()}`, // Temporary ID for UI purposes
-            material_id: repoMaterial.material_id, // Reference to repository material - IMPORTANT for backend
-            name: repoMaterial.name,
-            specification: repoMaterial.specification || '',
-            purchase_link: repoMaterial.purchase_link || null,
-            hasExistingImage: repoMaterial.image_file ? true : false,
-            image_url: repoMaterial.image_file?.file_url,
+            material_id: selectedMaterialForQuantity.material_id, // Reference to repository material - IMPORTANT for backend
+            name: selectedMaterialForQuantity.name,
+            specification: selectedMaterialForQuantity.specification || '',
+            quantity: parseInt(tempMaterialQuantity) || 1,
+            purchase_link: selectedMaterialForQuantity.purchase_link || null,
+            hasExistingImage: selectedMaterialForQuantity.image_file ? true : false,
+            image_url: selectedMaterialForQuantity.image_file?.file_url,
             // Mark this as from repository so we can handle it differently
             fromRepository: true
         };
 
-        // Directly add to current step materials without using form validation
-        // This preserves the material_id which is crucial for backend linking
+        // Add to current step materials
         if (setCurrentStepMaterials && typeof setCurrentStepMaterials === 'function') {
             setCurrentStepMaterials(prev => [...prev, stepMaterial]);
-        } else {
-            // Fallback: try the form-based approach but it won't preserve material_id
-            setCurrentStepMaterialName(repoMaterial.name);
-            setCurrentStepMaterialSpec(repoMaterial.specification || '');
-            
-            requestAnimationFrame(() => {
-                if (typeof handleAddMaterialToCurrentStep === 'function') {
-                    handleAddMaterialToCurrentStep();
-                }
-            });
         }
-        
-        // Clear the search interface
-        setShowMaterialRepo(false);
-        setMaterialSearchTerm('');
+
+        // Clear the quantity input
+        setSelectedMaterialForQuantity(null);
+        setTempMaterialQuantity(1);
+    };
+
+    // Cancel material quantity input
+    const cancelAddMaterial = () => {
+        setSelectedMaterialForQuantity(null);
+        setTempMaterialQuantity(1);
     };
 
     // Save new tool to repository
@@ -244,7 +266,7 @@ const MaterialsAndToolsTab = ({
                 setRepoTools(prev => [...prev, newTool]);
                 console.log('Tool saved to repository:', newTool);
                 return newTool;
-            } else {
+        } else {
                 const errorData = await response.json();
                 console.error('Failed to save tool to repository:', response.status, errorData);
                 return null;
@@ -342,17 +364,18 @@ const MaterialsAndToolsTab = ({
             );
 
             if (savedTool) {
-                            // Create step tool object with repository reference
-            const stepTool = {
-                id: `tool_${Date.now()}_${Math.random()}`,
-                tool_id: savedTool.tool_id, // Use the correct tool_id from saved tool
-                name: currentStepToolName,
-                specification: currentStepToolSpec || '',
-                purchase_link: currentStepToolPurchaseLink || null,
-                imageFile: currentStepToolImageFile,
-                hasExistingImage: false,
-                fromRepository: true
-            };
+                // Create step tool object with repository reference
+                const stepTool = {
+                    id: `tool_${Date.now()}_${Math.random()}`,
+                    tool_id: savedTool.tool_id, // Use the correct tool_id from saved tool
+                    name: currentStepToolName,
+                    specification: currentStepToolSpec || '',
+                    quantity: parseInt(currentStepToolQuantity) || 1,
+                    purchase_link: currentStepToolPurchaseLink || null,
+                    imageFile: currentStepToolImageFile,
+                    hasExistingImage: false,
+                    fromRepository: true
+                };
 
                 // Add to current step
                 if (setCurrentStepTools && typeof setCurrentStepTools === 'function') {
@@ -401,6 +424,7 @@ const MaterialsAndToolsTab = ({
                     material_id: savedMaterial.material_id, // Use the ID from saved material
                     name: currentStepMaterialName,
                     specification: currentStepMaterialSpec || '',
+                    quantity: parseInt(currentStepMaterialQuantity) || 1,
                     purchase_link: currentStepMaterialPurchaseLink || null,
                     imageFile: currentStepMaterialImageFile,
                     hasExistingImage: false,
@@ -548,6 +572,110 @@ const MaterialsAndToolsTab = ({
                     </div>
                 </div>
 
+                {/* Tool Quantity Input Modal */}
+                {selectedToolForQuantity && (
+                    <div 
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 10000,
+                        }}
+                        onClick={cancelAddTool}
+                    >
+                        <div 
+                            style={{
+                                backgroundColor: '#111111',
+                                border: '2px solid #007bff',
+                                borderRadius: '12px',
+                                padding: '2rem',
+                                maxWidth: '400px',
+                                width: '90%',
+                                color: '#D9D9D9',
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <h3 style={{
+                                margin: '0 0 1rem 0',
+                                color: '#007bff',
+                                fontSize: '1.2rem'
+                            }}>
+                                Set Quantity for Tool
+                            </h3>
+                            <div style={{marginBottom: '1rem'}}>
+                                <p style={{margin: '0 0 0.5rem 0', fontWeight: '500'}}>
+                                    {selectedToolForQuantity.name}
+                                </p>
+                                {selectedToolForQuantity.specification && (
+                                    <p style={{margin: 0, fontSize: '0.9rem', color: '#D9D9D9'}}>
+                                        {selectedToolForQuantity.specification}
+                                    </p>
+                                )}
+                            </div>
+                            <div style={{marginBottom: '1.5rem'}}>
+                                <label style={{...styles.inputLabel, fontSize: '0.9rem'}}>Quantity</label>
+                                <input
+                                    type="number"
+                                    value={tempToolQuantity}
+                                    onChange={(e) => {
+                                        const newQuantity = parseInt(e.target.value) || 1;
+                                        setTempToolQuantity(newQuantity);
+                                    }}
+                                    min="1"
+                                    style={{
+                                        ...styles.inputField,
+                                        width: '100%',
+                                        fontSize: '1rem',
+                                        padding: '0.75rem'
+                                    }}
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            confirmAddToolWithQuantity();
+                                        } else if (e.key === 'Escape') {
+                                            cancelAddTool();
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <div style={{
+                                display: 'flex',
+                                gap: '12px',
+                                justifyContent: 'flex-end'
+                            }}>
+                                <button
+                                    onClick={cancelAddTool}
+                                    style={{
+                                        ...styles.button,
+                                        backgroundColor: '#666666',
+                                        color: '#D9D9D9',
+                                        padding: '0.75rem 1.5rem'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={confirmAddToolWithQuantity}
+                                    style={{
+                                        ...styles.button,
+                                        backgroundColor: '#007bff',
+                                        color: 'white',
+                                        padding: '0.75rem 1.5rem'
+                                    }}
+                                >
+                                    Add Tool
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div style={{marginBottom: LAYOUT.inputSpacing, fontSize: '0.9rem', color: '#D9D9D9', textAlign: 'center'}}>
                     OR
                 </div>
@@ -569,6 +697,26 @@ const MaterialsAndToolsTab = ({
                         style={styles.inputField}
                     />
                 </div>
+                <div style={COMPONENTS.gridTwoColumns}>
+                    <input 
+                        type="number" 
+                        value={currentStepToolQuantity} 
+                        onChange={(e) => {
+                            const newQuantity = parseInt(e.target.value) || 1;
+                            setCurrentStepToolQuantity(newQuantity);
+                        }} 
+                        placeholder="Quantity" 
+                        min="1"
+                        style={styles.inputField}
+                    />
+                    <input 
+                        type="url" 
+                        value={currentStepToolPurchaseLink} 
+                        onChange={(e) => setCurrentStepToolPurchaseLink(e.target.value)} 
+                        placeholder="Purchase Link (Optional)" 
+                        style={styles.inputField}
+                    />
+                </div>
                 <div style={{marginTop: LAYOUT.inputSpacing}}>
                     <label style={{...styles.inputLabel, fontSize: '0.8rem'}}>Tool Image (Optional)</label>
                     <input 
@@ -579,16 +727,7 @@ const MaterialsAndToolsTab = ({
                         style={styles.fileInput}
                     />
                 </div>
-                <div style={{marginTop: LAYOUT.inputSpacing}}>
-                    <label style={{...styles.inputLabel, fontSize: '0.8rem'}}>Tool Purchase Link (Optional)</label>
-                    <input 
-                        type="url" 
-                        value={currentStepToolPurchaseLink} 
-                        onChange={(e) => setCurrentStepToolPurchaseLink(e.target.value)} 
-                        placeholder="https://example.com/tool" 
-                        style={styles.inputField}
-                    />
-                </div>
+
                 <button 
                     onClick={handleAddToolWithRepository} 
                     disabled={isSavingTool}
@@ -661,6 +800,7 @@ const MaterialsAndToolsTab = ({
                                             </p>
                                             <p style={COMPONENTS.fileListItemSubtext}>
                                                 {tool.specification ? `Specification: ${tool.specification}` : 'No specification'}
+                                                {tool.quantity && tool.quantity > 1 ? ` • Quantity: ${tool.quantity}` : ''}
                                                 {tool.tool_id && ' • From Repository'}
                                                 {tool.imageFile && ` • New image: ${tool.imageFile.name.substring(0, 20)}...`}
                                                 {tool.hasExistingImage && !tool.imageFile && ` • Has image`}
@@ -791,6 +931,110 @@ const MaterialsAndToolsTab = ({
                     </div>
                 </div>
 
+                {/* Material Quantity Input Modal */}
+                {selectedMaterialForQuantity && (
+                    <div 
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 10000,
+                        }}
+                        onClick={cancelAddMaterial}
+                    >
+                        <div 
+                            style={{
+                                backgroundColor: '#111111',
+                                border: '2px solid #059669',
+                                borderRadius: '12px',
+                                padding: '2rem',
+                                maxWidth: '400px',
+                                width: '90%',
+                                color: '#D9D9D9',
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <h3 style={{
+                                margin: '0 0 1rem 0',
+                                color: '#059669',
+                                fontSize: '1.2rem'
+                            }}>
+                                Set Quantity for Material
+                            </h3>
+                            <div style={{marginBottom: '1rem'}}>
+                                <p style={{margin: '0 0 0.5rem 0', fontWeight: '500'}}>
+                                    {selectedMaterialForQuantity.name}
+                                </p>
+                                {selectedMaterialForQuantity.specification && (
+                                    <p style={{margin: 0, fontSize: '0.9rem', color: '#D9D9D9'}}>
+                                        {selectedMaterialForQuantity.specification}
+                                    </p>
+                                )}
+                            </div>
+                            <div style={{marginBottom: '1.5rem'}}>
+                                <label style={{...styles.inputLabel, fontSize: '0.9rem'}}>Quantity</label>
+                                <input
+                                    type="number"
+                                    value={tempMaterialQuantity}
+                                    onChange={(e) => {
+                                        const newQuantity = parseInt(e.target.value) || 1;
+                                        setTempMaterialQuantity(newQuantity);
+                                    }}
+                                    min="1"
+                                    style={{
+                                        ...styles.inputField,
+                                        width: '100%',
+                                        fontSize: '1rem',
+                                        padding: '0.75rem'
+                                    }}
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            confirmAddMaterialWithQuantity();
+                                        } else if (e.key === 'Escape') {
+                                            cancelAddMaterial();
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <div style={{
+                                display: 'flex',
+                                gap: '12px',
+                                justifyContent: 'flex-end'
+                            }}>
+                                <button
+                                    onClick={cancelAddMaterial}
+                                    style={{
+                                        ...styles.button,
+                                        backgroundColor: '#666666',
+                                        color: '#D9D9D9',
+                                        padding: '0.75rem 1.5rem'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={confirmAddMaterialWithQuantity}
+                                    style={{
+                                        ...styles.button,
+                                        backgroundColor: '#059669',
+                                        color: 'white',
+                                        padding: '0.75rem 1.5rem'
+                                    }}
+                                >
+                                    Add Material
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div style={{marginBottom: LAYOUT.inputSpacing, fontSize: '0.9rem', color: '#D9D9D9', textAlign: 'center'}}>
                     OR
                 </div>
@@ -812,6 +1056,26 @@ const MaterialsAndToolsTab = ({
                     style={styles.inputField}
                 />
             </div>
+            <div style={COMPONENTS.gridTwoColumns}>
+                <input 
+                    type="number" 
+                    value={currentStepMaterialQuantity} 
+                    onChange={(e) => {
+                        const newQuantity = parseInt(e.target.value) || 1;
+                        setCurrentStepMaterialQuantity(newQuantity);
+                    }} 
+                    placeholder="Quantity" 
+                    min="1"
+                    style={styles.inputField}
+                />
+                <input 
+                    type="url" 
+                    value={currentStepMaterialPurchaseLink} 
+                    onChange={(e) => setCurrentStepMaterialPurchaseLink(e.target.value)} 
+                    placeholder="Purchase Link (Optional)" 
+                    style={styles.inputField}
+                />
+            </div>
                 <div style={{marginTop: LAYOUT.inputSpacing}}>
                 <label style={{...styles.inputLabel, fontSize: '0.8rem'}}>Material Image (Optional)</label>
                 <input 
@@ -822,16 +1086,7 @@ const MaterialsAndToolsTab = ({
                     style={styles.fileInput}
                 />
             </div>
-            <div style={{marginTop: LAYOUT.inputSpacing}}>
-                <label style={{...styles.inputLabel, fontSize: '0.8rem'}}>Material Purchase Link (Optional)</label>
-                <input 
-                    type="url" 
-                    value={currentStepMaterialPurchaseLink} 
-                    onChange={(e) => setCurrentStepMaterialPurchaseLink(e.target.value)} 
-                    placeholder="https://example.com/material" 
-                    style={styles.inputField}
-                />
-            </div>
+
             <button 
                 onClick={handleAddMaterialWithRepository} 
                 disabled={isSavingMaterial}
@@ -904,6 +1159,7 @@ const MaterialsAndToolsTab = ({
                                             </p>
                                             <p style={COMPONENTS.fileListItemSubtext}>
                                                 {material.specification ? `Specification: ${material.specification}` : 'No specification'}
+                                                {material.quantity && material.quantity > 1 ? ` • Quantity: ${material.quantity}` : ''}
                                                 {material.material_id && ' • From Repository'}
                                                 {material.imageFile && ` • New image: ${material.imageFile.name.substring(0, 20)}...`}
                                                 {material.hasExistingImage && !material.imageFile && ` • Has image`}

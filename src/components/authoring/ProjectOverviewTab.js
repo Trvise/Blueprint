@@ -1,5 +1,5 @@
 import React from 'react';
-import { COLORS, LAYOUT, formatFileSize, COMPONENTS, TYPOGRAPHY } from './shared/styles';
+import { formatFileSize } from './shared/styles';
 
 const ProjectOverviewTab = ({
     projectSteps,
@@ -569,44 +569,60 @@ const ProjectOverviewTab = ({
                                             </div>
                                             <div style={overviewStyles.detailContent}>
                                                 <ul style={overviewStyles.detailList}>
-                                                    {step.tools.map((tool, toolIndex) => (
-                                                        <li 
-                                                            key={tool.id || `tool-${toolIndex}`}
-                                                            style={{
-                                                                ...overviewStyles.detailItem,
-                                                                ...(toolIndex === step.tools.length - 1 ? overviewStyles.detailItemLast : {})
-                                                            }}
-                                                        >
-                                                            {(tool.image_url || tool.image_path || tool.hasExistingImage) && (
-                                                                <div style={overviewStyles.itemImage}>
-                                                                    <img 
-                                                                        src={tool.image_url} 
-                                                                        alt={tool.name}
-                                                                        style={{width: '100%', height: '100%', objectFit: 'cover'}}
-                                                                        onError={(e) => {
-                                                                            e.target.style.display = 'none';
-                                                                            e.target.nextSibling.style.display = 'flex';
-                                                                        }}
-                                                                    />
-                                                                    <div style={{
-                                                                        display: 'none',
-                                                                        fontSize: '10px',
-                                                                        color: '#666',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center',
-                                                                        width: '100%',
-                                                                        height: '100%'
-                                                                    }}>🔧</div>
-                                                                </div>
-                                                            )}
-                                                            <div style={overviewStyles.itemText}>
-                                                                <div style={overviewStyles.itemName}>{tool.name}</div>
-                                                                {tool.specification && (
-                                                                    <div style={overviewStyles.itemSpec}>{tool.specification}</div>
+                                                    {step.tools.map((toolData, toolIndex) => {
+                                                        // Handle both old format (direct tool object) and new format (nested with quantity)
+                                                        const tool = toolData.tool || toolData;
+                                                        const quantity = toolData.quantity || 1;
+                                                        
+                                                        return (
+                                                            <li 
+                                                                key={tool.id || tool.tool_id || `tool-${toolIndex}`}
+                                                                style={{
+                                                                    ...overviewStyles.detailItem,
+                                                                    ...(toolIndex === step.tools.length - 1 ? overviewStyles.detailItemLast : {})
+                                                                }}
+                                                            >
+                                                                {(tool.image_url || tool.image_path || tool.hasExistingImage || tool.image_file?.file_url) && (
+                                                                    <div style={overviewStyles.itemImage}>
+                                                                        <img 
+                                                                            src={tool.image_url || tool.image_file?.file_url} 
+                                                                            alt={tool.name}
+                                                                            style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                                                                            onError={(e) => {
+                                                                                e.target.style.display = 'none';
+                                                                                e.target.nextSibling.style.display = 'flex';
+                                                                            }}
+                                                                        />
+                                                                        <div style={{
+                                                                            display: 'none',
+                                                                            fontSize: '10px',
+                                                                            color: '#666',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            width: '100%',
+                                                                            height: '100%'
+                                                                        }}>🔧</div>
+                                                                    </div>
                                                                 )}
-                                                            </div>
-                                                        </li>
-                                                    ))}
+                                                                <div style={overviewStyles.itemText}>
+                                                                    <div style={overviewStyles.itemName}>
+                                                                        {tool.name}
+                                                                    </div>
+                                                                    <div style={{
+                                                                        fontSize: '0.8rem',
+                                                                        color: '#0000FF',
+                                                                        fontWeight: '500',
+                                                                        marginTop: '2px'
+                                                                    }}>
+                                                                        Quantity: {quantity}
+                                                                    </div>
+                                                                    {tool.specification && (
+                                                                        <div style={overviewStyles.itemSpec}>{tool.specification}</div>
+                                                                    )}
+                                                                </div>
+                                                            </li>
+                                                        );
+                                                    })}
                                                 </ul>
                                             </div>
                                         </div>
@@ -621,44 +637,60 @@ const ProjectOverviewTab = ({
                                             </div>
                                             <div style={overviewStyles.detailContent}>
                                                 <ul style={overviewStyles.detailList}>
-                                                    {step.materials.map((material, matIndex) => (
-                                                        <li 
-                                                            key={material.id || `material-${matIndex}`}
-                                                            style={{
-                                                                ...overviewStyles.detailItem,
-                                                                ...(matIndex === step.materials.length - 1 ? overviewStyles.detailItemLast : {})
-                                                            }}
-                                                        >
-                                                            {(material.image_url || material.image_path || material.hasExistingImage) && (
-                                                                <div style={overviewStyles.itemImage}>
-                                                                    <img 
-                                                                        src={material.image_url} 
-                                                                        alt={material.name}
-                                                                        style={{width: '100%', height: '100%', objectFit: 'cover'}}
-                                                                        onError={(e) => {
-                                                                            e.target.style.display = 'none';
-                                                                            e.target.nextSibling.style.display = 'flex';
-                                                                        }}
-                                                                    />
-                                                                    <div style={{
-                                                                        display: 'none',
-                                                                        fontSize: '10px',
-                                                                        color: '#666',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center',
-                                                                        width: '100%',
-                                                                        height: '100%'
-                                                                    }}>📦</div>
-                                                                </div>
-                                                            )}
-                                                            <div style={overviewStyles.itemText}>
-                                                                <div style={overviewStyles.itemName}>{material.name}</div>
-                                                                {material.specification && (
-                                                                    <div style={overviewStyles.itemSpec}>{material.specification}</div>
+                                                    {step.materials.map((materialData, matIndex) => {
+                                                        // Handle both old format (direct material object) and new format (nested with quantity)
+                                                        const material = materialData.material || materialData;
+                                                        const quantity = materialData.quantity || 1;
+                                                        
+                                                        return (
+                                                            <li 
+                                                                key={material.id || material.material_id || `material-${matIndex}`}
+                                                                style={{
+                                                                    ...overviewStyles.detailItem,
+                                                                    ...(matIndex === step.materials.length - 1 ? overviewStyles.detailItemLast : {})
+                                                                }}
+                                                            >
+                                                                {(material.image_url || material.image_path || material.hasExistingImage || material.image_file?.file_url) && (
+                                                                    <div style={overviewStyles.itemImage}>
+                                                                        <img 
+                                                                            src={material.image_url || material.image_file?.file_url} 
+                                                                            alt={material.name}
+                                                                            style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                                                                            onError={(e) => {
+                                                                                e.target.style.display = 'none';
+                                                                                e.target.nextSibling.style.display = 'flex';
+                                                                            }}
+                                                                        />
+                                                                        <div style={{
+                                                                            display: 'none',
+                                                                            fontSize: '10px',
+                                                                            color: '#666',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            width: '100%',
+                                                                            height: '100%'
+                                                                        }}>📦</div>
+                                                                    </div>
                                                                 )}
-                                                            </div>
-                                                        </li>
-                                                    ))}
+                                                                <div style={overviewStyles.itemText}>
+                                                                    <div style={overviewStyles.itemName}>
+                                                                        {material.name}
+                                                                    </div>
+                                                                    <div style={{
+                                                                        fontSize: '0.8rem',
+                                                                        color: '#0000FF',
+                                                                        fontWeight: '500',
+                                                                        marginTop: '2px'
+                                                                    }}>
+                                                                        Quantity: {quantity}
+                                                                    </div>
+                                                                    {material.specification && (
+                                                                        <div style={overviewStyles.itemSpec}>{material.specification}</div>
+                                                                    )}
+                                                                </div>
+                                                            </li>
+                                                        );
+                                                    })}
                                                 </ul>
                                             </div>
                                         </div>
@@ -753,11 +785,13 @@ const ProjectOverviewTab = ({
                         🛒 Shopping List ({projectBuyList.length} items)
                     </h3>
                     <div style={overviewStyles.buyListGrid}>
-                        {projectBuyList.map((item, index) => (
-                            <div 
-                                key={item.id || index}
-                                style={overviewStyles.buyListItem}
-                            >
+                        {projectBuyList.map((item, index) => {
+                            
+                            return (
+                                <div 
+                                    key={item.id || index}
+                                    style={overviewStyles.buyListItem}
+                                >
                                 {(item.image_url || item.image_path || item.hasExistingImage) && (
                                     <div style={overviewStyles.buyListImage}>
                                         <img 
@@ -790,7 +824,8 @@ const ProjectOverviewTab = ({
                                     </div>
                                 </div>
                             </div>
-                        ))}
+                        );
+                    })}
                     </div>
                 </div>
             )}

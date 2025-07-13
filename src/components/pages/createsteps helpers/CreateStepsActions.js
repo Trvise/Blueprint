@@ -115,6 +115,7 @@ export const createStepActions = (state) => {
             id: t.tool_id || t.id || `tool_${uuidv4()}`,
             name: t.name,
             specification: t.specification || '',
+            quantity: t.quantity || 1,
             imageFile: null, // Will be restored if has image_url
             image_file_name: t.image_file_name || null,
             image_path: t.image_path || t.image_file?.file_key || null,
@@ -126,6 +127,7 @@ export const createStepActions = (state) => {
             id: m.item_id || m.id || `material_${uuidv4()}`,
             name: m.name,
             specification: m.specification || '',
+            quantity: m.quantity || 1,
             imageFile: null, // Will be restored if has image_url
             image_file_name: m.image_file_name || null,
             image_path: m.image_path || m.image_file?.file_key || null,
@@ -269,6 +271,7 @@ export const createStepActions = (state) => {
                 id: tool.id,
                 name: tool.name,
                 specification: tool.specification,
+                quantity: tool.quantity || 1,
                 image_file_name: tool.imageFile ? tool.imageFile.name : tool.image_file_name,
                 image_url: tool.imageFile ? null : tool.image_url, // Keep existing URL if no new file
                 image_path: tool.imageFile ? null : tool.image_path, // Keep existing path if no new file
@@ -278,6 +281,7 @@ export const createStepActions = (state) => {
                 id: mat.id,
                 name: mat.name,
                 specification: mat.specification,
+                quantity: mat.quantity || 1,
                 image_file_name: mat.imageFile ? mat.imageFile.name : mat.image_file_name,
                 image_url: mat.imageFile ? null : mat.image_url, // Keep existing URL if no new file
                 image_path: mat.imageFile ? null : mat.image_path, // Keep existing path if no new file
@@ -501,6 +505,7 @@ export const createStepActions = (state) => {
                         stepPayload.tools.push({
                                 name: toolData?.name || 'Unknown Tool',
                                 specification: toolData?.specification || '',
+                                quantity: toolData?.quantity || 1,
                             image_url: uploaded.url,
                             image_path: uploaded.path,
                         });
@@ -515,6 +520,7 @@ export const createStepActions = (state) => {
                     stepPayload.tools.push({ 
                         name: tool.name, 
                         specification: tool.specification, 
+                        quantity: tool.quantity || 1,
                         image_path: tool.image_path || null,
                         image_url: tool.image_url || null,
                     });

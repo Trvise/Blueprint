@@ -5,7 +5,7 @@ import { doSignOut } from '../../firebase/auth';
 import { AiOutlineMenu, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineEye, AiOutlineArrowLeft, AiOutlineCheck, AiOutlineUser, AiOutlineDatabase, AiOutlineFolder, AiOutlineBarChart } from 'react-icons/ai';
 import logo from '../../assets/trvise_logo.png';
 
-const Sidebar = ({ isCollapsed, toggleSidebar }) => {
+const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { userLoggedIn, currentUser } = useAuth();
@@ -29,18 +29,14 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
         };
     }, []);
 
-    // Trigger animation when user logs in
+    // Animate logo only when animateLogo is true
     useEffect(() => {
-        if (userLoggedIn && currentUser) {
+        if (animateLogo) {
             setIsAnimating(true);
-            // Stop animation after 3 seconds
-            const timer = setTimeout(() => {
-                setIsAnimating(false);
-            }, 3000);
-            
+            const timer = setTimeout(() => setIsAnimating(false), 3000);
             return () => clearTimeout(timer);
         }
-    }, [userLoggedIn, currentUser]);
+    }, [animateLogo]);
 
     // Check if we're on the CreateSteps page
     const isCreateStepsPage = location.pathname.includes('/create-steps') || location.pathname.includes('/steps') || location.pathname.includes('/annotate');

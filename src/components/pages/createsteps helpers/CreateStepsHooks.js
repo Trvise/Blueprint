@@ -17,6 +17,8 @@ export const useCreateStepsState = () => {
     const [activeTab, setActiveTab] = useState('details');
     const [currentStepIndex, setCurrentStepIndex] = useState(-1);
     const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth >= 1024);
+    const [showTabWarning, setShowTabWarning] = useState(false);
+    const [pendingTabSwitch, setPendingTabSwitch] = useState(null);
     
     // Project state
     const [projectName, setProjectName] = useState('');
@@ -45,6 +47,7 @@ export const useCreateStepsState = () => {
     const [currentStepToolSpec, setCurrentStepToolSpec] = useState('');
     const [currentStepToolImageFile, setCurrentStepToolImageFile] = useState(null); 
     const [currentStepToolPurchaseLink, setCurrentStepToolPurchaseLink] = useState('');
+    const [currentStepToolQuantity, setCurrentStepToolQuantity] = useState(1);
     
     // Materials state
     const [currentStepMaterials, setCurrentStepMaterials] = useState([]);
@@ -52,6 +55,7 @@ export const useCreateStepsState = () => {
     const [currentStepMaterialSpec, setCurrentStepMaterialSpec] = useState('');
     const [currentStepMaterialImageFile, setCurrentStepMaterialImageFile] = useState(null);
     const [currentStepMaterialPurchaseLink, setCurrentStepMaterialPurchaseLink] = useState('');
+    const [currentStepMaterialQuantity, setCurrentStepMaterialQuantity] = useState(1);
     
     // Files state
     const [currentStepSupFiles, setCurrentStepSupFiles] = useState([]); 
@@ -98,6 +102,60 @@ export const useCreateStepsState = () => {
     const resultImageInputRef = useRef(null);
     const buyListImageInputRef = useRef(null); 
 
+    // Tab validation function
+    const validateCurrentTab = (tabName) => {
+        if (currentStepIndex === -1) return true; // No step selected, allow switching
+        
+        switch (tabName) {
+            case 'details':
+                return currentStepName.trim() !== '' && 
+                       currentStepDescription.trim() !== '' && 
+                       currentStepStartTime !== null && 
+                       currentStepEndTime !== null;
+            case 'materials':
+                // Materials tab is optional, always allow switching
+                return true;
+            case 'files':
+                // Files tab is optional, always allow switching
+                return true;
+            case 'result':
+                // Result tab is optional, always allow switching
+                return true;
+            case 'signoff':
+                return currentCautionaryNotes.trim() !== '' && 
+                       currentBestPracticeNotes.trim() !== '' && 
+                       currentStepValidationQuestion.trim() !== '' && 
+                       currentStepValidationAnswer.trim() !== '';
+            default:
+                return true;
+        }
+    };
+    
+    // Safe tab switching function
+    const safeSetActiveTab = (newTab) => {
+        if (validateCurrentTab(activeTab)) {
+            setActiveTab(newTab);
+        } else {
+            setPendingTabSwitch(newTab);
+            setShowTabWarning(true);
+        }
+    };
+    
+    // Confirm tab switch (user acknowledges warning)
+    const confirmTabSwitch = () => {
+        if (pendingTabSwitch) {
+            setActiveTab(pendingTabSwitch);
+            setPendingTabSwitch(null);
+        }
+        setShowTabWarning(false);
+    };
+    
+    // Cancel tab switch
+    const cancelTabSwitch = () => {
+        setPendingTabSwitch(null);
+        setShowTabWarning(false);
+    };
+
     return {
         // Location and navigation
         location,
@@ -112,6 +170,14 @@ export const useCreateStepsState = () => {
         setCurrentStepIndex,
         isLargeScreen,
         setIsLargeScreen,
+        showTabWarning,
+        setShowTabWarning,
+        pendingTabSwitch,
+        setPendingTabSwitch,
+        validateCurrentTab,
+        safeSetActiveTab,
+        confirmTabSwitch,
+        cancelTabSwitch,
         
         // Project state
         projectName,
@@ -160,6 +226,8 @@ export const useCreateStepsState = () => {
         setCurrentStepToolImageFile,
         currentStepToolPurchaseLink,
         setCurrentStepToolPurchaseLink,
+        currentStepToolQuantity,
+        setCurrentStepToolQuantity,
         
         // Materials state
         currentStepMaterials,
@@ -172,6 +240,8 @@ export const useCreateStepsState = () => {
         setCurrentStepMaterialImageFile,
         currentStepMaterialPurchaseLink,
         setCurrentStepMaterialPurchaseLink,
+        currentStepMaterialQuantity,
+        setCurrentStepMaterialQuantity,
         
         // Files state
         currentStepSupFiles,
@@ -292,8 +362,6 @@ export const useCreateStepsEffects = (state) => {
 
         const fetchProjectData = async () => {
             try {
-                console.log('Fetching project data for ID:', projectId);
-                console.log('Current user:', currentUser?.uid);
                 const response = await fetch(`${getApiUrl()}/projects/${projectId}`, {
                     method: 'GET',
                     headers: {
@@ -306,14 +374,12 @@ export const useCreateStepsEffects = (state) => {
                 }
 
                 const projectData = await response.json();
-                console.log('Project data from API:', projectData);
                 
                 setProjectName(projectData.name || `Project ${projectId}`);
                 
                 // Store existing thumbnail URL if it exists
                 if (projectData.thumbnail_url) {
                     setExistingThumbnailUrl(projectData.thumbnail_url);
-                    console.log('Found existing thumbnail:', projectData.thumbnail_url);
                 }
                 
                 // Now fetch the project's primary video files and buy list
@@ -336,42 +402,28 @@ export const useCreateStepsEffects = (state) => {
                 
                 if (stepsResponse.ok) {
                     const stepsData = await stepsResponse.json();
-                    console.log('Steps data from API:', stepsData);
-                    console.log('Number of steps returned:', stepsData.length);
-                    
-                    // Verify these steps belong to the current project
-                    stepsData.forEach((step, index) => {
-                        console.log(`Step ${index}:`, {
-                            name: step.name,
-                            project_id: step.project_id || 'not specified',
-                            main_video_file: step.main_video_file?.original_filename || 'no video'
-                        });
-                    });
                     
                     // Process and load existing buy list (only if not already loaded)
                     if (buyListResponse.ok && !buyListLoadedRef.current) {
                         const buyListData = await buyListResponse.json();
-                        console.log('Buy list data from API:', buyListData);
-                        console.log('Number of buy list items:', buyListData.length);
                         
                         // Transform buy list items to frontend format
                         const transformedBuyList = buyListData.map(item => ({
-                            id: `buyitem_${item.item_id}`, // Use backend ID with prefix
+                            id: `buyitem_${item.item_id}`,
                             name: item.name,
                             quantity: item.quantity,
                             specification: item.specification || '',
                             purchase_link: item.purchase_link || '',
-                            imageFile: null, // Existing items don't have File objects
+                            imageFile: null,
                             hasExistingImage: !!(item.image_file && item.image_file.file_url),
                             image_url: item.image_file?.file_url || null,
                             image_path: item.image_file?.file_key || null,
-                            sourceType: 'existing', // Mark as existing buy list item
+                            sourceType: 'existing',
                             sourceId: item.item_id
                         }));
                         
                         setProjectBuyList(transformedBuyList);
                         buyListLoadedRef.current = true; // Mark as loaded
-                        console.log('Loaded existing buy list:', transformedBuyList);
                         
                         // Show success message if items were loaded
                         if (transformedBuyList.length > 0) {
@@ -379,8 +431,33 @@ export const useCreateStepsEffects = (state) => {
                             setTimeout(() => setSuccessMessage(''), 3000);
                         }
                     } else if (!buyListLoadedRef.current) {
-                        console.log('No existing buy list found or failed to fetch buy list');
-                        buyListLoadedRef.current = true; // Mark as loaded even if empty
+                        // Fallback: create a placeholder if we can't get video files
+                        console.warn('Could not fetch steps data, using placeholder');
+                        setUploadedVideos([]);
+                        
+                        // Still try to load buy list even if steps failed (only if not already loaded)
+                        if (buyListResponse.ok && !buyListLoadedRef.current) {
+                            const buyListData = await buyListResponse.json();
+                            
+                            const transformedBuyList = buyListData.map(item => ({
+                                id: `buyitem_${item.item_id}`,
+                                name: item.name,
+                                quantity: item.quantity,
+                                specification: item.specification || '',
+                                purchase_link: item.purchase_link || '',
+                                imageFile: null,
+                                hasExistingImage: !!(item.image_file && item.image_file.file_url),
+                                image_url: item.image_file?.file_url || null,
+                                image_path: item.image_file?.file_key || null,
+                                sourceType: 'existing',
+                                sourceId: item.item_id
+                            }));
+                            
+                            setProjectBuyList(transformedBuyList);
+                            buyListLoadedRef.current = true; // Mark as loaded
+                        } else if (!buyListLoadedRef.current) {
+                            buyListLoadedRef.current = true; // Mark as loaded even if empty
+                        }
                     }
                     
                     // Extract unique video files from steps
@@ -391,10 +468,8 @@ export const useCreateStepsEffects = (state) => {
                         if (step.main_video_file && step.main_video_file.file_key) {
                             try {
                                 // Convert file_key to proper Firebase Storage URL
-                                console.log('Processing video file_key:', step.main_video_file.file_key);
                                 const fileRef = storageRef(storage, step.main_video_file.file_key);
                                 const downloadURL = await getDownloadURL(fileRef);
-                                console.log('Generated download URL:', downloadURL);
                                 
                                 videoFilesMap.set(step.main_video_file.file_key, {
                                     name: step.main_video_file.original_filename,
@@ -402,7 +477,6 @@ export const useCreateStepsEffects = (state) => {
                                     path: step.main_video_file.file_key
                                 });
                             } catch (error) {
-                                console.error('Error getting download URL for video:', step.main_video_file.file_key, error);
                                 // If file_url is available as fallback, use it
                                 if (step.main_video_file.file_url) {
                                     videoFilesMap.set(step.main_video_file.file_key, {
@@ -417,17 +491,43 @@ export const useCreateStepsEffects = (state) => {
                     
                     videosFromAPI = Array.from(videoFilesMap.values());
                     setUploadedVideos(videosFromAPI);
-                    console.log("Videos from API:", videosFromAPI);
                     
                     // Also load the existing steps for editing
                     if (stepsData.length > 0) {
-                        console.log('Loading existing steps for editing...');
-                        setProjectSteps(stepsData);
+                        
+                        // Transform the steps data to match frontend expectations
+                        const transformedSteps = stepsData.map(step => ({
+                            ...step,
+                            // Transform tools from nested format to flat format for frontend
+                            tools: step.tools?.map(toolData => ({
+                                id: toolData.tool?.tool_id || toolData.tool_id,
+                                name: toolData.tool?.name || toolData.name,
+                                specification: toolData.tool?.specification || toolData.specification,
+                                purchase_link: toolData.tool?.purchase_link || toolData.purchase_link,
+                                quantity: toolData.quantity || 1,
+                                image_url: toolData.tool?.image_file?.file_url || toolData.image_url,
+                                image_path: toolData.tool?.image_file?.file_key || toolData.image_path,
+                                hasExistingImage: !!(toolData.tool?.image_file?.file_url || toolData.image_url)
+                            })) || [],
+                            // Transform materials from nested format to flat format for frontend
+                            materials: step.materials?.map(materialData => ({
+                                id: materialData.material?.material_id || materialData.material_id,
+                                name: materialData.material?.name || materialData.name,
+                                specification: materialData.material?.specification || materialData.specification,
+                                purchase_link: materialData.material?.purchase_link || materialData.purchase_link,
+                                quantity: materialData.quantity || 1,
+                                image_url: materialData.material?.image_file?.file_url || materialData.image_url,
+                                image_path: materialData.material?.image_file?.file_key || materialData.image_path,
+                                hasExistingImage: !!(materialData.material?.image_file?.file_url || materialData.image_url)
+                            })) || []
+                        }));
+                        
+                        setProjectSteps(transformedSteps);
                         
                         // Reconstruct annotation frames for editing
                         try {
                             await reconstructCapturedAnnotationFrames(
-                                stepsData, 
+                                transformedSteps, 
                                 setCapturedAnnotationFrames, 
                                 setSuccessMessage
                             );
@@ -445,7 +545,6 @@ export const useCreateStepsEffects = (state) => {
                     // Still try to load buy list even if steps failed (only if not already loaded)
                     if (buyListResponse.ok && !buyListLoadedRef.current) {
                         const buyListData = await buyListResponse.json();
-                        console.log('Buy list data from API (steps failed):', buyListData);
                         
                         const transformedBuyList = buyListData.map(item => ({
                             id: `buyitem_${item.item_id}`,
@@ -463,24 +562,15 @@ export const useCreateStepsEffects = (state) => {
                         
                         setProjectBuyList(transformedBuyList);
                         buyListLoadedRef.current = true; // Mark as loaded
-                        console.log('Loaded existing buy list (steps failed):', transformedBuyList);
-                        
-                        // Show success message if items were loaded
-                        if (transformedBuyList.length > 0) {
-                            setSuccessMessage(`Loaded existing buy list with ${transformedBuyList.length} item${transformedBuyList.length !== 1 ? 's' : ''}.`);
-                            setTimeout(() => setSuccessMessage(''), 3000);
-                        }
                     } else if (!buyListLoadedRef.current) {
                         buyListLoadedRef.current = true; // Mark as loaded even if empty
                     }
                 }
                 
                 if (videosFromAPI.length > 0 && videosFromAPI[0].url) {
-                    console.log('Setting active video URL:', videosFromAPI[0].url);
                     setActiveVideoUrl(videosFromAPI[0].url);
                     setActiveVideoIndex(0);
                 } else {
-                    console.log('No videos found or first video missing URL:', videosFromAPI);
                     setErrorMessage("No videos found for this project. Video files may need to be re-uploaded.");
                 }
                 
@@ -500,7 +590,6 @@ export const useCreateStepsEffects = (state) => {
             setProjectName(location.state.projectName || `Project ${projectId}`);
             const videosFromState = location.state.uploadedVideos || [];
             setUploadedVideos(videosFromState);
-            console.log("Videos from state:", videosFromState);
             if (videosFromState.length > 0 && videosFromState[0].url) {
                 setActiveVideoUrl(videosFromState[0].url);
                 setActiveVideoIndex(0);
@@ -514,7 +603,7 @@ export const useCreateStepsEffects = (state) => {
         } else {
             setErrorMessage("Project ID not found. Please start from project creation.");
         }
-    }, [projectId, location.state, currentUser, navigate, setProjectName, setUploadedVideos, setActiveVideoUrl, setActiveVideoIndex, setErrorMessage, setProjectSteps, setCapturedAnnotationFrames, setSuccessMessage, setExistingThumbnailUrl, setProjectBuyList]);
+    }, [projectId, location.state, currentUser, navigate, setProjectName, setUploadedVideos, setActiveVideoUrl, setActiveVideoIndex, setErrorMessage, setProjectSteps, setCapturedAnnotationFrames, setSuccessMessage, setExistingThumbnailUrl, setProjectBuyList, projectBuyList.length]);
 
     // Handle video metadata loading
     useEffect(() => {

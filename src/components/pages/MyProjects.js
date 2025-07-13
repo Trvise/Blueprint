@@ -171,6 +171,7 @@ const styles = {
         padding: '4rem 2rem',
         color: '#D9D9D9',
         backgroundColor: '#000000',
+        marginTop: '2rem',
     },
     emptyStateIcon: {
         marginBottom: '1rem',
@@ -364,7 +365,7 @@ const MyProjects = () => {
     
     const [activeTab, setActiveTab] = useState('published');
     const [publishedProjects, setPublishedProjects] = useState([]);
-    const [unpublishedProjects, setUnpublishedProjects] = useState([]);
+    const [draftProjects, setDraftProjects] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [deleteLoading, setDeleteLoading] = useState(null);
@@ -382,7 +383,7 @@ const MyProjects = () => {
             const data = await createApiCall(`/users/${currentUser.uid}/projects`);
             
             setPublishedProjects(data.published || []);
-            setUnpublishedProjects(data.unpublished || []);
+            setDraftProjects(data.unpublished || []);
         } catch (err) {
             console.error('Error fetching projects:', err);
             setError('Failed to load projects');
@@ -409,14 +410,14 @@ const MyProjects = () => {
 
             const projectToMove = isCurrentlyPublished
                 ? publishedProjects.find(p => p.project_id === projectId)
-                : unpublishedProjects.find(p => p.project_id === projectId);
+                : draftProjects.find(p => p.project_id === projectId);
 
             if (projectToMove) {
                 if (isCurrentlyPublished) {
                     setPublishedProjects(prev => prev.filter(p => p.project_id !== projectId));
-                    setUnpublishedProjects(prev => [projectToMove, ...prev]);
+                    setDraftProjects(prev => [projectToMove, ...prev]);
                 } else {
-                    setUnpublishedProjects(prev => prev.filter(p => p.project_id !== projectId));
+                    setDraftProjects(prev => prev.filter(p => p.project_id !== projectId));
                     setPublishedProjects(prev => [projectToMove, ...prev]);
                 }
             }
@@ -441,7 +442,7 @@ const MyProjects = () => {
             });
 
             setPublishedProjects(projects => projects.filter(project => project.project_id !== projectId));
-            setUnpublishedProjects(projects => projects.filter(project => project.project_id !== projectId));
+            setDraftProjects(projects => projects.filter(project => project.project_id !== projectId));
             alert('Project deleted successfully');
         } catch (err) {
             console.error('Error deleting project:', err);
@@ -478,7 +479,7 @@ const MyProjects = () => {
                 
                 try {
                     const { uploadFileToFirebase } = await import('./createsteps helpers/CreateStepsUtils');
-                    const project = [...publishedProjects, ...unpublishedProjects].find(p => p.project_id === projectId);
+                    const project = [...publishedProjects, ...draftProjects].find(p => p.project_id === projectId);
                     const projectName = project?.name || 'Unknown Project';
                     
                     const uploadedThumbnailInfo = await uploadFileToFirebase(
@@ -510,7 +511,7 @@ const MyProjects = () => {
                                     : p
                             );
                             setPublishedProjects(updateProjectList);
-                            setUnpublishedProjects(updateProjectList);
+                            setDraftProjects(updateProjectList);
                             
                             alert(`Thumbnail uploaded successfully for "${projectName}"!`);
                         } catch (backendError) {
@@ -522,7 +523,7 @@ const MyProjects = () => {
                                     : p
                             );
                             setPublishedProjects(updateProjectList);
-                            setUnpublishedProjects(updateProjectList);
+                            setDraftProjects(updateProjectList);
                             
                             const errorMessage = backendError.message?.includes('steps') 
                                 ? 'Failed to fetch existing project data. Thumbnail uploaded but database not updated.'
@@ -558,7 +559,7 @@ const MyProjects = () => {
         );
     }
 
-    const projectsToDisplay = activeTab === 'published' ? publishedProjects : unpublishedProjects;
+    const projectsToDisplay = activeTab === 'published' ? publishedProjects : draftProjects;
 
     return (
         <div style={styles.container}>
@@ -586,10 +587,10 @@ const MyProjects = () => {
                     Published ({publishedProjects.length})
                 </button>
                 <button
-                    style={{ ...styles.tabButton, ...(activeTab === 'unpublished' && styles.activeTabButton) }}
-                    onClick={() => setActiveTab('unpublished')}
+                    style={{ ...styles.tabButton, ...(activeTab === 'drafts' && styles.activeTabButton) }}
+                    onClick={() => setActiveTab('drafts')}
                 >
-                    Unpublished ({unpublishedProjects.length})
+                    Drafts ({draftProjects.length})
                 </button>
             </div>
 
@@ -606,8 +607,8 @@ const MyProjects = () => {
                             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"/>
                         </svg>
                     </div>
-                    <div style={styles.emptyStateText}>No {activeTab} projects yet.</div>
-                    {activeTab === 'unpublished' && <p>Create a new project or unpublish an existing one to see it here.</p>}
+                    <div style={styles.emptyStateText}>No {activeTab === 'published' ? 'published' : 'draft'} projects yet.</div>
+                    {activeTab === 'drafts' && <p>Create a new project or unpublish an existing one to see it here.</p>}
                 </div>
             ) : (
                 <div className="projects-grid">

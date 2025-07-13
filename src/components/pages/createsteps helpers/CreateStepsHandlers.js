@@ -18,10 +18,14 @@ export const createStepHandlers = (
         setCurrentStepToolName,
         setCurrentStepToolSpec,
         setCurrentStepToolImageFile,
+        setCurrentStepToolPurchaseLink,
+        setCurrentStepToolQuantity,
         setCurrentStepMaterials,
         setCurrentStepMaterialName,
         setCurrentStepMaterialSpec,
         setCurrentStepMaterialImageFile,
+        setCurrentStepMaterialPurchaseLink,
+        setCurrentStepMaterialQuantity,
         setCurrentStepSupFiles,
         setCurrentStepSupFileName,
         setCurrentStepResultImageFile,
@@ -56,9 +60,13 @@ export const createStepHandlers = (
         currentStepToolName,
         currentStepToolSpec,
         currentStepToolImageFile,
+        currentStepToolPurchaseLink,
+        currentStepToolQuantity,
         currentStepMaterialName,
         currentStepMaterialSpec,
         currentStepMaterialImageFile,
+        currentStepMaterialPurchaseLink,
+        currentStepMaterialQuantity,
         buyListItemName,
         buyListItemQty,
         buyListItemSpec,
@@ -152,9 +160,16 @@ export const createStepHandlers = (
         if (!currentStepToolName.trim()) { alert("Tool name is required."); return; }
         setCurrentStepTools(prev => [...prev, { 
             id: `tool_${uuidv4()}`, name: currentStepToolName, 
-            specification: currentStepToolSpec, imageFile: currentStepToolImageFile 
+            specification: currentStepToolSpec, 
+            quantity: parseInt(currentStepToolQuantity) || 1,
+            imageFile: currentStepToolImageFile,
+            purchase_link: currentStepToolPurchaseLink
         }]);
-        setCurrentStepToolName(''); setCurrentStepToolSpec(''); setCurrentStepToolImageFile(null);
+        setCurrentStepToolName(''); 
+        setCurrentStepToolSpec(''); 
+        setCurrentStepToolQuantity(1);
+        setCurrentStepToolImageFile(null);
+        setCurrentStepToolPurchaseLink('');
         if (toolImageInputRef.current) toolImageInputRef.current.value = "";
     };
 
@@ -164,9 +179,16 @@ export const createStepHandlers = (
         if (!currentStepMaterialName.trim()) { alert("Material name is required."); return; }
         setCurrentStepMaterials(prev => [...prev, { 
             id: `material_${uuidv4()}`, name: currentStepMaterialName, 
-            specification: currentStepMaterialSpec, imageFile: currentStepMaterialImageFile 
+            specification: currentStepMaterialSpec, 
+            quantity: parseInt(currentStepMaterialQuantity) || 1,
+            imageFile: currentStepMaterialImageFile,
+            purchase_link: currentStepMaterialPurchaseLink
         }]);
-        setCurrentStepMaterialName(''); setCurrentStepMaterialSpec(''); setCurrentStepMaterialImageFile(null);
+        setCurrentStepMaterialName(''); 
+        setCurrentStepMaterialSpec(''); 
+        setCurrentStepMaterialQuantity(1);
+        setCurrentStepMaterialImageFile(null);
+        setCurrentStepMaterialPurchaseLink('');
         if (materialImageInputRef.current) materialImageInputRef.current.value = "";
     };
 
@@ -204,7 +226,8 @@ export const createStepHandlers = (
         setProjectBuyList(prev => [...prev, {
             id: `buyitem_${uuidv4()}`, name: buyListItemName,
             quantity: parseInt(buyListItemQty, 10) || 1, specification: buyListItemSpec,
-            purchase_link: buyListItemLink, imageFile: buyListItemImageFile 
+            purchase_link: buyListItemLink, imageFile: buyListItemImageFile,
+            hasExistingImage: false // Mark as new item for proper image display
         }]);
         setBuyListItemName(''); setBuyListItemQty(1); setBuyListItemSpec('');
         setBuyListItemLink(''); setBuyListItemImageFile(null);
@@ -245,14 +268,21 @@ export const createStepHandlers = (
                 // Add tools from this step
                 if (step.tools && step.tools.length > 0) {
                     step.tools.forEach(tool => {
+                        // Skip tools without a valid name
+                        if (!tool.name || typeof tool.name !== 'string') {
+                            console.warn('Skipping tool without valid name:', tool);
+                            return;
+                        }
+                        
                         allProjectItems.push({
                             id: `buyitem_tool_${stepIndex}_${tool.id || uuidv4()}`,
-                    name: tool.name,
-                    quantity: 1, // Default quantity
-                    specification: tool.specification || '',
-                    purchase_link: tool.purchase_link || '',
+                            name: tool.name,
+                            quantity: tool.quantity || 1, // Use actual quantity from step
+                            specification: tool.specification || '',
+                            purchase_link: tool.purchase_link || '',
                             imageFile: tool.imageFile || null,
                             image_url: tool.image_url || null,
+                            image_path: tool.image_path || null,
                             sourceType: 'tool',
                             sourceStep: stepIndex + 1,
                             sourceStepName: step.name
@@ -263,14 +293,21 @@ export const createStepHandlers = (
                 // Add materials from this step
                 if (step.materials && step.materials.length > 0) {
                     step.materials.forEach(material => {
+                        // Skip materials without a valid name
+                        if (!material.name || typeof material.name !== 'string') {
+                            console.warn('Skipping material without valid name:', material);
+                            return;
+                        }
+                        
                         allProjectItems.push({
                             id: `buyitem_material_${stepIndex}_${material.id || uuidv4()}`,
-                    name: material.name,
-                    quantity: 1, // Default quantity
-                    specification: material.specification || '',
-                    purchase_link: material.purchase_link || '',
+                            name: material.name,
+                            quantity: material.quantity || 1, // Use actual quantity from step
+                            specification: material.specification || '',
+                            purchase_link: material.purchase_link || '',
                             imageFile: material.imageFile || null,
                             image_url: material.image_url || null,
+                            image_path: material.image_path || null,
                             sourceType: 'material',
                             sourceStep: stepIndex + 1,
                             sourceStepName: step.name
@@ -285,26 +322,37 @@ export const createStepHandlers = (
                 return;
             }
 
-            // Remove duplicates by name (keep the first occurrence)
-            const uniqueItems = [];
-            const seenNames = new Set();
+            // Remove duplicates by name and aggregate quantities
+            const aggregatedItems = {};
             
             allProjectItems.forEach(item => {
+                // Skip items without a name
+                if (!item.name || typeof item.name !== 'string') {
+                    console.warn('Skipping item without valid name:', item);
+                    return;
+                }
+                
                 const key = item.name.toLowerCase();
-                if (!seenNames.has(key)) {
-                    seenNames.add(key);
-                    uniqueItems.push(item);
+                if (aggregatedItems[key]) {
+                    // If item already exists, add the quantities
+                    aggregatedItems[key].quantity += (item.quantity || 1);
+                } else {
+                    // If item doesn't exist, add it
+                    aggregatedItems[key] = { ...item };
                 }
             });
 
+            const uniqueItems = Object.values(aggregatedItems);
+
             // Filter out items that are already in the buy list (by name to avoid duplicates)
-            const existingItemNames = new Set(projectBuyList.map(item => item.name.toLowerCase()));
+            const existingItemNames = new Set(projectBuyList.map(item => item.name?.toLowerCase()).filter(Boolean));
             
             // Get list of items that were manually removed
             const removedItems = JSON.parse(localStorage.getItem('removedBuyListItems') || '[]');
             const removedItemsSet = new Set(removedItems);
             
             const newItems = uniqueItems.filter(item => 
+                item.name && 
                 !existingItemNames.has(item.name.toLowerCase()) && 
                 !removedItemsSet.has(item.name.toLowerCase())
             );
@@ -315,7 +363,7 @@ export const createStepHandlers = (
                 return;
             }
 
-            // Add new items to the buy list
+            // Add new items to the buy list (append to existing)
             setProjectBuyList(prev => [...prev, ...newItems]);
             
             setSuccessMessage(`Successfully added ${newItems.length} items from project steps to buy list!`);
@@ -347,14 +395,21 @@ export const createStepHandlers = (
                 // Add tools from this step
                 if (step.tools && step.tools.length > 0) {
                     step.tools.forEach(tool => {
+                        // Skip tools without a valid name
+                        if (!tool.name || typeof tool.name !== 'string') {
+                            console.warn('Skipping tool without valid name:', tool);
+                            return;
+                        }
+                        
                         allProjectItems.push({
                             id: `buyitem_tool_${stepIndex}_${tool.id || uuidv4()}`,
                             name: tool.name,
-                            quantity: 1, // Default quantity
+                            quantity: tool.quantity || 1, // Use actual quantity from step
                             specification: tool.specification || '',
                             purchase_link: tool.purchase_link || '',
                             imageFile: tool.imageFile || null,
                             image_url: tool.image_url || null,
+                            image_path: tool.image_path || null,
                             sourceType: 'tool',
                             sourceStep: stepIndex + 1,
                             sourceStepName: step.name
@@ -365,14 +420,21 @@ export const createStepHandlers = (
                 // Add materials from this step
                 if (step.materials && step.materials.length > 0) {
                     step.materials.forEach(material => {
+                        // Skip materials without a valid name
+                        if (!material.name || typeof material.name !== 'string') {
+                            console.warn('Skipping material without valid name:', material);
+                            return;
+                        }
+                        
                         allProjectItems.push({
                             id: `buyitem_material_${stepIndex}_${material.id || uuidv4()}`,
                             name: material.name,
-                            quantity: 1, // Default quantity
+                            quantity: material.quantity || 1, // Use actual quantity from step
                             specification: material.specification || '',
                             purchase_link: material.purchase_link || '',
                             imageFile: material.imageFile || null,
                             image_url: material.image_url || null,
+                            image_path: material.image_path || null,
                             sourceType: 'material',
                             sourceStep: stepIndex + 1,
                             sourceStepName: step.name
@@ -387,17 +449,27 @@ export const createStepHandlers = (
                 return;
             }
 
-            // Remove duplicates by name (keep the first occurrence)
-            const uniqueProjectItems = [];
-            const seenNames = new Set();
+            // Remove duplicates by name and aggregate quantities
+            const aggregatedItems = {};
             
             allProjectItems.forEach(item => {
+                // Skip items without a name
+                if (!item.name || typeof item.name !== 'string') {
+                    console.warn('Skipping item without valid name:', item);
+                    return;
+                }
+                
                 const key = item.name.toLowerCase();
-                if (!seenNames.has(key)) {
-                    seenNames.add(key);
-                    uniqueProjectItems.push(item);
+                if (aggregatedItems[key]) {
+                    // If item already exists, add the quantities
+                    aggregatedItems[key].quantity += (item.quantity || 1);
+                } else {
+                    // If item doesn't exist, add it
+                    aggregatedItems[key] = { ...item };
                 }
             });
+
+            const uniqueProjectItems = Object.values(aggregatedItems);
 
             // Separate manually added items from project-generated items
             const manuallyAddedItems = projectBuyList.filter(item => 
@@ -410,7 +482,7 @@ export const createStepHandlers = (
 
             // Filter out items that were manually removed
             const filteredProjectItems = uniqueProjectItems.filter(item => 
-                !removedItemsSet.has(item.name.toLowerCase())
+                item.name && !removedItemsSet.has(item.name.toLowerCase())
             );
 
             // Combine manually added items with filtered project items
@@ -461,6 +533,11 @@ export const createStepHandlers = (
         }
     };
 
+    // Function to replace buy list with new items (for auto-populate)
+    const handleReplaceBuyList = (newItems) => {
+        setProjectBuyList(newItems);
+    };
+
     const handleFinishProject = async (projectName) => {
         setIsLoading(true);
         setErrorMessage('');
@@ -500,9 +577,11 @@ export const createStepHandlers = (
                 for (const toolFile of step._toolImageFiles || []) {
                     const uploaded = await uploadFileToFirebase(toolFile, `users/${currentUser.uid}/${projectId}/tools`, currentUser);
                     if (uploaded) {
+                        const tool = step.tools.find(t => t.image_file_name === toolFile.name);
                         stepPayload.tools.push({
-                            name: step.tools.find(t => t.image_file_name === toolFile.name)?.name || 'Unknown Tool',
-                            specification: step.tools.find(t => t.image_file_name === toolFile.name)?.specification || '',
+                            name: tool?.name || 'Unknown Tool',
+                            quantity: tool?.quantity || 1,
+                            specification: tool?.specification || '',
                             image_url: uploaded.url,
                             image_path: uploaded.path,
                         });
@@ -511,7 +590,13 @@ export const createStepHandlers = (
                 // Add tools without images
                 for (const tool of step.tools || []) {
                     if (!tool.image_file_name && !stepPayload.tools.some(t => t.name === tool.name)) {
-                         stepPayload.tools.push({ name: tool.name, specification: tool.specification, image_url: tool.image_url || null, image_path: tool.image_path || null });
+                         stepPayload.tools.push({ 
+                             name: tool.name, 
+                             quantity: tool.quantity || 1,
+                             specification: tool.specification, 
+                             image_url: tool.image_url || null, 
+                             image_path: tool.image_path || null 
+                         });
                     }
                 }
 
@@ -519,9 +604,11 @@ export const createStepHandlers = (
                 for (const materialFile of step._materialImageFiles || []) {
                     const uploaded = await uploadFileToFirebase(materialFile, `users/${currentUser.uid}/${projectId}/materials`, currentUser);
                     if (uploaded) {
+                        const material = step.materials.find(m => m.image_file_name === materialFile.name);
                         stepPayload.materials.push({
-                            name: step.materials.find(m => m.image_file_name === materialFile.name)?.name || 'Unknown Material',
-                            specification: step.materials.find(m => m.image_file_name === materialFile.name)?.specification || '',
+                            name: material?.name || 'Unknown Material',
+                            quantity: material?.quantity || 1,
+                            specification: material?.specification || '',
                             image_url: uploaded.url,
                             image_path: uploaded.path,
                         });
@@ -530,7 +617,13 @@ export const createStepHandlers = (
                 // Add materials without images
                 for (const material of step.materials || []) {
                     if (!material.image_file_name && !stepPayload.materials.some(m => m.name === material.name)) {
-                         stepPayload.materials.push({ name: material.name, specification: material.specification, image_url: material.image_url || null, image_path: material.image_path || null });
+                         stepPayload.materials.push({ 
+                             name: material.name, 
+                             quantity: material.quantity || 1,
+                             specification: material.specification, 
+                             image_url: material.image_url || null, 
+                             image_path: material.image_path || null 
+                         });
                     }
                 }
 
@@ -647,6 +740,7 @@ export const createStepHandlers = (
         removeBuyListItem,
         handleAutoPopulateBuyList,
         handleUpdateBuyListFromProject,
+        handleReplaceBuyList,
         handleClearBuyList,
         handleFinishProject
     };

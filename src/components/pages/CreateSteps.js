@@ -50,6 +50,11 @@ const ProjectStepsPage = () => {
         setSuccessMessage,
         isStepLoading,
         isLoading,
+                    // Tab warning state
+        showTabWarning,
+        safeSetActiveTab,
+        confirmTabSwitch,
+        cancelTabSwitch,
         // Current step data
         currentStepName,
         currentStepDescription,
@@ -72,6 +77,8 @@ const ProjectStepsPage = () => {
         setCurrentStepToolImageFile,
         currentStepToolPurchaseLink,
         setCurrentStepToolPurchaseLink,
+        currentStepToolQuantity,
+        setCurrentStepToolQuantity,
         toolImageInputRef,
         // Materials data
         currentStepMaterials,
@@ -83,6 +90,8 @@ const ProjectStepsPage = () => {
         setCurrentStepMaterialImageFile,
         currentStepMaterialPurchaseLink,
         setCurrentStepMaterialPurchaseLink,
+        currentStepMaterialQuantity,
+        setCurrentStepMaterialQuantity,
         materialImageInputRef,
         // Files data
         currentStepSupFiles,
@@ -231,6 +240,31 @@ const ProjectStepsPage = () => {
         }
     };
 
+    // Get missing fields for warning message
+    const getMissingFields = () => {
+        if (currentStepIndex === -1) return [];
+        
+        const missing = [];
+        switch (activeTab) {
+            case 'details':
+                if (!currentStepName.trim()) missing.push('Step Name');
+                if (!currentStepDescription.trim()) missing.push('Step Description');
+                if (currentStepStartTime === null) missing.push('Start Time');
+                if (currentStepEndTime === null) missing.push('End Time');
+                break;
+            case 'signoff':
+                if (!currentCautionaryNotes.trim()) missing.push('Cautionary Notes');
+                if (!currentBestPracticeNotes.trim()) missing.push('Best Practice Notes');
+                if (!currentStepValidationQuestion.trim()) missing.push('Validation Question');
+                if (!currentStepValidationAnswer.trim()) missing.push('Validation Answer');
+                break;
+            default:
+                // Other tabs are optional, no validation needed
+                break;
+        }
+        return missing;
+    };
+
     // Early returns for loading/error states
     if (!currentUser) return <div style={styles.pageContainer}><p>Loading...</p></div>;
     if (errorMessage && uploadedVideos.length === 0 && !location.state) {
@@ -263,6 +297,96 @@ const ProjectStepsPage = () => {
             {errorMessage && <div role="alert" style={styles.errorMessage}>{errorMessage}</div>}
             {successMessage && <div role="alert" style={styles.successMessage} onClick={()=>setSuccessMessage('')}>{successMessage} (click to dismiss)</div>}
 
+            {/* Tab Warning Modal */}
+            {showTabWarning && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10000,
+                }}>
+                    <div style={{
+                        backgroundColor: '#111111',
+                        border: '2px solid #F1C232',
+                        borderRadius: '12px',
+                        padding: '2rem',
+                        maxWidth: '500px',
+                        width: '90%',
+                        color: '#D9D9D9',
+                    }}>
+                        <h3 style={{
+                            color: '#F1C232',
+                            marginBottom: '1rem',
+                            fontSize: '1.25rem',
+                            fontWeight: 'bold',
+                        }}>
+                            ⚠️ Incomplete Step Information
+                        </h3>
+                        <p style={{ marginBottom: '1rem', lineHeight: '1.5' }}>
+                            You have incomplete required fields in the <strong>{activeTab === 'details' ? 'Step Details' : activeTab === 'signoff' ? 'Sign Off' : activeTab}</strong> tab:
+                        </p>
+                        <ul style={{
+                            marginBottom: '1.5rem',
+                            paddingLeft: '1.5rem',
+                            color: '#ef4444',
+                        }}>
+                            {getMissingFields().map((field, index) => (
+                                <li key={index} style={{ marginBottom: '0.5rem' }}>• {field}</li>
+                            ))}
+                        </ul>
+                        <p style={{ marginBottom: '1.5rem', fontSize: '0.9rem', color: '#9ca3af' }}>
+                            Your changes won't be lost, but it's recommended to complete all required fields before proceeding.
+                        </p>
+                        <div style={{
+                            display: 'flex',
+                            gap: '1rem',
+                            justifyContent: 'flex-end',
+                        }}>
+                            <button
+                                onClick={cancelTabSwitch}
+                                style={{
+                                    padding: '0.75rem 1.5rem',
+                                    backgroundColor: '#6b7280',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem',
+                                    fontWeight: '500',
+                                }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = '#4b5563'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = '#6b7280'}
+                            >
+                                Stay on Current Tab
+                            </button>
+                            <button
+                                onClick={confirmTabSwitch}
+                                style={{
+                                    padding: '0.75rem 1.5rem',
+                                    backgroundColor: '#F1C232',
+                                    color: '#000000',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem',
+                                    fontWeight: '600',
+                                }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = '#E6B800'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = '#F1C232'}
+                            >
+                                Continue Anyway
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Main content area - conditional layout */}
             {activeTab === 'finalize' ? (
                 // Finalize page - dedicated layout
@@ -285,6 +409,7 @@ const ProjectStepsPage = () => {
                         removeBuyListItem={enhancedHandlers.removeBuyListItem}
                         handleAutoPopulateBuyList={enhancedHandlers.handleAutoPopulateBuyList}
                         handleUpdateBuyListFromProject={enhancedHandlers.handleUpdateBuyListFromProject}
+                        handleReplaceBuyList={enhancedHandlers.handleReplaceBuyList}
                         handleClearBuyList={enhancedHandlers.handleClearBuyList}
                         handleFinishProject={enhancedHandlers.handleFinishProject}
                         isLoading={isLoading}
@@ -325,7 +450,7 @@ const ProjectStepsPage = () => {
                     {/* Tab navigation */}
                     <div style={styles.tabNavigation}>
                         <button 
-                            onClick={() => state.setActiveTab('details')}
+                            onClick={() => safeSetActiveTab('details')}
                             style={{
                                 ...styles.tabButton,
                                 ...(activeTab === 'details' ? styles.tabButtonActive : {})
@@ -334,7 +459,7 @@ const ProjectStepsPage = () => {
                             Step Details
                                         </button>
                         <button 
-                            onClick={() => state.setActiveTab('materials')}
+                            onClick={() => safeSetActiveTab('materials')}
                                 style={{
                                 ...styles.tabButton,
                                 ...(activeTab === 'materials' ? styles.tabButtonActive : {})
@@ -343,7 +468,7 @@ const ProjectStepsPage = () => {
                             Step Materials
                         </button>
                         <button 
-                            onClick={() => state.setActiveTab('files')}
+                            onClick={() => safeSetActiveTab('files')}
                             style={{
                                 ...styles.tabButton,
                                 ...(activeTab === 'files' ? styles.tabButtonActive : {})
@@ -352,7 +477,7 @@ const ProjectStepsPage = () => {
                             Files
                         </button>
                         <button 
-                            onClick={() => state.setActiveTab('result')}
+                            onClick={() => safeSetActiveTab('result')}
                             style={{
                                 ...styles.tabButton,
                                 ...(activeTab === 'result' ? styles.tabButtonActive : {})
@@ -361,7 +486,7 @@ const ProjectStepsPage = () => {
                             Result
                         </button>
                         <button 
-                            onClick={() => state.setActiveTab('signoff')}
+                            onClick={() => safeSetActiveTab('signoff')}
                             style={{
                                 ...styles.tabButton,
                                 ...(activeTab === 'signoff' ? styles.tabButtonActive : {})
@@ -400,6 +525,8 @@ const ProjectStepsPage = () => {
                                 setCurrentStepToolImageFile={setCurrentStepToolImageFile}
                                 currentStepToolPurchaseLink={currentStepToolPurchaseLink}
                                 setCurrentStepToolPurchaseLink={setCurrentStepToolPurchaseLink}
+                                currentStepToolQuantity={currentStepToolQuantity}
+                                setCurrentStepToolQuantity={setCurrentStepToolQuantity}
                                 toolImageInputRef={toolImageInputRef}
                                 handleAddToolToCurrentStep={enhancedHandlers.handleAddToolToCurrentStep}
                                 removeToolFromCurrentStep={enhancedHandlers.removeToolFromCurrentStep}
@@ -416,6 +543,8 @@ const ProjectStepsPage = () => {
                                 setCurrentStepMaterialImageFile={setCurrentStepMaterialImageFile}
                                 currentStepMaterialPurchaseLink={currentStepMaterialPurchaseLink}
                                 setCurrentStepMaterialPurchaseLink={setCurrentStepMaterialPurchaseLink}
+                                currentStepMaterialQuantity={currentStepMaterialQuantity}
+                                setCurrentStepMaterialQuantity={setCurrentStepMaterialQuantity}
                                 materialImageInputRef={materialImageInputRef}
                                 handleAddMaterialToCurrentStep={enhancedHandlers.handleAddMaterialToCurrentStep}
                                 removeMaterialFromCurrentStep={enhancedHandlers.removeMaterialFromCurrentStep}
