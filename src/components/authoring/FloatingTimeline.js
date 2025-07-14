@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+// Chrome detection
+const isChrome = typeof window !== 'undefined' && /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+
 const FloatingTimeline = ({
     videoRef,
     projectSteps,
@@ -21,8 +24,12 @@ const FloatingTimeline = ({
     const timelineRef = useRef(null);
     const scrollContainerRef = useRef(null);
     const animationFrameRef = useRef(null);
+    const lastUpdateTimeRef = useRef(0);
     
     const videoDuration = videoRef?.current?.duration || 0;
+    
+    // Chrome-specific throttling for smoother animation
+    const updateInterval = isChrome ? 50 : 16; // 20fps for Chrome, 60fps for others
     
     // Calculate timeline dimensions based on zoom
     const timelineWidth = Math.max(1000 * zoomLevel, window.innerWidth - 256); // 256px for sidebar
@@ -114,14 +121,27 @@ const FloatingTimeline = ({
         setZoomLevel(prev => Math.max(prev / 1.5, 0.1));
     };
     
-    // Smoothly track video current time using requestAnimationFrame
+    // Optimized video time tracking with throttling for Chrome
     useEffect(() => {
         let running = true;
-        function update() {
+        function update(timestamp) {
             if (!running) return;
-            if (videoRef.current && !isDragging) {
-                setCurrentTime(videoRef.current.currentTime);
+            
+            // Throttle updates for Chrome
+            if (isChrome && (timestamp - lastUpdateTimeRef.current) < updateInterval) {
+                animationFrameRef.current = requestAnimationFrame(update);
+                return;
             }
+            
+            if (videoRef.current && !isDragging) {
+                const newTime = videoRef.current.currentTime;
+                // Only update if time has changed significantly (reduce unnecessary re-renders)
+                if (Math.abs(newTime - currentTime) > 0.05) {
+                    setCurrentTime(newTime);
+                }
+                lastUpdateTimeRef.current = timestamp;
+            }
+            
             animationFrameRef.current = requestAnimationFrame(update);
         }
         animationFrameRef.current = requestAnimationFrame(update);
@@ -129,19 +149,24 @@ const FloatingTimeline = ({
             running = false;
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         };
-    }, [videoRef, isDragging]);
+    }, [videoRef, isDragging, currentTime, updateInterval]);
     
-    // Auto-scroll to current time
+    // Optimized auto-scroll with throttling
     useEffect(() => {
         if (!scrollContainerRef.current || !videoRef.current) return;
         
-        const currentTimePercent = currentTime / videoDuration;
-        const scrollTo = (currentTimePercent * timelineWidth) - (scrollContainerRef.current.clientWidth / 2);
+        // Throttle auto-scroll for Chrome
+        const scrollTimeout = setTimeout(() => {
+            const currentTimePercent = currentTime / videoDuration;
+            const scrollTo = (currentTimePercent * timelineWidth) - (scrollContainerRef.current.clientWidth / 2);
+            
+            scrollContainerRef.current.scrollTo({
+                left: Math.max(0, scrollTo),
+                behavior: isChrome ? 'auto' : 'smooth' // Use instant scroll for Chrome
+            });
+        }, isChrome ? 100 : 0);
         
-        scrollContainerRef.current.scrollTo({
-            left: Math.max(0, scrollTo),
-            behavior: 'smooth'
-        });
+        return () => clearTimeout(scrollTimeout);
     }, [currentTime, videoDuration, timelineWidth, videoRef]);
     
     if (!isVisible) return null;
@@ -233,7 +258,7 @@ const FloatingTimeline = ({
                                     style={{
                                         ...styles.currentTimeIndicator,
                                         left: `${(currentTime / videoDuration) * 100}%`,
-                                        transition: isDragging ? 'none' : 'left 0.1s linear'
+                                        transition: isDragging ? 'none' : (isChrome ? 'none' : 'left 0.1s linear')
                                     }}
                                     onMouseDown={(e) => handleMarkerMouseDown(e, 'playhead')}
                                 />

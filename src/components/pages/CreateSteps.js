@@ -1,5 +1,5 @@
 // CreateSteps.js - Refactored CreateSteps component using modular files
-import React from 'react';
+import React, { useEffect } from 'react';
 
 // Import modular components
 import { useCreateStepsState, useCreateStepsEffects } from './createsteps helpers/CreateStepsHooks';
@@ -20,6 +20,187 @@ import ProjectRepositoryTab from '../authoring/ProjectRepositoryTab';
 import AnnotationPopup from '../authoring/AnnotationPopup';
 import FloatingTimeline from '../authoring/FloatingTimeline';
 
+// Chrome detection
+const isChrome = typeof window !== 'undefined' && /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+
+// Chrome-specific scaling factor
+const chromeScale = isChrome ? 0.85 : 1;
+
+// Chrome-optimized styles
+const getChromeStyles = () => {
+    if (!isChrome) return styles;
+    
+    return {
+        ...styles,
+        // Scale down header and titles
+        pageTitle: {
+            ...styles.pageTitle,
+            fontSize: `${Math.max(1.5 * chromeScale, 1.2)}rem`,
+            marginBottom: `${8 * chromeScale}px`,
+        },
+        header: {
+            ...styles.header,
+            padding: `${12 * chromeScale}px ${16 * chromeScale}px`,
+            marginBottom: `${12 * chromeScale}px`,
+        },
+        // Scale down tab navigation
+        tabNavigation: {
+            ...styles.tabNavigation,
+            gap: `${4 * chromeScale}px`,
+            padding: `${8 * chromeScale}px`,
+        },
+        tabButton: {
+            ...styles.tabButton,
+            padding: `${8 * chromeScale}px ${12 * chromeScale}px`,
+            fontSize: `${0.85 * chromeScale}rem`,
+            borderRadius: `${6 * chromeScale}px`,
+        },
+        // Scale down content areas
+        leftPanelContent: {
+            ...styles.leftPanelContent,
+            padding: `${12 * chromeScale}px`,
+        },
+        videoSection: {
+            ...styles.videoSection,
+            padding: `${12 * chromeScale}px`,
+        },
+        stepsSection: {
+            ...styles.stepsSection,
+            padding: `${12 * chromeScale}px`,
+        },
+        // Scale down video controls
+        videoControls: {
+            ...styles.videoControls,
+            gap: `${6 * chromeScale}px`,
+            padding: `${8 * chromeScale}px`,
+        },
+        button: {
+            ...styles.button,
+            padding: `${6 * chromeScale}px ${12 * chromeScale}px`,
+            fontSize: `${0.8 * chromeScale}rem`,
+            borderRadius: `${4 * chromeScale}px`,
+        },
+        buttonPrimary: {
+            ...styles.buttonPrimary,
+            padding: `${8 * chromeScale}px ${16 * chromeScale}px`,
+            fontSize: `${0.85 * chromeScale}rem`,
+        },
+        buttonSecondary: {
+            ...styles.buttonSecondary,
+            padding: `${6 * chromeScale}px ${12 * chromeScale}px`,
+            fontSize: `${0.8 * chromeScale}rem`,
+        },
+        buttonSecondarySm: {
+            ...styles.buttonSecondarySm,
+            padding: `${4 * chromeScale}px ${8 * chromeScale}px`,
+            fontSize: `${0.75 * chromeScale}rem`,
+        },
+        buttonDanger: {
+            ...styles.buttonDanger,
+            padding: `${6 * chromeScale}px ${12 * chromeScale}px`,
+            fontSize: `${0.8 * chromeScale}rem`,
+        },
+        // Scale down step items
+        stepItem: {
+            ...styles.stepItem,
+            padding: `${8 * chromeScale}px`,
+            marginBottom: `${6 * chromeScale}px`,
+        },
+        stepItemHeader: {
+            ...styles.stepItemHeader,
+            marginBottom: `${4 * chromeScale}px`,
+        },
+        stepItemNumber: {
+            ...styles.stepItemNumber,
+            fontSize: `${0.75 * chromeScale}rem`,
+        },
+        stepItemNumberActive: {
+            ...styles.stepItemNumberActive,
+            fontSize: `${0.75 * chromeScale}rem`,
+        },
+        stepItemTime: {
+            ...styles.stepItemTime,
+            fontSize: `${0.7 * chromeScale}rem`,
+        },
+        stepItemTimeActive: {
+            ...styles.stepItemTimeActive,
+            fontSize: `${0.7 * chromeScale}rem`,
+        },
+        stepItemName: {
+            ...styles.stepItemName,
+            fontSize: `${0.85 * chromeScale}rem`,
+        },
+        stepItemNameActive: {
+            ...styles.stepItemNameActive,
+            fontSize: `${0.85 * chromeScale}rem`,
+        },
+        // Scale down sections
+        stepsSectionHeader: {
+            ...styles.stepsSectionHeader,
+            marginBottom: `${12 * chromeScale}px`,
+        },
+        stepsSectionTitle: {
+            ...styles.stepsSectionTitle,
+            fontSize: `${1.1 * chromeScale}rem`,
+        },
+        // Scale down messages
+        errorMessage: {
+            ...styles.errorMessage,
+            padding: `${8 * chromeScale}px ${12 * chromeScale}px`,
+            fontSize: `${0.85 * chromeScale}rem`,
+            marginBottom: `${8 * chromeScale}px`,
+        },
+        successMessage: {
+            ...styles.successMessage,
+            padding: `${8 * chromeScale}px ${12 * chromeScale}px`,
+            fontSize: `${0.85 * chromeScale}rem`,
+            marginBottom: `${8 * chromeScale}px`,
+        },
+        // Scale down video selection
+        videoSelection: {
+            ...styles.videoSelection,
+            gap: `${6 * chromeScale}px`,
+            marginBottom: `${8 * chromeScale}px`,
+        },
+        videoSelectButton: {
+            ...styles.videoSelectButton,
+            padding: `${6 * chromeScale}px ${10 * chromeScale}px`,
+            fontSize: `${0.8 * chromeScale}rem`,
+        },
+        videoSelectButtonActive: {
+            ...styles.videoSelectButtonActive,
+            padding: `${6 * chromeScale}px ${10 * chromeScale}px`,
+            fontSize: `${0.8 * chromeScale}rem`,
+        },
+        // Scale down layout spacing
+        videoTimelineLayout: {
+            ...styles.videoTimelineLayout,
+            gap: `${16 * chromeScale}px`,
+        },
+        leftPanel: {
+            ...styles.leftPanel,
+            gap: `${8 * chromeScale}px`,
+        },
+        rightPanel: {
+            ...styles.rightPanel,
+            gap: `${12 * chromeScale}px`,
+        },
+        // Scale down floating save button
+        floatingSaveButton: {
+            position: 'fixed',
+            left: `${20 * chromeScale}px`,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 1000,
+        },
+        floatingSaveButtonInner: {
+            padding: `${10 * chromeScale}px ${20 * chromeScale}px`,
+            fontSize: `${0.9 * chromeScale}rem`,
+            borderRadius: `${20 * chromeScale}px`,
+        },
+    };
+};
+
 const ProjectStepsPage = () => {
     // Initialize state using custom hook
     const state = useCreateStepsState();
@@ -32,6 +213,9 @@ const ProjectStepsPage = () => {
     
     // Create step actions
     const stepActions = createStepActions(state);
+
+    // Get Chrome-optimized styles
+    const chromeStyles = getChromeStyles();
 
     // Destructure commonly used state values
     const {
@@ -240,6 +424,27 @@ const ProjectStepsPage = () => {
         }
     };
 
+    // Expose functions and state to global window for sidebar access
+    useEffect(() => {
+        window.handleAddStep = enhancedHandlers.handleAddStep;
+        window.isStepLoading = isStepLoading;
+        window.currentStepName = currentStepName;
+        window.currentStepDescription = currentStepDescription;
+        window.currentStepStartTime = currentStepStartTime;
+        window.currentStepEndTime = currentStepEndTime;
+        window.currentStepIndex = currentStepIndex;
+        
+        return () => {
+            delete window.handleAddStep;
+            delete window.isStepLoading;
+            delete window.currentStepName;
+            delete window.currentStepDescription;
+            delete window.currentStepStartTime;
+            delete window.currentStepEndTime;
+            delete window.currentStepIndex;
+        };
+    }, [enhancedHandlers.handleAddStep, isStepLoading, currentStepName, currentStepDescription, currentStepStartTime, currentStepEndTime, currentStepIndex]);
+
     // Get missing fields for warning message
     const getMissingFields = () => {
         if (currentStepIndex === -1) return [];
@@ -266,19 +471,19 @@ const ProjectStepsPage = () => {
     };
 
     // Early returns for loading/error states
-    if (!currentUser) return <div style={styles.pageContainer}><p>Loading...</p></div>;
+    if (!currentUser) return <div style={chromeStyles.pageContainer}><p>Loading...</p></div>;
     if (errorMessage && uploadedVideos.length === 0 && !location.state) {
-         return <div style={styles.pageContainer}><p style={styles.errorMessage}>{errorMessage} <button onClick={() => navigate(-1)} style={{...styles.backLink, marginLeft: '10px'}}>Go Back</button></p></div>;
+         return <div style={chromeStyles.pageContainer}><p style={chromeStyles.errorMessage}>{errorMessage} <button onClick={() => navigate(-1)} style={{...chromeStyles.backLink, marginLeft: '10px'}}>Go Back</button></p></div>;
     }
 
     return (
         <div style={{
-            ...styles.videoTimelineContainer,
-            ...(activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' && styles.contentPadding)
+            ...chromeStyles.videoTimelineContainer,
+            ...(activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' && chromeStyles.contentPadding)
         }}>
                 {/* Header */}
-            <header style={styles.header}>
-                <h1 style={styles.pageTitle}>
+            <header style={chromeStyles.header}>
+                <h1 style={chromeStyles.pageTitle}>
                     {activeTab === 'repository' ? 'Repository Management' : 
                      activeTab === 'finalize' ? 'Finalize Project' :
                      activeTab === 'overview' ? 'Project Overview' :
@@ -294,8 +499,8 @@ const ProjectStepsPage = () => {
             </header>
 
             {/* Error and success messages */}
-            {errorMessage && <div role="alert" style={styles.errorMessage}>{errorMessage}</div>}
-            {successMessage && <div role="alert" style={styles.successMessage} onClick={()=>setSuccessMessage('')}>{successMessage} (click to dismiss)</div>}
+            {errorMessage && <div role="alert" style={chromeStyles.errorMessage}>{errorMessage}</div>}
+            {successMessage && <div role="alert" style={chromeStyles.successMessage} onClick={()=>setSuccessMessage('')}>{successMessage} (click to dismiss)</div>}
 
             {/* Tab Warning Modal */}
             {showTabWarning && (
@@ -390,7 +595,7 @@ const ProjectStepsPage = () => {
             {/* Main content area - conditional layout */}
             {activeTab === 'finalize' ? (
                 // Finalize page - dedicated layout
-                <div style={styles.finalizeContainer}>
+                <div style={chromeStyles.finalizeContainer}>
                     <FinalizeTab 
                         projectSteps={projectSteps}
                         projectBuyList={projectBuyList}
@@ -414,20 +619,20 @@ const ProjectStepsPage = () => {
                         handleFinishProject={enhancedHandlers.handleFinishProject}
                         isLoading={isLoading}
                         formatTime={formatTime}
-                        styles={styles}
+                        styles={chromeStyles}
                     />
                 </div>
             ) : activeTab === 'repository' ? (
                 // Repository page - dedicated layout
-                <div style={styles.finalizeContainer}>
+                <div style={chromeStyles.finalizeContainer}>
                     <ProjectRepositoryTab 
-                        styles={styles}
+                        styles={chromeStyles}
                         onRepositoryUpdate={() => state.setRepositoryRefreshTrigger(prev => prev + 1)}
                     />
                 </div>
             ) : activeTab === 'overview' ? (
                 // Overview page - dedicated layout
-                <div style={styles.finalizeContainer}>
+                <div style={chromeStyles.finalizeContainer}>
                     <ProjectOverviewTab 
                         projectSteps={projectSteps}
                         projectBuyList={projectBuyList}
@@ -438,22 +643,22 @@ const ProjectStepsPage = () => {
                             setSuccessMessage(`Step deleted successfully!`);
                             setTimeout(() => setSuccessMessage(''), 3000);
                         }}
-                        styles={styles}
+                        styles={chromeStyles}
                     />
                 </div>
             ) : (
                 // Regular step authoring layout
-                <div style={styles.videoTimelineLayout}>
+                <div style={chromeStyles.videoTimelineLayout}>
 
                 {/* Left side - Tabs and controls (2/5ths) */}
-                <div style={styles.leftPanel}>
+                <div style={chromeStyles.leftPanel}>
                     {/* Tab navigation */}
-                    <div style={styles.tabNavigation}>
+                    <div style={chromeStyles.tabNavigation}>
                         <button 
                             onClick={() => safeSetActiveTab('details')}
                             style={{
-                                ...styles.tabButton,
-                                ...(activeTab === 'details' ? styles.tabButtonActive : {})
+                                ...chromeStyles.tabButton,
+                                ...(activeTab === 'details' ? chromeStyles.tabButtonActive : {})
                             }}
                         >
                             Step Details
@@ -461,8 +666,8 @@ const ProjectStepsPage = () => {
                         <button 
                             onClick={() => safeSetActiveTab('materials')}
                                 style={{
-                                ...styles.tabButton,
-                                ...(activeTab === 'materials' ? styles.tabButtonActive : {})
+                                ...chromeStyles.tabButton,
+                                ...(activeTab === 'materials' ? chromeStyles.tabButtonActive : {})
                             }}
                         >
                             Step Materials
@@ -470,8 +675,8 @@ const ProjectStepsPage = () => {
                         <button 
                             onClick={() => safeSetActiveTab('files')}
                             style={{
-                                ...styles.tabButton,
-                                ...(activeTab === 'files' ? styles.tabButtonActive : {})
+                                ...chromeStyles.tabButton,
+                                ...(activeTab === 'files' ? chromeStyles.tabButtonActive : {})
                             }}
                         >
                             Files
@@ -479,8 +684,8 @@ const ProjectStepsPage = () => {
                         <button 
                             onClick={() => safeSetActiveTab('result')}
                             style={{
-                                ...styles.tabButton,
-                                ...(activeTab === 'result' ? styles.tabButtonActive : {})
+                                ...chromeStyles.tabButton,
+                                ...(activeTab === 'result' ? chromeStyles.tabButtonActive : {})
                             }}
                         >
                             Result
@@ -488,8 +693,8 @@ const ProjectStepsPage = () => {
                         <button 
                             onClick={() => safeSetActiveTab('signoff')}
                             style={{
-                                ...styles.tabButton,
-                                ...(activeTab === 'signoff' ? styles.tabButtonActive : {})
+                                ...chromeStyles.tabButton,
+                                ...(activeTab === 'signoff' ? chromeStyles.tabButtonActive : {})
                             }}
                         >
                             Sign Off
@@ -497,7 +702,7 @@ const ProjectStepsPage = () => {
                             </div>
 
                 {/* Tab content */}
-                    <div style={styles.leftPanelContent}>
+                    <div style={chromeStyles.leftPanelContent}>
                         {activeTab === 'details' && (
                             <StepDetailsTab 
                                 currentStepName={currentStepName}
@@ -509,7 +714,7 @@ const ProjectStepsPage = () => {
                                 currentStepAnnotations={state.currentStepAnnotations}
                                 formatTime={formatTime}
                                 onEditAnnotation={enhancedHandlers.onEditAnnotation}
-                                styles={styles}
+                                styles={chromeStyles}
                             />
                         )}
 
@@ -550,7 +755,7 @@ const ProjectStepsPage = () => {
                                 removeMaterialFromCurrentStep={enhancedHandlers.removeMaterialFromCurrentStep}
                                 // Repository refresh trigger
                                 repositoryRefreshTrigger={state.repositoryRefreshTrigger}
-                                styles={styles}
+                                styles={chromeStyles}
                             />
                         )}
 
@@ -562,7 +767,7 @@ const ProjectStepsPage = () => {
                                 supFileInputRef={supFileInputRef}
                                 handleSupFileChange={enhancedHandlers.handleSupFileChange}
                                 removeSupFileFromCurrentStep={enhancedHandlers.removeSupFileFromCurrentStep}
-                                styles={styles}
+                                styles={chromeStyles}
                             />
                         )}
 
@@ -572,7 +777,7 @@ const ProjectStepsPage = () => {
                                 currentStepResultImageFile={currentStepResultImageFile}
                                 handleResultImageChange={enhancedHandlers.handleResultImageChange}
                                 resultImageInputRef={resultImageInputRef}
-                                styles={styles}
+                                styles={chromeStyles}
                             />
                         )}
 
@@ -586,7 +791,7 @@ const ProjectStepsPage = () => {
                                 setCurrentStepValidationQuestion={state.setCurrentStepValidationQuestion}
                                 currentStepValidationAnswer={currentStepValidationAnswer}
                                 setCurrentStepValidationAnswer={state.setCurrentStepValidationAnswer}
-                                styles={styles}
+                                styles={chromeStyles}
                             />
                         )}
                     </div>
@@ -595,23 +800,23 @@ const ProjectStepsPage = () => {
             </div>
             
                 {/* Right side - Video and steps (3/5ths) */}
-                <div style={styles.rightPanel}>
+                <div style={chromeStyles.rightPanel}>
                     
                     {/* Video section */}
-                    <div style={styles.videoSection}>
-                        <div style={styles.videoContainer}>
+                    <div style={chromeStyles.videoSection}>
+                        <div style={chromeStyles.videoContainer}>
                             {uploadedVideos.length > 0 && activeVideoUrl ? (
                                 <div>
                                     {/* Video selection */}
                                     {uploadedVideos.length > 1 && (
-                                        <div style={styles.videoSelection}>
+                                        <div style={chromeStyles.videoSelection}>
                                             {uploadedVideos.map((video, index) => (
                     <button 
                                                     key={video.path || index} 
                                                     onClick={() => enhancedHandlers.handleVideoSelection(index)}
                         style={{
-                                                        ...styles.videoSelectButton,
-                                                        ...(activeVideoIndex === index ? styles.videoSelectButtonActive : {})
+                                                        ...chromeStyles.videoSelectButton,
+                                                        ...(activeVideoIndex === index ? chromeStyles.videoSelectButtonActive : {})
                         }}
                     >
                                                     Video {index + 1}
@@ -627,7 +832,7 @@ const ProjectStepsPage = () => {
                                         controls 
                                         src={activeVideoUrl} 
                                         crossOrigin="anonymous"
-                                        style={styles.videoPlayer}
+                                        style={chromeStyles.videoPlayer}
                                         onError={(e) => { 
                                             console.error("Video Error:", e);
                                             console.error("Failed video URL:", activeVideoUrl);
@@ -642,64 +847,64 @@ const ProjectStepsPage = () => {
                                     />
             
                                     {/* Video controls */}
-                                    <div style={styles.videoControls}>
+                                    <div style={chromeStyles.videoControls}>
                     <button 
                                             onClick={() => enhancedHandlers.navigateFrame('backward')} 
-                                            style={{...styles.button, ...styles.buttonSecondarySm}}
+                                            style={{...chromeStyles.button, ...chromeStyles.buttonSecondarySm}}
                                         >
                                             ◀ Frame
                                         </button>
                                         <button 
                                             onClick={() => enhancedHandlers.navigateFrame('forward')} 
-                                            style={{...styles.button, ...styles.buttonSecondarySm}}
+                                            style={{...chromeStyles.button, ...chromeStyles.buttonSecondarySm}}
                                         >
                                             Frame ▶
                                         </button>
                                         <button 
                                             onClick={enhancedHandlers.captureFrameForAnnotation} 
-                                            style={{...styles.button, backgroundColor: '#3498db', color: 'white'}}
+                                            style={{...chromeStyles.button, backgroundColor: '#3498db', color: 'white'}}
                                         >
                                             Capture Frame
                                         </button>
                                         {/* Mark Start/End/Clear buttons */}
-                                        <button
-                                            onClick={() => {
-                                                if (videoRef.current) {
-                                                    const currentTime = videoRef.current.currentTime;
-                                                    state.setCurrentStepStartTime(currentTime);
+                                            <button
+                                                onClick={() => {
+                                                    if (videoRef.current) {
+                                                        const currentTime = videoRef.current.currentTime;
+                                                        state.setCurrentStepStartTime(currentTime);
                                                 }
                                             }}
-                                            style={{...styles.button, ...styles.buttonPrimary, marginLeft: 8}}
-                                        >
-                                            Mark Start
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                if (videoRef.current) {
-                                                    const currentTime = videoRef.current.currentTime;
+                                            style={{...chromeStyles.button, ...chromeStyles.buttonPrimary, marginLeft: 8}}
+                                            >
+                                                Mark Start
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    if (videoRef.current) {
+                                                        const currentTime = videoRef.current.currentTime;
                                                     if (state.currentStepStartTime !== null && currentTime <= state.currentStepStartTime) {
                                                         return; // End time must be after start time
-                                                    }
-                                                    state.setCurrentStepEndTime(currentTime);
+                                                        }
+                                                        state.setCurrentStepEndTime(currentTime);
                                                 }
                                             }}
-                                            style={{...styles.button, ...styles.buttonSecondary, marginLeft: 8}}
-                                        >
-                                            Mark End
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                state.setCurrentStepStartTime(null);
-                                                state.setCurrentStepEndTime(null);
-                                            }}
-                                            style={{...styles.button, ...styles.buttonDanger, marginLeft: 8}}
-                                        >
-                                            Clear
+                                            style={{...chromeStyles.button, ...chromeStyles.buttonSecondary, marginLeft: 8}}
+                                            >
+                                                Mark End
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    state.setCurrentStepStartTime(null);
+                                                    state.setCurrentStepEndTime(null);
+                                                }}
+                                            style={{...chromeStyles.button, ...chromeStyles.buttonDanger, marginLeft: 8}}
+                                            >
+                                                Clear
                                         </button>
                                     </div>
                                 </div>
                             ) : (
-                                <div style={styles.noVideoMessage}>
+                                <div style={chromeStyles.noVideoMessage}>
                                     <p>No videos available</p>
                                 </div>
                             )}
@@ -707,24 +912,24 @@ const ProjectStepsPage = () => {
                     </div>
 
                     {/* Steps section */}
-                    <div style={styles.stepsSection}>
-                        <div style={styles.stepsSectionHeader}>
-                            <h3 style={styles.stepsSectionTitle}>Project Steps</h3>
+                    <div style={chromeStyles.stepsSection}>
+                        <div style={chromeStyles.stepsSectionHeader}>
+                            <h3 style={chromeStyles.stepsSectionTitle}>Project Steps</h3>
                             <button 
                                 onClick={stepActions.addNewStep}
-                                style={{...styles.button, ...styles.buttonPrimary}}
+                                style={{...chromeStyles.button, ...chromeStyles.buttonPrimary}}
                             >
                                 + Add Step
                             </button>
                         </div>
                         
-                        <div style={styles.stepsList}>
+                        <div style={chromeStyles.stepsList}>
                             {projectSteps.map((step, index) => (
                                 <div
                                     key={step.id || `step-${index}`}
                         style={{
-                                        ...styles.stepItem,
-                                        ...(currentStepIndex === index ? styles.stepItemActive : {}),
+                                        ...chromeStyles.stepItem,
+                                        ...(currentStepIndex === index ? chromeStyles.stepItemActive : {}),
                                         position: 'relative'
                                     }}
                                 >
@@ -732,16 +937,16 @@ const ProjectStepsPage = () => {
                                         onClick={() => stepActions.loadStepForEditing(step, index)}
                                         style={{flex: 1, cursor: 'pointer'}}
                                 >
-                                    <div style={styles.stepItemHeader}>
-                                        <span style={currentStepIndex === index ? styles.stepItemNumberActive : styles.stepItemNumber}>Step {index + 1}</span>
-                                        <span style={currentStepIndex === index ? styles.stepItemTimeActive : styles.stepItemTime}>
+                                    <div style={chromeStyles.stepItemHeader}>
+                                        <span style={currentStepIndex === index ? chromeStyles.stepItemNumberActive : chromeStyles.stepItemNumber}>Step {index + 1}</span>
+                                        <span style={currentStepIndex === index ? chromeStyles.stepItemTimeActive : chromeStyles.stepItemTime}>
                                             {formatTime(step.video_start_time_ms / 1000)} - {formatTime(step.video_end_time_ms / 1000)}
                                         </span>
                                     </div>
-                                    <div style={currentStepIndex === index ? styles.stepItemNameActive : styles.stepItemName}>{step.name}</div>
-                                    </div>
+                                    <div style={currentStepIndex === index ? chromeStyles.stepItemNameActive : chromeStyles.stepItemName}>{step.name}</div>
+                                </div>
                                     
-                                    <button
+                    <button 
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             if (window.confirm(`Are you sure you want to delete "Step ${index + 1}: ${step.name}"? This action cannot be undone.`)) {
@@ -750,7 +955,7 @@ const ProjectStepsPage = () => {
                                                 setTimeout(() => setSuccessMessage(''), 3000);
                                             }
                                         }}
-                                        style={{
+                        style={{
                                             position: 'absolute',
                                             bottom: '8px',
                                             right: '8px',
@@ -769,44 +974,16 @@ const ProjectStepsPage = () => {
                                         title="Delete step"
                                     >
                                         ×
-                                    </button>
+                    </button>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </div>
-            </div>
-            )}
-            
-            {/* Floating save button - left middle */}
-            {activeTab !== 'finalize' && (currentStepIndex >= 0 || currentStepName.trim() || currentStepDescription.trim() || 
-             (currentStepStartTime !== null && currentStepStartTime !== undefined) || 
-             (currentStepEndTime !== null && currentStepEndTime !== undefined)) && (
-                <div style={{
-                    position: 'fixed',
-                    left: '20px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    zIndex: 1000
-                }}>
-                    <button 
-                        onClick={enhancedHandlers.handleAddStep}
-                        disabled={isStepLoading || !currentStepName.trim() || !currentStepDescription.trim() || (currentStepStartTime === null || currentStepStartTime === undefined) || (currentStepEndTime === null || currentStepEndTime === undefined)}
-                        style={{
-                            ...styles.button,
-                            ...styles.buttonPrimary,
-                            ...(isStepLoading && styles.buttonDisabled),
-                            padding: '12px 24px',
-                            fontSize: '1rem',
-                            borderRadius: '25px',
-                            boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)'
-                        }}
-                    >
-                        {isStepLoading ? 'Saving...' : 
-                         currentStepIndex >= 0 ? 'Update Step' : 'Save New Step'}
-                    </button>
                 </div>
                 )}
+            
+
 
             {/* Annotation Popup */}
             <AnnotationPopup
@@ -821,7 +998,7 @@ const ProjectStepsPage = () => {
                 removeAnnotation={enhancedHandlers.removeAnnotation}
                 handleClearAnnotations={handlers.handleClearAnnotations}
                 formatTime={formatTime}
-                styles={styles}
+                styles={chromeStyles}
             />
             
             {/* Floating Timeline - always visible on video steps page */}
@@ -834,7 +1011,7 @@ const ProjectStepsPage = () => {
                     setCurrentStepStartTime={state.setCurrentStepStartTime}
                     setCurrentStepEndTime={state.setCurrentStepEndTime}
                     formatTime={formatTime}
-                    styles={styles}
+                    styles={chromeStyles}
                     isVisible={true}
                 />
             )}

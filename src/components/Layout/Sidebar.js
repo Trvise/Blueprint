@@ -5,6 +5,9 @@ import { doSignOut } from '../../firebase/auth';
 import { AiOutlineMenu, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineEye, AiOutlineArrowLeft, AiOutlineCheck, AiOutlineUser, AiOutlineDatabase, AiOutlineFolder, AiOutlineBarChart } from 'react-icons/ai';
 import logo from '../../assets/trvise_logo.png';
 
+// Chrome detection
+const isChrome = typeof window !== 'undefined' && /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+
 const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -90,7 +93,14 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                                 alt="Blueprint Logo" 
                                 className="w-14 h-14"
                             />
-                            <h1 className="text-2xl font-semibold whitespace-nowrap" style={{
+                            <h1 className="text-2xl font-semibold whitespace-nowrap" style={isChrome ? {
+                                // Plain text for Chrome
+                                fontWeight: 600,
+                                fontSize: '1.2rem',
+                                margin: 0,
+                                letterSpacing: '0.05em',
+                                textAlign: 'left',
+                            } : {
                                 background: isAnimating 
                                     ? 'linear-gradient(45deg, #0000FF 0%, #F1C232 40%, #0000FF 80%, #F1C232 90%, #0000FF 100%)'
                                     : 'linear-gradient(45deg, #0000FF 0%, #F1C232 100%)',
@@ -98,7 +108,12 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                                 WebkitBackgroundClip: 'text',
                                 WebkitTextFillColor: 'transparent',
                                 backgroundClip: 'text',
-                                animation: isAnimating ? 'gradientShift 3s ease-in-out infinite' : 'none'
+                                animation: isAnimating ? 'gradientShift 3s ease-in-out infinite' : 'none',
+                                fontWeight: 600,
+                                fontSize: '1.6rem',
+                                margin: 0,
+                                letterSpacing: '0.05em',
+                                textAlign: 'left',
                             }}>
                                 Blueprint
                             </h1>
@@ -216,6 +231,37 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                                         <AiOutlineCheck size={20} />
                                         {!isCollapsed && <span className="ml-3">Finalize Project</span>}
                                     </button>
+                                    
+                                    {/* Save Step Button */}
+                                    {activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' && (
+                                        <div className="px-5 py-3 border-t border-gray-700 mt-2">
+                                            <button
+                                                onClick={() => {
+                                                    if (window.handleAddStep) {
+                                                        window.handleAddStep();
+                                                    }
+                                                }}
+                                                disabled={window.isStepLoading || !window.currentStepName?.trim() || !window.currentStepDescription?.trim() || 
+                                                         (window.currentStepStartTime === null || window.currentStepStartTime === undefined) || 
+                                                         (window.currentStepEndTime === null || window.currentStepEndTime === undefined)}
+                                                className={`w-full flex items-center justify-center py-3 px-4 text-base font-medium transition-all duration-200 rounded-lg ${
+                                                    (window.isStepLoading || !window.currentStepName?.trim() || !window.currentStepDescription?.trim() || 
+                                                     (window.currentStepStartTime === null || window.currentStepStartTime === undefined) || 
+                                                     (window.currentStepEndTime === null || window.currentStepEndTime === undefined))
+                                                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                                        : 'bg-[#F1C232] text-black hover:bg-[#E6B800] hover:scale-105'
+                                                }`}
+                                            >
+                                                <AiOutlineCheck size={18} />
+                                                {!isCollapsed && (
+                                                    <span className="ml-2">
+                                                        {window.isStepLoading ? 'Saving...' : 
+                                                         window.currentStepIndex >= 0 ? 'Update Step' : 'Save New Step'}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </>
