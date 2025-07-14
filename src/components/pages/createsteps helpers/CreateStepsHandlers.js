@@ -1,0 +1,762 @@
+// CreateStepsHandlers.js - Handler functions for CreateSteps component
+import { v4 as uuidv4 } from 'uuid';
+import { uploadFileToFirebase, getApiUrl } from './CreateStepsUtils';
+
+export const createStepHandlers = (
+    // State setters and dependencies
+    {
+        setActiveVideoIndex,
+        setActiveVideoUrl,
+        setCurrentStepStartTime,
+        setCurrentStepEndTime,
+        setFrameForAnnotation,
+        setCurrentStepAnnotations,
+        setVideoDimensions,
+        setErrorMessage,
+        setCurrentAnnotationTool,
+        setCurrentStepTools,
+        setCurrentStepToolName,
+        setCurrentStepToolSpec,
+        setCurrentStepToolImageFile,
+        setCurrentStepToolPurchaseLink,
+        setCurrentStepToolQuantity,
+        setCurrentStepMaterials,
+        setCurrentStepMaterialName,
+        setCurrentStepMaterialSpec,
+        setCurrentStepMaterialImageFile,
+        setCurrentStepMaterialPurchaseLink,
+        setCurrentStepMaterialQuantity,
+        setCurrentStepSupFiles,
+        setCurrentStepSupFileName,
+        setCurrentStepResultImageFile,
+        setCurrentStepResultImage,
+        setProjectBuyList,
+        setBuyListItemName,
+        setBuyListItemQty,
+        setBuyListItemSpec,
+        setBuyListItemLink,
+        setBuyListItemImageFile,
+        setProjectSteps,
+        setCurrentStepIndex,
+        setIsStepLoading,
+        setSuccessMessage,
+        setIsLoading,
+        // Refs
+        toolImageInputRef,
+        materialImageInputRef,
+        supFileInputRef,
+        buyListImageInputRef,
+        videoRef,
+        // State values
+        uploadedVideos,
+        currentStepStartTime,
+        frameTimestampMs,
+        videoDimensions,
+        currentStepAnnotations,
+        currentStepTools,
+        currentStepMaterials,
+        currentStepSupFiles,
+        currentStepSupFileName,
+        currentStepToolName,
+        currentStepToolSpec,
+        currentStepToolImageFile,
+        currentStepToolPurchaseLink,
+        currentStepToolQuantity,
+        currentStepMaterialName,
+        currentStepMaterialSpec,
+        currentStepMaterialImageFile,
+        currentStepMaterialPurchaseLink,
+        currentStepMaterialQuantity,
+        buyListItemName,
+        buyListItemQty,
+        buyListItemSpec,
+        buyListItemLink,
+        buyListItemImageFile,
+        projectBuyList,
+        projectSteps,
+        currentStepIndex,
+        projectId,
+        currentUser,
+        navigate
+    }
+) => {
+
+    const handleVideoSelection = (index) => {
+        if (uploadedVideos[index] && uploadedVideos[index].url) {
+            setActiveVideoIndex(index);
+            setActiveVideoUrl(uploadedVideos[index].url);
+            setCurrentStepStartTime(null);
+            setCurrentStepEndTime(null);
+            setFrameForAnnotation(null); 
+            setCurrentStepAnnotations([]); 
+            setVideoDimensions({ width: 0, height: 0 });
+        } else {
+            console.warn(`Video at index ${index} is missing a URL.`);
+            setErrorMessage(`Video ${index + 1} could not be loaded.`);
+        }
+    };
+
+    const markTime = (type) => {
+        if (videoRef.current) {
+            const currentTime = videoRef.current.currentTime;
+            if (type === 'start') {
+                setCurrentStepStartTime(currentTime);
+            } else if (type === 'end') {
+                if (currentStepStartTime !== null && currentTime <= currentStepStartTime) {
+                    alert("End time must be after start time.");
+                    return;
+                }
+                setCurrentStepEndTime(currentTime);
+            }
+        }
+    };
+
+    const handleAnnotationSubmit = (annotationData) => {
+        console.log('Annotation submitted:', annotationData);
+        console.log('Current frameTimestampMs:', frameTimestampMs);
+        
+        // Validate that we have a valid timestamp
+        if (!frameTimestampMs || frameTimestampMs <= 0) {
+            alert('Please capture a frame first before creating annotations.');
+            return;
+        }
+        
+        // The annotationData from react-image-annotation comes with geometry and data
+        // We need to ensure it has the correct structure for our system
+        const newAnnotation = {
+            geometry: annotationData.geometry,
+            data: {
+                text: annotationData.data?.text || 'Untitled annotation',
+                id: `annotation_${uuidv4()}`,
+                frame_timestamp_ms: frameTimestampMs,
+            }
+        };
+        
+        console.log('Creating annotation:', newAnnotation);
+        setCurrentStepAnnotations(prev => [...prev, newAnnotation]);
+        
+        // Clear the annotation tool after successful submission
+        setCurrentAnnotationTool({});
+    };
+
+    // Function to clear all annotations for the current step
+    const handleClearAnnotations = () => {
+        if (currentStepAnnotations.length === 0) {
+            setSuccessMessage('No annotations to clear.');
+            setTimeout(() => setSuccessMessage(''), 2000);
+            return;
+        }
+
+        const confirmed = window.confirm(`Are you sure you want to clear all ${currentStepAnnotations.length} annotations? This action cannot be undone.`);
+        if (confirmed) {
+            setCurrentStepAnnotations([]);
+            setCurrentAnnotationTool({});
+            setSuccessMessage('All annotations cleared successfully.');
+            setTimeout(() => setSuccessMessage(''), 3000);
+        }
+    };
+
+    const handleAddToolToCurrentStep = () => {
+        if (!currentStepToolName.trim()) { alert("Tool name is required."); return; }
+        // Only store serializable data
+        const safeImageFile = currentStepToolImageFile instanceof File ? currentStepToolImageFile : null;
+        setCurrentStepTools(prev => [...prev, { 
+            id: `tool_${uuidv4()}`, name: currentStepToolName, 
+            specification: currentStepToolSpec, 
+            quantity: parseInt(currentStepToolQuantity) || 1,
+            imageFile: safeImageFile,
+            purchase_link: currentStepToolPurchaseLink
+        }]);
+        setCurrentStepToolName(''); 
+        setCurrentStepToolSpec(''); 
+        setCurrentStepToolQuantity(1);
+        setCurrentStepToolImageFile(null);
+        setCurrentStepToolPurchaseLink('');
+        if (toolImageInputRef.current) toolImageInputRef.current.value = "";
+    };
+
+    const removeToolFromCurrentStep = (toolId) => setCurrentStepTools(prev => prev.filter(tool => tool.id !== toolId));
+
+    const handleAddMaterialToCurrentStep = () => {
+        if (!currentStepMaterialName.trim()) { alert("Material name is required."); return; }
+        // Only store serializable data
+        const safeImageFile = currentStepMaterialImageFile instanceof File ? currentStepMaterialImageFile : null;
+        setCurrentStepMaterials(prev => [...prev, { 
+            id: `material_${uuidv4()}`, name: currentStepMaterialName, 
+            specification: currentStepMaterialSpec, 
+            quantity: parseInt(currentStepMaterialQuantity) || 1,
+            imageFile: safeImageFile,
+            purchase_link: currentStepMaterialPurchaseLink
+        }]);
+        setCurrentStepMaterialName(''); 
+        setCurrentStepMaterialSpec(''); 
+        setCurrentStepMaterialQuantity(1);
+        setCurrentStepMaterialImageFile(null);
+        setCurrentStepMaterialPurchaseLink('');
+        if (materialImageInputRef.current) materialImageInputRef.current.value = "";
+    };
+
+    const removeMaterialFromCurrentStep = (materialId) => setCurrentStepMaterials(prev => prev.filter(mat => mat.id !== materialId));
+
+    const handleSupFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setCurrentStepSupFiles(prev => [...prev, {
+                id: `supfile_${uuidv4()}`,
+                fileObject: file, // Only store the File object
+                displayName: currentStepSupFileName || file.name
+            }]);
+            setCurrentStepSupFileName(''); 
+            if (supFileInputRef.current) supFileInputRef.current.value = null; 
+        }
+    };
+
+    const removeSupFileFromCurrentStep = (fileId) => setCurrentStepSupFiles(prev => prev.filter(f => f.id !== fileId));
+
+    const handleResultImageChange = (e) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setCurrentStepResultImageFile(file);
+            // Create a URL for immediate preview
+            setCurrentStepResultImage(URL.createObjectURL(file));
+        } else {
+            setCurrentStepResultImageFile(null);
+            setCurrentStepResultImage(null);
+        }
+    };
+
+    const handleAddBuyListItem = () => {
+        if (!buyListItemName.trim()) { alert("Item name is required for buy list."); return; }
+        // Only store serializable data
+        const safeImageFile = buyListItemImageFile instanceof File ? buyListItemImageFile : null;
+        setProjectBuyList(prev => [...prev, {
+            id: `buyitem_${uuidv4()}`, name: buyListItemName,
+            quantity: parseInt(buyListItemQty, 10) || 1, specification: buyListItemSpec,
+            purchase_link: buyListItemLink, imageFile: safeImageFile,
+            hasExistingImage: false // Mark as new item for proper image display
+        }]);
+        setBuyListItemName(''); setBuyListItemQty(1); setBuyListItemSpec('');
+        setBuyListItemLink(''); setBuyListItemImageFile(null);
+        if (buyListImageInputRef.current) buyListImageInputRef.current.value = "";
+    };
+
+    const removeBuyListItem = (itemId) => {
+        const removedItem = projectBuyList.find(item => item.id === itemId);
+        if (removedItem) {
+            // If this is a project-generated item, we should remember not to add it back
+            if (removedItem.id.startsWith('buyitem_tool_') || removedItem.id.startsWith('buyitem_material_')) {
+                // Store the removed item name in localStorage to prevent auto-adding back
+                const removedItems = JSON.parse(localStorage.getItem('removedBuyListItems') || '[]');
+                if (!removedItems.includes(removedItem.name.toLowerCase())) {
+                    removedItems.push(removedItem.name.toLowerCase());
+                    localStorage.setItem('removedBuyListItems', JSON.stringify(removedItems));
+                }
+            }
+        }
+        setProjectBuyList(prev => prev.filter(item => item.id !== itemId));
+    };
+
+    // New function to fetch repository items and auto-populate buy list
+    const handleAutoPopulateBuyList = async () => {
+        if (!projectSteps || projectSteps.length === 0) {
+            setErrorMessage("No steps found in project. Please add some steps first.");
+            return;
+        }
+
+        try {
+            setIsLoading(true);
+            setErrorMessage('');
+            
+            // Collect all tools and materials from all steps in the project
+            let allProjectItems = [];
+
+            projectSteps.forEach((step, stepIndex) => {
+                // Add tools from this step
+                if (step.tools && step.tools.length > 0) {
+                    step.tools.forEach(tool => {
+                        // Skip tools without a valid name
+                        if (!tool.name || typeof tool.name !== 'string') {
+                            console.warn('Skipping tool without valid name:', tool);
+                            return;
+                        }
+                        
+                        allProjectItems.push({
+                            id: `buyitem_tool_${stepIndex}_${tool.id || uuidv4()}`,
+                    name: tool.name,
+                            quantity: tool.quantity || 1, // Use actual quantity from step
+                    specification: tool.specification || '',
+                    purchase_link: tool.purchase_link || '',
+                            imageFile: tool.imageFile || null,
+                            image_url: tool.image_url || null,
+                            image_path: tool.image_path || null,
+                            sourceType: 'tool',
+                            sourceStep: stepIndex + 1,
+                            sourceStepName: step.name
+                        });
+                    });
+                }
+
+                // Add materials from this step
+                if (step.materials && step.materials.length > 0) {
+                    step.materials.forEach(material => {
+                        // Skip materials without a valid name
+                        if (!material.name || typeof material.name !== 'string') {
+                            console.warn('Skipping material without valid name:', material);
+                            return;
+                        }
+                        
+                        allProjectItems.push({
+                            id: `buyitem_material_${stepIndex}_${material.id || uuidv4()}`,
+                    name: material.name,
+                            quantity: material.quantity || 1, // Use actual quantity from step
+                    specification: material.specification || '',
+                    purchase_link: material.purchase_link || '',
+                            imageFile: material.imageFile || null,
+                            image_url: material.image_url || null,
+                            image_path: material.image_path || null,
+                            sourceType: 'material',
+                            sourceStep: stepIndex + 1,
+                            sourceStepName: step.name
+                        });
+                    });
+                }
+            });
+
+            if (allProjectItems.length === 0) {
+                setSuccessMessage('No tools or materials found in any project steps. Please add some tools or materials to your steps first.');
+                setTimeout(() => setSuccessMessage(''), 5000);
+                return;
+            }
+
+            // Remove duplicates by name and aggregate quantities
+            const aggregatedItems = {};
+            
+            allProjectItems.forEach(item => {
+                // Skip items without a name
+                if (!item.name || typeof item.name !== 'string') {
+                    console.warn('Skipping item without valid name:', item);
+                    return;
+                }
+                
+                const key = item.name.toLowerCase();
+                if (aggregatedItems[key]) {
+                    // If item already exists, add the quantities
+                    aggregatedItems[key].quantity += (item.quantity || 1);
+                } else {
+                    // If item doesn't exist, add it
+                    aggregatedItems[key] = { ...item };
+                }
+            });
+
+            const uniqueItems = Object.values(aggregatedItems);
+
+            // Filter out items that are already in the buy list (by name to avoid duplicates)
+            const existingItemNames = new Set(projectBuyList.map(item => item.name?.toLowerCase()).filter(Boolean));
+            
+            // Get list of items that were manually removed
+            const removedItems = JSON.parse(localStorage.getItem('removedBuyListItems') || '[]');
+            const removedItemsSet = new Set(removedItems);
+            
+            const newItems = uniqueItems.filter(item => 
+                item.name && 
+                !existingItemNames.has(item.name.toLowerCase()) && 
+                !removedItemsSet.has(item.name.toLowerCase())
+            );
+
+            if (newItems.length === 0) {
+                setSuccessMessage('All project tools and materials are already in the buy list or were previously removed.');
+                setTimeout(() => setSuccessMessage(''), 3000);
+                return;
+            }
+
+            // Add new items to the buy list (append to existing)
+            setProjectBuyList(prev => [...prev, ...newItems]);
+            
+            setSuccessMessage(`Successfully added ${newItems.length} items from project steps to buy list!`);
+            setTimeout(() => setSuccessMessage(''), 5000);
+
+        } catch (error) {
+            console.error('Error auto-populating buy list from project:', error);
+            setErrorMessage(`Failed to populate buy list from project: ${error.message}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // New function to update buy list from current project state
+    const handleUpdateBuyListFromProject = async () => {
+        if (!projectSteps || projectSteps.length === 0) {
+            setErrorMessage("No steps found in project. Please add some steps first.");
+            return;
+        }
+
+        try {
+            setIsLoading(true);
+            setErrorMessage('');
+            
+            // Collect all tools and materials from all steps in the project
+            let allProjectItems = [];
+
+            projectSteps.forEach((step, stepIndex) => {
+                // Add tools from this step
+                if (step.tools && step.tools.length > 0) {
+                    step.tools.forEach(tool => {
+                        // Skip tools without a valid name
+                        if (!tool.name || typeof tool.name !== 'string') {
+                            console.warn('Skipping tool without valid name:', tool);
+                            return;
+                        }
+                        
+                        allProjectItems.push({
+                            id: `buyitem_tool_${stepIndex}_${tool.id || uuidv4()}`,
+                            name: tool.name,
+                            quantity: tool.quantity || 1, // Use actual quantity from step
+                            specification: tool.specification || '',
+                            purchase_link: tool.purchase_link || '',
+                            imageFile: tool.imageFile || null,
+                            image_url: tool.image_url || null,
+                            image_path: tool.image_path || null,
+                            sourceType: 'tool',
+                            sourceStep: stepIndex + 1,
+                            sourceStepName: step.name
+                        });
+                    });
+                }
+
+                // Add materials from this step
+                if (step.materials && step.materials.length > 0) {
+                    step.materials.forEach(material => {
+                        // Skip materials without a valid name
+                        if (!material.name || typeof material.name !== 'string') {
+                            console.warn('Skipping material without valid name:', material);
+                            return;
+                        }
+                        
+                        allProjectItems.push({
+                            id: `buyitem_material_${stepIndex}_${material.id || uuidv4()}`,
+                            name: material.name,
+                            quantity: material.quantity || 1, // Use actual quantity from step
+                            specification: material.specification || '',
+                            purchase_link: material.purchase_link || '',
+                            imageFile: material.imageFile || null,
+                            image_url: material.image_url || null,
+                            image_path: material.image_path || null,
+                            sourceType: 'material',
+                            sourceStep: stepIndex + 1,
+                            sourceStepName: step.name
+                        });
+                    });
+                }
+            });
+
+            if (allProjectItems.length === 0) {
+                setSuccessMessage('No tools or materials found in any project steps. Please add some tools or materials to your steps first.');
+                setTimeout(() => setSuccessMessage(''), 5000);
+                return;
+            }
+
+            // Remove duplicates by name and aggregate quantities
+            const aggregatedItems = {};
+            
+            allProjectItems.forEach(item => {
+                // Skip items without a name
+                if (!item.name || typeof item.name !== 'string') {
+                    console.warn('Skipping item without valid name:', item);
+                    return;
+                }
+                
+                const key = item.name.toLowerCase();
+                if (aggregatedItems[key]) {
+                    // If item already exists, add the quantities
+                    aggregatedItems[key].quantity += (item.quantity || 1);
+                } else {
+                    // If item doesn't exist, add it
+                    aggregatedItems[key] = { ...item };
+                }
+            });
+
+            const uniqueProjectItems = Object.values(aggregatedItems);
+
+            // Separate manually added items from project-generated items
+            const manuallyAddedItems = projectBuyList.filter(item => 
+                !item.id.startsWith('buyitem_tool_') && !item.id.startsWith('buyitem_material_')
+            );
+
+            // Get list of items that were manually removed
+            const removedItems = JSON.parse(localStorage.getItem('removedBuyListItems') || '[]');
+            const removedItemsSet = new Set(removedItems);
+
+            // Filter out items that were manually removed
+            const filteredProjectItems = uniqueProjectItems.filter(item => 
+                item.name && !removedItemsSet.has(item.name.toLowerCase())
+            );
+
+            // Combine manually added items with filtered project items
+            const updatedBuyList = [...manuallyAddedItems, ...filteredProjectItems];
+            
+            setProjectBuyList(updatedBuyList);
+            
+            const addedCount = filteredProjectItems.length;
+            const removedCount = removedItems.length;
+            
+            let message = `Buy list updated! `;
+            if (addedCount > 0) {
+                message += `Added ${addedCount} items from project steps. `;
+            }
+            if (removedCount > 0) {
+                message += `Respected ${removedCount} previously removed items. `;
+            }
+            if (manuallyAddedItems.length > 0) {
+                message += `Preserved ${manuallyAddedItems.length} manually added items.`;
+            }
+            
+            setSuccessMessage(message);
+            setTimeout(() => setSuccessMessage(''), 5000);
+
+        } catch (error) {
+            console.error('Error updating buy list from project:', error);
+            setErrorMessage(`Failed to update buy list from project: ${error.message}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // New function to clear the entire buy list
+    const handleClearBuyList = () => {
+        if (projectBuyList.length === 0) {
+            setSuccessMessage('Buy list is already empty.');
+            setTimeout(() => setSuccessMessage(''), 3000);
+            return;
+        }
+
+        const confirmed = window.confirm(`Are you sure you want to clear all ${projectBuyList.length} items from the buy list? This action cannot be undone.`);
+        if (confirmed) {
+            setProjectBuyList([]);
+            // Also clear the removed items list so they can be added back if needed
+            localStorage.removeItem('removedBuyListItems');
+            setSuccessMessage('Buy list cleared successfully. Removed items can now be added back.');
+            setTimeout(() => setSuccessMessage(''), 3000);
+        }
+    };
+
+    // Function to replace buy list with new items (for auto-populate)
+    const handleReplaceBuyList = (newItems) => {
+        setProjectBuyList(newItems);
+    };
+
+    const handleFinishProject = async (projectName) => {
+        setIsLoading(true);
+        setErrorMessage('');
+        setSuccessMessage('');
+
+        try {
+            // Create project data payload
+            const processedStepsPayload = [];
+
+            for (let i = 0; i < projectSteps.length; i++) {
+                const step = projectSteps[i];
+                
+                // Build the video path
+                const videoPath = step.associated_video_path || (uploadedVideos[step.associated_video_index]?.path) || null;
+                
+                const stepPayload = {
+                    name: step.name,
+                    description: step.description,
+                    video_start_time_ms: Math.round(step.video_start_time_ms),
+                    video_end_time_ms: Math.round(step.video_end_time_ms),
+                    cautionary_notes: step.cautionary_notes,
+                    best_practice_notes: step.best_practice_notes,
+                    associated_video_path: videoPath,
+                    step_order: step.step_order,
+                    annotations: step.annotations || [],
+                    tools: [],
+                    materials: [],
+                    supplementary_files: [],
+                    validation_metric: step.validation_metric && step.validation_metric.question ? {
+                        question: step.validation_metric.question,
+                        expected_answer: step.validation_metric.expected_answer
+                    } : null,
+                    result_image_path: null,
+                };
+
+                // Upload Tool Images
+                for (const toolFile of step._toolImageFiles || []) {
+                    const uploaded = await uploadFileToFirebase(toolFile, `users/${currentUser.uid}/${projectId}/tools`, currentUser);
+                    if (uploaded) {
+                        const tool = step.tools.find(t => t.image_file_name === toolFile.name);
+                        stepPayload.tools.push({
+                            name: tool?.name || 'Unknown Tool',
+                            quantity: tool?.quantity || 1,
+                            specification: tool?.specification || '',
+                            image_url: uploaded.url,
+                            image_path: uploaded.path,
+                        });
+                    }
+                }
+                // Add tools without images
+                for (const tool of step.tools || []) {
+                    if (!tool.image_file_name && !stepPayload.tools.some(t => t.name === tool.name)) {
+                         stepPayload.tools.push({ 
+                             name: tool.name, 
+                             quantity: tool.quantity || 1,
+                             specification: tool.specification, 
+                             image_url: tool.image_url || null, 
+                             image_path: tool.image_path || null 
+                         });
+                    }
+                }
+
+                // Upload Material Images
+                for (const materialFile of step._materialImageFiles || []) {
+                    const uploaded = await uploadFileToFirebase(materialFile, `users/${currentUser.uid}/${projectId}/materials`, currentUser);
+                    if (uploaded) {
+                        const material = step.materials.find(m => m.image_file_name === materialFile.name);
+                        stepPayload.materials.push({
+                            name: material?.name || 'Unknown Material',
+                            quantity: material?.quantity || 1,
+                            specification: material?.specification || '',
+                            image_url: uploaded.url,
+                            image_path: uploaded.path,
+                        });
+                    }
+                }
+                // Add materials without images
+                for (const material of step.materials || []) {
+                    if (!material.image_file_name && !stepPayload.materials.some(m => m.name === material.name)) {
+                         stepPayload.materials.push({ 
+                             name: material.name, 
+                             quantity: material.quantity || 1,
+                             specification: material.specification, 
+                             image_url: material.image_url || null, 
+                             image_path: material.image_path || null 
+                         });
+                    }
+                }
+
+                // Upload Supplementary Files
+                for (const supFileObj of step._supplementaryFileObjects || []) {
+                    const uploaded = await uploadFileToFirebase(supFileObj, `users/${currentUser.uid}/${projectId}/supplementary_files`, currentUser);
+                    if (uploaded) {
+                        stepPayload.supplementary_files.push({
+                            display_name: step.supplementary_files.find(sf => sf.fileName === supFileObj.name)?.displayName || supFileObj.name,
+                            file_url: uploaded.url,
+                            file_path: uploaded.path,
+                            original_filename: uploaded.name,
+                            mime_type: uploaded.type,
+                            file_size_bytes: uploaded.size,
+                        });
+                    }
+                }
+
+                // Upload Step Result Image
+                if (step._resultImageFileObject) {
+                    const uploaded = await uploadFileToFirebase(step._resultImageFileObject, `users/${currentUser.uid}/${projectId}/result_images`, currentUser);
+                    if (uploaded) {
+                        stepPayload.result_image_url = uploaded.url;
+                        stepPayload.result_image_path = uploaded.path;
+                    }
+                }
+                processedStepsPayload.push(stepPayload);
+            }
+
+            // Process Buy List Items - only include items that are explicitly in the buy list
+            const processedBuyListPayload = [];
+            
+            // Only process buy list items if the buy list is not empty
+            if (projectBuyList && projectBuyList.length > 0) {
+                for (const item of projectBuyList) {
+                    let itemImageUrl = null;
+                    let itemImagePath = null;
+                    
+                    if (item.imageFile) {
+                        // New image file to upload
+                        const uploaded = await uploadFileToFirebase(item.imageFile, `users/${currentUser.uid}/${projectId}/buy_list_images`, currentUser);
+                        if (uploaded) {
+                            itemImageUrl = uploaded.url;
+                            itemImagePath = uploaded.path;
+                        }
+                    } else if (item.hasExistingImage && item.image_url && item.image_path) {
+                        // Preserve existing image from database
+                        itemImageUrl = item.image_url;
+                        itemImagePath = item.image_path;
+                    }
+                    
+                    processedBuyListPayload.push({
+                        name: item.name,
+                        quantity: item.quantity,
+                        specification: item.specification,
+                        purchase_link: item.purchase_link,
+                        image_url: itemImageUrl,
+                        image_path: itemImagePath,
+                    });
+                }
+            }
+            
+            // If buy list is empty, explicitly send empty array to prevent backend auto-generation
+            console.log(`Finalizing project with ${processedBuyListPayload.length} buy list items (${projectBuyList ? projectBuyList.length : 0} in frontend)`);
+
+            const finalApiPayload = {
+                project_id: projectId,
+                project_name: projectName,
+                user_id: currentUser.uid,
+                steps: processedStepsPayload,
+                buy_list: processedBuyListPayload,
+                // Explicitly indicate if buy list should be auto-generated from steps
+                auto_generate_buy_list: false, // Never auto-generate, only use what's explicitly provided
+            };
+
+            console.log("Final API Payload to send to backend:", JSON.stringify(finalApiPayload, null, 2));
+
+            // TODO: Replace with your actual API endpoint for finalizing project steps
+            const backendApiUrl = `${getApiUrl()}/upload_steps`; 
+            const token = currentUser.uid;
+
+            const response = await fetch(backendApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(finalApiPayload),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || "Failed to save project steps to backend.");
+            }
+            
+            const responseData = await response.json();
+            console.log("Backend response from finalize_steps:", responseData);
+
+            setSuccessMessage("Project finalized and all data saved successfully! Redirecting...");
+            navigate(`/videos`);
+
+        } catch (error) {
+            console.error("Error during project finalization:", error);
+            setErrorMessage(`Finalization failed: ${error.message}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return {
+        handleVideoSelection,
+        markTime,
+        handleAnnotationSubmit,
+        handleClearAnnotations,
+        handleAddToolToCurrentStep,
+        removeToolFromCurrentStep,
+        handleAddMaterialToCurrentStep,
+        removeMaterialFromCurrentStep,
+        handleSupFileChange,
+        removeSupFileFromCurrentStep,
+        handleResultImageChange,
+        handleAddBuyListItem,
+        removeBuyListItem,
+        handleAutoPopulateBuyList,
+        handleUpdateBuyListFromProject,
+        handleReplaceBuyList,
+        handleClearBuyList,
+        handleFinishProject
+    };
+}; 

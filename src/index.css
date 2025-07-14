@@ -1,3 +1,42 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --color-accent: #F1C232; /* Gold: main highlight */
+    --color-text: #D9D9D9;   /* Offwhite: main text */
+    --color-highlight: #0000FF; /* Blue: accent */
+    --color-bg: #000000;     /* Black: background */
+    --color-success: #10b981; /* Green: success */
+    --color-error: #dc2626;    /* Red: error */
+  }
+  body {
+    background-color: var(--color-bg) !important;
+    color: var(--color-text) !important;
+  }
+}
+
+/* Make react-image-annotation rectangles always visible on dark backgrounds */
+.region-select, .region-shape, .region-shape-rect {
+  stroke: #F1C232 !important; /* Gold border */
+  stroke-width: 3px !important;
+  filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 6px #F1C232);
+}
+.region-shape-rect, .region-shape {
+  fill: rgba(241, 194, 50, 0.18) !important; /* Gold semi-transparent fill */
+}
+.region-select-area, .region-shape.active, .region-shape.selected {
+  stroke: #fff !important;
+  stroke-width: 4px !important;
+  filter: drop-shadow(0 0 6px #fff);
+}
+
+/* Annotation rectangle label text: black and bold for readability */
+.region-label, .region-label-text, .region-label__text, .region-label-text-editable, .region-label-text-foreignobject {
+  fill: #18181b !important;
+  color: #18181b !important;
+  font-weight: 900 !important;
+  font-size: 1.1em !important;
+  text-shadow: 0 2px 8px #fff8;
+}
