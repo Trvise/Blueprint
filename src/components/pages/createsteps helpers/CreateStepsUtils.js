@@ -31,7 +31,6 @@ export const formatDate = (dateString) => {
 
 // API utility functions
 export const getApiUrl = () => {
-    // Always return the production URL, ignoring any local environment variables.
     return 'https://pbsggxqwqp.us-east-1.awsapprunner.com';
 };
 

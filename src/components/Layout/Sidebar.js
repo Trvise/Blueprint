@@ -6,9 +6,6 @@ import { AiOutlineMenu, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiO
 import logo from '../../assets/trvise_logo.png';
 import { getApiUrl } from '../pages/createsteps helpers/CreateStepsUtils';
 
-// Chrome detection
-const isChrome = typeof window !== 'undefined' && /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-
 const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
     const navigate = useNavigate();
     const location = useLocation();
