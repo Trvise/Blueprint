@@ -63,7 +63,8 @@ export const repositoryStyles = {
       actionsContainer: "flex justify-end space-x-2 pt-2 border-t border-[#D9D9D9] mt-2",
       actionButton: "bg-[#18181b] border border-[#D9D9D9] text-[#D9D9D9] p-2 rounded-lg transition-all duration-200 hover:bg-[#222222] hover:border-[#F1C232] hover:text-[#F1C232] flex items-center justify-center",
       editButton: "hover:bg-[#0000FF] hover:border-[#0000FF] hover:text-white",
-      deleteButton: "hover:bg-red-600 hover:border-red-600 hover:text-white"
+      deleteButton: "hover:bg-red-600 hover:border-red-600 hover:text-white",
+      buyButton: "hover:bg-[#F1C232] hover:border-[#F1C232] hover:text-black"
     }
   },
   

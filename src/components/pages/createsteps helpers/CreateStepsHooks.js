@@ -68,12 +68,7 @@ export const useCreateStepsState = () => {
     const [currentStepResultImage, setCurrentStepResultImage] = useState(null); // For displaying image URL
     
     // Buy list state
-    const [projectBuyList, setProjectBuyList] = useState([]); 
-    const [buyListItemName, setBuyListItemName] = useState('');
-    const [buyListItemQty, setBuyListItemQty] = useState(1);
-    const [buyListItemSpec, setBuyListItemSpec] = useState('');
-    const [buyListItemLink, setBuyListItemLink] = useState('');
-    const [buyListItemImageFile, setBuyListItemImageFile] = useState(null); 
+    const [projectBuyList, setProjectBuyList] = useState([]);
     
     // Project steps and loading state
     const [projectSteps, setProjectSteps] = useState([]);
@@ -100,7 +95,6 @@ export const useCreateStepsState = () => {
     const materialImageInputRef = useRef(null);
     const supFileInputRef = useRef(null); 
     const resultImageInputRef = useRef(null);
-    const buyListImageInputRef = useRef(null); 
 
     // Tab validation function
     const validateCurrentTab = (tabName) => {
@@ -262,16 +256,6 @@ export const useCreateStepsState = () => {
         // Buy list state
         projectBuyList,
         setProjectBuyList,
-        buyListItemName,
-        setBuyListItemName,
-        buyListItemQty,
-        setBuyListItemQty,
-        buyListItemSpec,
-        setBuyListItemSpec,
-        buyListItemLink,
-        setBuyListItemLink,
-        buyListItemImageFile,
-        setBuyListItemImageFile,
         
         // Project steps and loading state
         projectSteps,
@@ -306,8 +290,7 @@ export const useCreateStepsState = () => {
         toolImageInputRef,
         materialImageInputRef,
         supFileInputRef,
-        resultImageInputRef,
-        buyListImageInputRef
+        resultImageInputRef
     };
 };
 
@@ -327,16 +310,12 @@ export const useCreateStepsEffects = (state) => {
         setSuccessMessage,
         setExistingThumbnailUrl,
         setProjectBuyList,
-        projectBuyList,
         setIsLargeScreen,
         videoRef,
         setVideoDimensions,
         setActiveTab,
         activeVideoUrl
     } = state;
-
-    // Add a ref to track if we've already loaded the buy list
-    const buyListLoadedRef = useRef(false);
 
     // Expose setActiveTab globally for sidebar navigation
     useEffect(() => {
@@ -382,82 +361,91 @@ export const useCreateStepsEffects = (state) => {
                     setExistingThumbnailUrl(projectData.thumbnail_url);
                 }
                 
-                // Now fetch the project's primary video files and buy list
-                const [stepsResponse, buyListResponse] = await Promise.all([
-                    fetch(`${getApiUrl()}/projects/${projectId}/steps`, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                    }),
-                    fetch(`${getApiUrl()}/projects/${projectId}/buy_list`, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                    })
-                ]);
+                // Check if there's a saved buy list state in localStorage
+                const savedBuyListState = localStorage.getItem(`buyListState_${projectId}`);
+                
+                // Now fetch the project's primary video files
+                const stepsResponse = await fetch(`${getApiUrl()}/projects/${projectId}/steps`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
 
                 let videosFromAPI = [];
                 
                 if (stepsResponse.ok) {
                     const stepsData = await stepsResponse.json();
                     
-                    // Process and load existing buy list (only if not already loaded)
-                    if (buyListResponse.ok && !buyListLoadedRef.current) {
-                        const buyListData = await buyListResponse.json();
-                        
-                        // Transform buy list items to frontend format
-                        const transformedBuyList = buyListData.map(item => ({
-                            id: `buyitem_${item.item_id}`,
-                            name: item.name,
-                            quantity: item.quantity,
-                            specification: item.specification || '',
-                            purchase_link: item.purchase_link || '',
-                            imageFile: null,
-                            hasExistingImage: !!(item.image_file && item.image_file.file_url),
-                            image_url: item.image_file?.file_url || null,
-                            image_path: item.image_file?.file_key || null,
-                            sourceType: 'existing',
-                            sourceId: item.item_id
-                        }));
-                        
-                        setProjectBuyList(transformedBuyList);
-                        buyListLoadedRef.current = true; // Mark as loaded
-                        
-                        // Show success message if items were loaded
-                        if (transformedBuyList.length > 0) {
-                            setSuccessMessage(`Loaded existing buy list with ${transformedBuyList.length} item${transformedBuyList.length !== 1 ? 's' : ''}.`);
-                            setTimeout(() => setSuccessMessage(''), 3000);
-                        }
-                    } else if (!buyListLoadedRef.current) {
-                        // Fallback: create a placeholder if we can't get video files
-                        console.warn('Could not fetch steps data, using placeholder');
-                        setUploadedVideos([]);
-                        
-                        // Still try to load buy list even if steps failed (only if not already loaded)
-                        if (buyListResponse.ok && !buyListLoadedRef.current) {
-                            const buyListData = await buyListResponse.json();
+                    // Check if this is an existing project (has steps) or a new project
+                    const isExistingProject = stepsData && stepsData.length > 0;
+                    
+                    if (savedBuyListState) {
+                        // If there's a saved state, use it (handles both cleared and modified states)
+                        try {
+                            const savedBuyList = JSON.parse(savedBuyListState);
+                            setProjectBuyList(savedBuyList);
                             
-                            const transformedBuyList = buyListData.map(item => ({
-                                id: `buyitem_${item.item_id}`,
-                                name: item.name,
-                                quantity: item.quantity,
-                                specification: item.specification || '',
-                                purchase_link: item.purchase_link || '',
-                                imageFile: null,
-                                hasExistingImage: !!(item.image_file && item.image_file.file_url),
-                                image_url: item.image_file?.file_url || null,
-                                image_path: item.image_file?.file_key || null,
-                                sourceType: 'existing',
-                                sourceId: item.item_id
-                            }));
-                            
-                            setProjectBuyList(transformedBuyList);
-                            buyListLoadedRef.current = true; // Mark as loaded
-                        } else if (!buyListLoadedRef.current) {
-                            buyListLoadedRef.current = true; // Mark as loaded even if empty
+                            if (savedBuyList.length > 0) {
+                                setSuccessMessage(`Restored buy list with ${savedBuyList.length} item${savedBuyList.length !== 1 ? 's' : ''}.`);
+                                setTimeout(() => setSuccessMessage(''), 3000);
+                            }
+                        } catch (error) {
+                            console.error('Error parsing saved buy list state:', error);
+                            setProjectBuyList([]);
                         }
+                    } else if (isExistingProject) {
+                        // For existing projects without saved state, load from database
+                        try {
+                            const buyListResponse = await fetch(`${getApiUrl()}/projects/${projectId}/buy_list`, {
+                                method: 'GET',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                            });
+                            
+                            if (buyListResponse.ok) {
+                                const buyListData = await buyListResponse.json();
+                                
+                                // Transform buy list items to frontend format
+                                const transformedBuyList = buyListData.map(item => ({
+                                    id: `buyitem_${item.item_id}`,
+                                    name: item.name,
+                                    quantity: item.quantity,
+                                    specification: item.specification || '',
+                                    purchase_link: item.purchase_link || '',
+                                    imageFile: null,
+                                    hasExistingImage: !!(item.image_file && item.image_file.file_url),
+                                    image_url: item.image_file?.file_url || null,
+                                    image_path: item.image_file?.file_key || null,
+                                    sourceType: 'existing',
+                                    sourceId: item.item_id
+                                }));
+                                
+                                setProjectBuyList(transformedBuyList);
+                                
+                                // Save initial state to localStorage
+                                localStorage.setItem(`buyListState_${projectId}`, JSON.stringify(transformedBuyList));
+                                
+                                // Show success message if items were loaded
+                                if (transformedBuyList.length > 0) {
+                                    setSuccessMessage(`Loaded existing buy list with ${transformedBuyList.length} item${transformedBuyList.length !== 1 ? 's' : ''}.`);
+                                    setTimeout(() => setSuccessMessage(''), 3000);
+                                }
+                            } else {
+                                // If buy list fetch fails, start with empty
+                                setProjectBuyList([]);
+                                localStorage.setItem(`buyListState_${projectId}`, JSON.stringify([]));
+                            }
+                        } catch (error) {
+                            console.error('Error loading buy list:', error);
+                            setProjectBuyList([]);
+                            localStorage.setItem(`buyListState_${projectId}`, JSON.stringify([]));
+                        }
+                    } else {
+                        // For new projects, start with empty buy list
+                        setProjectBuyList([]);
+                        localStorage.setItem(`buyListState_${projectId}`, JSON.stringify([]));
                     }
                     
                     // Extract unique video files from steps
@@ -542,29 +530,8 @@ export const useCreateStepsEffects = (state) => {
                     console.warn('Could not fetch steps data, using placeholder');
                     setUploadedVideos([]);
                     
-                    // Still try to load buy list even if steps failed (only if not already loaded)
-                    if (buyListResponse.ok && !buyListLoadedRef.current) {
-                        const buyListData = await buyListResponse.json();
-                        
-                        const transformedBuyList = buyListData.map(item => ({
-                            id: `buyitem_${item.item_id}`,
-                            name: item.name,
-                            quantity: item.quantity,
-                            specification: item.specification || '',
-                            purchase_link: item.purchase_link || '',
-                            imageFile: null,
-                            hasExistingImage: !!(item.image_file && item.image_file.file_url),
-                            image_url: item.image_file?.file_url || null,
-                            image_path: item.image_file?.file_key || null,
-                            sourceType: 'existing',
-                            sourceId: item.item_id
-                        }));
-                        
-                        setProjectBuyList(transformedBuyList);
-                        buyListLoadedRef.current = true; // Mark as loaded
-                    } else if (!buyListLoadedRef.current) {
-                        buyListLoadedRef.current = true; // Mark as loaded even if empty
-                    }
+                    // Initialize buy list as empty
+                    setProjectBuyList([]);
                 }
                 
                 if (videosFromAPI.length > 0 && videosFromAPI[0].url) {
@@ -578,10 +545,8 @@ export const useCreateStepsEffects = (state) => {
                 console.error('Error fetching project data:', error);
                 setErrorMessage("Failed to load project data. Please try again.");
                 
-                // If project data fetch fails completely, still try to initialize empty buy list
-                if (projectBuyList.length === 0) {
-                    setProjectBuyList([]);
-                }
+                // Initialize buy list as empty even if project data fetch fails
+                setProjectBuyList([]);
             }
         };
 
@@ -603,7 +568,7 @@ export const useCreateStepsEffects = (state) => {
         } else {
             setErrorMessage("Project ID not found. Please start from project creation.");
         }
-    }, [projectId, location.state, currentUser, navigate, setProjectName, setUploadedVideos, setActiveVideoUrl, setActiveVideoIndex, setErrorMessage, setProjectSteps, setCapturedAnnotationFrames, setSuccessMessage, setExistingThumbnailUrl, setProjectBuyList, projectBuyList.length]);
+    }, [projectId, location.state, currentUser, navigate, setProjectName, setUploadedVideos, setActiveVideoUrl, setActiveVideoIndex, setErrorMessage, setProjectSteps, setCapturedAnnotationFrames, setSuccessMessage, setExistingThumbnailUrl, setProjectBuyList]);
 
     // Handle video metadata loading
     useEffect(() => {

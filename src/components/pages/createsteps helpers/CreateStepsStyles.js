@@ -1,4 +1,10 @@
 // CreateStepsStyles.js - All styles for the CreateSteps component
+
+// Chrome detection function
+const isChrome = () => {
+    return navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg') && !navigator.userAgent.includes('Safari');
+};
+
 export const styles = {
     pageContainer: {
         display: 'flex',
@@ -6,6 +12,10 @@ export const styles = {
         fontFamily: "'Inter', sans-serif", 
         color: '#D9D9D9',
         backgroundColor: '#000000',
+        ...(isChrome() && {
+            width: '100vw',
+            overflow: 'hidden',
+        }),
     },
     videoTimelineContainer: {
         display: 'flex',
@@ -14,11 +24,20 @@ export const styles = {
         fontFamily: "'Inter', sans-serif", 
         color: '#D9D9D9',
         backgroundColor: '#000000',
+        ...(isChrome() && {
+            width: '100vw',
+            height: '100vh',
+            overflow: 'hidden',
+        }),
     },
     videoTimelineLayout: {
         display: 'flex',
         flex: 1,
         overflow: 'hidden',
+        ...(isChrome() && {
+            width: '100%',
+            minWidth: '0',
+        }),
     },
     leftPanel: {
         width: '40%',
@@ -26,18 +45,33 @@ export const styles = {
         flexDirection: 'column',
         backgroundColor: '#000000',
         borderRight: '1px solid #D9D9D9',
+        ...(isChrome() && {
+            width: '25%',
+            minWidth: '260px',
+            maxWidth: '300px',
+            flexShrink: 0,
+        }),
     },
     rightPanel: {
         width: '60%',
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: '#000000',
+        ...(isChrome() && {
+            width: '75%',
+            minWidth: '0',
+            flex: 1,
+        }),
     },
     mainContent: {
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        ...(isChrome() && {
+            width: '100%',
+            minWidth: '0',
+        }),
     },
     header: {
         display: 'flex',
@@ -47,11 +81,20 @@ export const styles = {
         backgroundColor: '#000000',
         borderBottom: '1px solid #D9D9D9',
         boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+        ...(isChrome() && {
+            padding: '12px 16px',
+            width: '100%',
+            minWidth: '0',
+            boxSizing: 'border-box',
+        }),
     },
     pageTitle: {
         fontSize: '1.8rem', 
         fontWeight: 'bold',
         color: '#F1C232', // Gold for main title
+        ...(isChrome() && {
+            fontSize: '1.6rem',
+        }),
     },
     projectNameHighlight: {
         color: '#F1C232', 
@@ -144,6 +187,13 @@ export const styles = {
         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
         backgroundColor: '#000000',
         marginBottom: '20px',
+        ...(isChrome() && {
+            padding: '8px',
+            marginBottom: '8px',
+            width: '100%',
+            minWidth: '0',
+            boxSizing: 'border-box',
+        }),
     },
     sectionTitle: {
         fontSize: '1.4rem',
@@ -151,7 +201,13 @@ export const styles = {
         color: '#F1C232', // Gold for section titles
         marginBottom: '16px',
         paddingBottom: '8px',
-        borderBottom: '1px solid #D9D9D9'
+        borderBottom: '1px solid #D9D9D9',
+        ...(isChrome() && {
+            fontSize: '1.2rem',
+            marginBottom: '12px',
+            width: '100%',
+            minWidth: '0',
+        }),
     },
     inputLabel: {
         display: 'block',
@@ -159,6 +215,10 @@ export const styles = {
         fontWeight: '500',
         color: '#D9D9D9', 
         marginBottom: '6px',
+        ...(isChrome() && {
+            fontSize: '0.8rem',
+            marginBottom: '4px',
+        }),
     },
     inputField: {
         width: '100%',
@@ -171,6 +231,13 @@ export const styles = {
         boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.15)',
         transition: 'border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
         boxSizing: 'border-box', 
+        ...(isChrome() && {
+            padding: '6px 8px',
+            fontSize: '0.8rem',
+            width: '100%',
+            minWidth: '0',
+            boxSizing: 'border-box',
+        }),
     },
     textareaField: {
         width: '100%',
@@ -184,6 +251,14 @@ export const styles = {
         transition: 'border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
         minHeight: '80px',
         boxSizing: 'border-box',
+        ...(isChrome() && {
+            padding: '6px 8px',
+            fontSize: '0.8rem',
+            minHeight: '60px',
+            width: '100%',
+            minWidth: '0',
+            boxSizing: 'border-box',
+        }),
     },
     button: {
         padding: '10px 18px',
@@ -194,6 +269,10 @@ export const styles = {
         cursor: 'pointer',
         transition: 'background-color 0.2s ease-in-out, transform 0.1s ease',
         boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+        ...(isChrome() && {
+            width: 'auto',
+            minWidth: '0',
+        }),
     },
     buttonPrimary: {
         backgroundColor: '#F1C232', // Gold for primary actions
@@ -236,6 +315,12 @@ export const styles = {
         flex: 1,
         padding: '20px',
         overflowY: 'auto',
+        ...(isChrome() && {
+            padding: '8px',
+            width: '100%',
+            minWidth: '0',
+            boxSizing: 'border-box',
+        }),
     },
     finalizeContainer: {
         flex: 1,
@@ -243,6 +328,12 @@ export const styles = {
         overflowY: 'auto',
         backgroundColor: '#000000',
         minHeight: '100vh',
+        ...(isChrome() && {
+            padding: '16px',
+            width: '100%',
+            minWidth: '0',
+            boxSizing: 'border-box',
+        }),
     },
     tabNavigation: {
         display: 'flex',
@@ -251,6 +342,12 @@ export const styles = {
         borderTopLeftRadius: '8px',
         borderTopRightRadius: '8px',
         padding: '0 20px',
+        ...(isChrome() && {
+            padding: '0 8px',
+            width: '100%',
+            minWidth: '0',
+            boxSizing: 'border-box',
+        }),
     },
     tabButton: {
         padding: '12px 16px',
@@ -265,6 +362,12 @@ export const styles = {
         borderBottomStyle: 'solid',
         borderBottomColor: 'transparent',
         position: 'relative',
+        ...(isChrome() && {
+            padding: '8px 10px',
+            fontSize: '0.8rem',
+            flex: 1,
+            minWidth: '0',
+        }),
     },
     tabButtonActive: {
         color: '#000000',
@@ -276,15 +379,28 @@ export const styles = {
     videoSection: {
         padding: '20px',
         borderBottom: '1px solid #D9D9D9',
+        ...(isChrome() && {
+            padding: '12px',
+            width: '100%',
+            minWidth: '0',
+            boxSizing: 'border-box',
+        }),
     },
     videoContainer: {
         marginBottom: '16px',
+        ...(isChrome() && {
+            marginBottom: '12px',
+        }),
     },
     videoSelection: {
         display: 'flex',
         gap: '8px',
         marginBottom: '16px',
         flexWrap: 'wrap',
+        ...(isChrome() && {
+            gap: '6px',
+            marginBottom: '12px',
+        }),
     },
     videoSelectButton: {
         padding: '6px 12px',
@@ -307,6 +423,10 @@ export const styles = {
         gap: '8px',
         marginTop: '12px',
         flexWrap: 'wrap',
+        ...(isChrome() && {
+            width: '100%',
+            minWidth: '0',
+        }),
     },
     noVideoMessage: {
         padding: '40px',
@@ -319,17 +439,31 @@ export const styles = {
         flex: 1,
         padding: '20px',
         overflowY: 'auto',
+        ...(isChrome() && {
+            padding: '12px',
+            width: '100%',
+            minWidth: '0',
+            boxSizing: 'border-box',
+        }),
     },
     stepsSectionHeader: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '16px',
+        ...(isChrome() && {
+            marginBottom: '12px',
+            gap: '8px',
+        }),
     },
     stepsSectionTitle: {
         fontSize: '1.1rem',
         fontWeight: '600',
         color: '#F1C232',
+        ...(isChrome() && {
+            width: '100%',
+            minWidth: '0',
+        }),
     },
     stepsList: {
         display: 'flex',
@@ -343,6 +477,10 @@ export const styles = {
         backgroundColor: '#000000',
         cursor: 'pointer',
         transition: 'all 0.2s',
+        ...(isChrome() && {
+            width: '100%',
+            minWidth: '0',
+        }),
     },
     stepItemActive: {
         border: '1px solid #0000FF',
