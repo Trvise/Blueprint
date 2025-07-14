@@ -21,6 +21,9 @@ function SplashScreen({ onFinish }) {
     return () => { clearTimeout(timer1); clearTimeout(timer2); clearTimeout(timer3); };
   }, [onFinish]);
 
+  // Chrome detection
+  const isChrome = typeof window !== 'undefined' && /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+
   // Calculate transform: move from center to (20px, 20px)
   // Use vw/vh for responsiveness, fallback to fixed px for sidebar
   const moveTransform = 'translate(-40vw, -40vh) scale(0.25)';
@@ -45,14 +48,20 @@ function SplashScreen({ onFinish }) {
         willChange: 'transform',
       }}>
         <img src={trviseLogo} alt="Blueprint Logo" style={{ width: '160px', height: '160px', marginBottom: '1.5rem', transition: 'width 0.7s, height 0.7s' }} />
-        <h1 style={{
+        <h1 style={isChrome ? {
+          fontSize: '5rem',
+          fontWeight: 'bold',
+          letterSpacing: '0.1em',
+          textAlign: 'center',
+          margin: 0,
+        } : {
           fontSize: '5rem',
           fontWeight: 'bold',
           background: 'linear-gradient(45deg, #0000FF 0%, #F1C232 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
-          animation: 'gradientShift 2s linear',
+          color: '#F1C232', // fallback color
           letterSpacing: '0.1em',
           textAlign: 'center',
           margin: 0,

@@ -329,34 +329,41 @@ export const createStepHandlers = (
                 processedStepsPayload.push(stepPayload);
             }
 
-            // Process Buy List Items
+            // Process Buy List Items - only include items that are explicitly in the buy list
             const processedBuyListPayload = [];
-            for (const item of projectBuyList) {
-                let itemImageUrl = null;
-                let itemImagePath = null;
-                
-                if (item.imageFile) {
-                    // New image file to upload
-                    const uploaded = await uploadFileToFirebase(item.imageFile, `users/${currentUser.uid}/${projectId}/buy_list_images`, currentUser);
-                    if (uploaded) {
-                        itemImageUrl = uploaded.url;
-                        itemImagePath = uploaded.path;
+            
+            // Only process buy list items if the buy list is not empty
+            if (projectBuyList && projectBuyList.length > 0) {
+                for (const item of projectBuyList) {
+                    let itemImageUrl = null;
+                    let itemImagePath = null;
+                    
+                    if (item.imageFile) {
+                        // New image file to upload
+                        const uploaded = await uploadFileToFirebase(item.imageFile, `users/${currentUser.uid}/${projectId}/buy_list_images`, currentUser);
+                        if (uploaded) {
+                            itemImageUrl = uploaded.url;
+                            itemImagePath = uploaded.path;
+                        }
+                    } else if (item.hasExistingImage && item.image_url && item.image_path) {
+                        // Preserve existing image from database
+                        itemImageUrl = item.image_url;
+                        itemImagePath = item.image_path;
                     }
-                } else if (item.hasExistingImage && item.image_url && item.image_path) {
-                    // Preserve existing image from database
-                    itemImageUrl = item.image_url;
-                    itemImagePath = item.image_path;
+                    
+                    processedBuyListPayload.push({
+                        name: item.name,
+                        quantity: item.quantity,
+                        specification: item.specification,
+                        purchase_link: item.purchase_link,
+                        image_url: itemImageUrl,
+                        image_path: itemImagePath,
+                    });
                 }
-                
-                processedBuyListPayload.push({
-                    name: item.name,
-                    quantity: item.quantity,
-                    specification: item.specification,
-                    purchase_link: item.purchase_link,
-                    image_url: itemImageUrl,
-                    image_path: itemImagePath,
-                });
             }
+            
+            // If buy list is empty, explicitly send empty array to prevent backend auto-generation
+            console.log(`Finalizing project with ${processedBuyListPayload.length} buy list items (${projectBuyList ? projectBuyList.length : 0} in frontend)`);
 
             // If buy list is empty, explicitly send empty array to prevent backend auto-generation
             console.log(`Finalizing project with ${processedBuyListPayload.length} buy list items (${projectBuyList ? projectBuyList.length : 0} in frontend)`);
