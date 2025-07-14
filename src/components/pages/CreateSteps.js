@@ -633,6 +633,12 @@ const ProjectStepsPage = () => {
                                             console.error("Failed video URL:", activeVideoUrl);
                                             setErrorMessage(`Error loading video: ${uploadedVideos[activeVideoIndex]?.name || 'Unknown video'}`); 
                                         }}
+                                        onTimeUpdate={(e) => {
+                                            // Debug log for current time
+                                            if (videoRef.current) {
+                                                console.log('Video currentTime:', videoRef.current.currentTime);
+                                            }
+                                        }}
                                     />
             
                                     {/* Video controls */}
@@ -654,6 +660,41 @@ const ProjectStepsPage = () => {
                                             style={{...styles.button, backgroundColor: '#3498db', color: 'white'}}
                                         >
                                             Capture Frame
+                                        </button>
+                                        {/* Mark Start/End/Clear buttons */}
+                                        <button
+                                            onClick={() => {
+                                                if (videoRef.current) {
+                                                    const currentTime = videoRef.current.currentTime;
+                                                    state.setCurrentStepStartTime(currentTime);
+                                                }
+                                            }}
+                                            style={{...styles.button, ...styles.buttonPrimary, marginLeft: 8}}
+                                        >
+                                            Mark Start
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (videoRef.current) {
+                                                    const currentTime = videoRef.current.currentTime;
+                                                    if (state.currentStepStartTime !== null && currentTime <= state.currentStepStartTime) {
+                                                        return; // End time must be after start time
+                                                    }
+                                                    state.setCurrentStepEndTime(currentTime);
+                                                }
+                                            }}
+                                            style={{...styles.button, ...styles.buttonSecondary, marginLeft: 8}}
+                                        >
+                                            Mark End
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                state.setCurrentStepStartTime(null);
+                                                state.setCurrentStepEndTime(null);
+                                            }}
+                                            style={{...styles.button, ...styles.buttonDanger, marginLeft: 8}}
+                                        >
+                                            Clear
                                         </button>
                                     </div>
                                 </div>
@@ -681,7 +722,7 @@ const ProjectStepsPage = () => {
                             {projectSteps.map((step, index) => (
                                 <div
                                     key={step.id || `step-${index}`}
-                                    style={{
+                        style={{
                                         ...styles.stepItem,
                                         ...(currentStepIndex === index ? styles.stepItemActive : {}),
                                         position: 'relative'
@@ -690,14 +731,14 @@ const ProjectStepsPage = () => {
                                     <div
                                         onClick={() => stepActions.loadStepForEditing(step, index)}
                                         style={{flex: 1, cursor: 'pointer'}}
-                                    >
-                                        <div style={styles.stepItemHeader}>
-                                            <span style={currentStepIndex === index ? styles.stepItemNumberActive : styles.stepItemNumber}>Step {index + 1}</span>
-                                            <span style={currentStepIndex === index ? styles.stepItemTimeActive : styles.stepItemTime}>
-                                                {formatTime(step.video_start_time_ms / 1000)} - {formatTime(step.video_end_time_ms / 1000)}
-                                            </span>
-                                        </div>
-                                        <div style={currentStepIndex === index ? styles.stepItemNameActive : styles.stepItemName}>{step.name}</div>
+                                >
+                                    <div style={styles.stepItemHeader}>
+                                        <span style={currentStepIndex === index ? styles.stepItemNumberActive : styles.stepItemNumber}>Step {index + 1}</span>
+                                        <span style={currentStepIndex === index ? styles.stepItemTimeActive : styles.stepItemTime}>
+                                            {formatTime(step.video_start_time_ms / 1000)} - {formatTime(step.video_end_time_ms / 1000)}
+                                        </span>
+                                    </div>
+                                    <div style={currentStepIndex === index ? styles.stepItemNameActive : styles.stepItemName}>{step.name}</div>
                                     </div>
                                     
                                     <button

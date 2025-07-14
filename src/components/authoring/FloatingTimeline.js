@@ -20,6 +20,7 @@ const FloatingTimeline = ({
     
     const timelineRef = useRef(null);
     const scrollContainerRef = useRef(null);
+    const animationFrameRef = useRef(null);
     
     const videoDuration = videoRef?.current?.duration || 0;
     
@@ -113,30 +114,22 @@ const FloatingTimeline = ({
         setZoomLevel(prev => Math.max(prev / 1.5, 0.1));
     };
     
-    // Track video current time in real-time
+    // Smoothly track video current time using requestAnimationFrame
     useEffect(() => {
-        if (!videoRef.current) return;
-        
-        const video = videoRef.current;
-        
-        const updateCurrentTime = () => {
-            setCurrentTime(video.currentTime);
-        };
-        
-        // Update on timeupdate event (fires multiple times per second during playback)
-        video.addEventListener('timeupdate', updateCurrentTime);
-        
-        // Also update on seeked event (when user manually seeks)
-        video.addEventListener('seeked', updateCurrentTime);
-        
-        // Initial update
-        updateCurrentTime();
-        
+        let running = true;
+        function update() {
+            if (!running) return;
+            if (videoRef.current && !isDragging) {
+                setCurrentTime(videoRef.current.currentTime);
+            }
+            animationFrameRef.current = requestAnimationFrame(update);
+        }
+        animationFrameRef.current = requestAnimationFrame(update);
         return () => {
-            video.removeEventListener('timeupdate', updateCurrentTime);
-            video.removeEventListener('seeked', updateCurrentTime);
+            running = false;
+            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         };
-    }, [videoRef]);
+    }, [videoRef, isDragging]);
     
     // Auto-scroll to current time
     useEffect(() => {
