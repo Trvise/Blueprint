@@ -31,6 +31,11 @@ export const createStepHandlers = (
         setCurrentStepResultImageFile,
         setCurrentStepResultImage,
         setProjectBuyList,
+        setBuyListItemName,
+        setBuyListItemQty,
+        setBuyListItemSpec,
+        setBuyListItemLink,
+        setBuyListItemImageFile,
         setProjectSteps,
         setCurrentStepIndex,
         setIsStepLoading,
@@ -40,6 +45,7 @@ export const createStepHandlers = (
         toolImageInputRef,
         materialImageInputRef,
         supFileInputRef,
+        buyListImageInputRef,
         videoRef,
         // State values
         uploadedVideos,
@@ -61,6 +67,11 @@ export const createStepHandlers = (
         currentStepMaterialImageFile,
         currentStepMaterialPurchaseLink,
         currentStepMaterialQuantity,
+        buyListItemName,
+        buyListItemQty,
+        buyListItemSpec,
+        buyListItemLink,
+        buyListItemImageFile,
         projectBuyList,
         projectSteps,
         currentStepIndex,
@@ -214,6 +225,325 @@ export const createStepHandlers = (
         }
     };
 
+    const handleAddBuyListItem = () => {
+        if (!buyListItemName.trim()) { alert("Item name is required for buy list."); return; }
+        // Only store serializable data
+        const safeImageFile = buyListItemImageFile instanceof File ? buyListItemImageFile : null;
+        setProjectBuyList(prev => [...prev, {
+            id: `buyitem_${uuidv4()}`, name: buyListItemName,
+            quantity: parseInt(buyListItemQty, 10) || 1, specification: buyListItemSpec,
+            purchase_link: buyListItemLink, imageFile: safeImageFile,
+            hasExistingImage: false // Mark as new item for proper image display
+        }]);
+        setBuyListItemName(''); setBuyListItemQty(1); setBuyListItemSpec('');
+        setBuyListItemLink(''); setBuyListItemImageFile(null);
+        if (buyListImageInputRef.current) buyListImageInputRef.current.value = "";
+    };
+
+    const removeBuyListItem = (itemId) => {
+        const removedItem = projectBuyList.find(item => item.id === itemId);
+        if (removedItem) {
+            // If this is a project-generated item, we should remember not to add it back
+            if (removedItem.id.startsWith('buyitem_tool_') || removedItem.id.startsWith('buyitem_material_')) {
+                // Store the removed item name in localStorage to prevent auto-adding back
+                const removedItems = JSON.parse(localStorage.getItem('removedBuyListItems') || '[]');
+                if (!removedItems.includes(removedItem.name.toLowerCase())) {
+                    removedItems.push(removedItem.name.toLowerCase());
+                    localStorage.setItem('removedBuyListItems', JSON.stringify(removedItems));
+                }
+            }
+        }
+        setProjectBuyList(prev => prev.filter(item => item.id !== itemId));
+    };
+
+    // New function to fetch repository items and auto-populate buy list
+    const handleAutoPopulateBuyList = async () => {
+        if (!projectSteps || projectSteps.length === 0) {
+            setErrorMessage("No steps found in project. Please add some steps first.");
+            return;
+        }
+
+        try {
+            setIsLoading(true);
+            setErrorMessage('');
+            
+            // Collect all tools and materials from all steps in the project
+            let allProjectItems = [];
+
+            projectSteps.forEach((step, stepIndex) => {
+                // Add tools from this step
+                if (step.tools && step.tools.length > 0) {
+                    step.tools.forEach(tool => {
+                        // Skip tools without a valid name
+                        if (!tool.name || typeof tool.name !== 'string') {
+                            console.warn('Skipping tool without valid name:', tool);
+                            return;
+                        }
+                        
+                        allProjectItems.push({
+                            id: `buyitem_tool_${stepIndex}_${tool.id || uuidv4()}`,
+                    name: tool.name,
+                            quantity: tool.quantity || 1, // Use actual quantity from step
+                    specification: tool.specification || '',
+                    purchase_link: tool.purchase_link || '',
+                            imageFile: tool.imageFile || null,
+                            image_url: tool.image_url || null,
+                            image_path: tool.image_path || null,
+                            sourceType: 'tool',
+                            sourceStep: stepIndex + 1,
+                            sourceStepName: step.name
+                        });
+                    });
+                }
+
+                // Add materials from this step
+                if (step.materials && step.materials.length > 0) {
+                    step.materials.forEach(material => {
+                        // Skip materials without a valid name
+                        if (!material.name || typeof material.name !== 'string') {
+                            console.warn('Skipping material without valid name:', material);
+                            return;
+                        }
+                        
+                        allProjectItems.push({
+                            id: `buyitem_material_${stepIndex}_${material.id || uuidv4()}`,
+                    name: material.name,
+                            quantity: material.quantity || 1, // Use actual quantity from step
+                    specification: material.specification || '',
+                    purchase_link: material.purchase_link || '',
+                            imageFile: material.imageFile || null,
+                            image_url: material.image_url || null,
+                            image_path: material.image_path || null,
+                            sourceType: 'material',
+                            sourceStep: stepIndex + 1,
+                            sourceStepName: step.name
+                        });
+                    });
+                }
+            });
+
+            if (allProjectItems.length === 0) {
+                setSuccessMessage('No tools or materials found in any project steps. Please add some tools or materials to your steps first.');
+                setTimeout(() => setSuccessMessage(''), 5000);
+                return;
+            }
+
+            // Remove duplicates by name and aggregate quantities
+            const aggregatedItems = {};
+            
+            allProjectItems.forEach(item => {
+                // Skip items without a name
+                if (!item.name || typeof item.name !== 'string') {
+                    console.warn('Skipping item without valid name:', item);
+                    return;
+                }
+                
+                const key = item.name.toLowerCase();
+                if (aggregatedItems[key]) {
+                    // If item already exists, add the quantities
+                    aggregatedItems[key].quantity += (item.quantity || 1);
+                } else {
+                    // If item doesn't exist, add it
+                    aggregatedItems[key] = { ...item };
+                }
+            });
+
+            const uniqueItems = Object.values(aggregatedItems);
+
+            // Filter out items that are already in the buy list (by name to avoid duplicates)
+            const existingItemNames = new Set(projectBuyList.map(item => item.name?.toLowerCase()).filter(Boolean));
+            
+            // Get list of items that were manually removed
+            const removedItems = JSON.parse(localStorage.getItem('removedBuyListItems') || '[]');
+            const removedItemsSet = new Set(removedItems);
+            
+            const newItems = uniqueItems.filter(item => 
+                item.name && 
+                !existingItemNames.has(item.name.toLowerCase()) && 
+                !removedItemsSet.has(item.name.toLowerCase())
+            );
+
+            if (newItems.length === 0) {
+                setSuccessMessage('All project tools and materials are already in the buy list or were previously removed.');
+                setTimeout(() => setSuccessMessage(''), 3000);
+                return;
+            }
+
+            // Add new items to the buy list (append to existing)
+            setProjectBuyList(prev => [...prev, ...newItems]);
+            
+            setSuccessMessage(`Successfully added ${newItems.length} items from project steps to buy list!`);
+            setTimeout(() => setSuccessMessage(''), 5000);
+
+        } catch (error) {
+            console.error('Error auto-populating buy list from project:', error);
+            setErrorMessage(`Failed to populate buy list from project: ${error.message}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // New function to update buy list from current project state
+    const handleUpdateBuyListFromProject = async () => {
+        if (!projectSteps || projectSteps.length === 0) {
+            setErrorMessage("No steps found in project. Please add some steps first.");
+            return;
+        }
+
+        try {
+            setIsLoading(true);
+            setErrorMessage('');
+            
+            // Collect all tools and materials from all steps in the project
+            let allProjectItems = [];
+
+            projectSteps.forEach((step, stepIndex) => {
+                // Add tools from this step
+                if (step.tools && step.tools.length > 0) {
+                    step.tools.forEach(tool => {
+                        // Skip tools without a valid name
+                        if (!tool.name || typeof tool.name !== 'string') {
+                            console.warn('Skipping tool without valid name:', tool);
+                            return;
+                        }
+                        
+                        allProjectItems.push({
+                            id: `buyitem_tool_${stepIndex}_${tool.id || uuidv4()}`,
+                            name: tool.name,
+                            quantity: tool.quantity || 1, // Use actual quantity from step
+                            specification: tool.specification || '',
+                            purchase_link: tool.purchase_link || '',
+                            imageFile: tool.imageFile || null,
+                            image_url: tool.image_url || null,
+                            image_path: tool.image_path || null,
+                            sourceType: 'tool',
+                            sourceStep: stepIndex + 1,
+                            sourceStepName: step.name
+                        });
+                    });
+                }
+
+                // Add materials from this step
+                if (step.materials && step.materials.length > 0) {
+                    step.materials.forEach(material => {
+                        // Skip materials without a valid name
+                        if (!material.name || typeof material.name !== 'string') {
+                            console.warn('Skipping material without valid name:', material);
+                            return;
+                        }
+                        
+                        allProjectItems.push({
+                            id: `buyitem_material_${stepIndex}_${material.id || uuidv4()}`,
+                            name: material.name,
+                            quantity: material.quantity || 1, // Use actual quantity from step
+                            specification: material.specification || '',
+                            purchase_link: material.purchase_link || '',
+                            imageFile: material.imageFile || null,
+                            image_url: material.image_url || null,
+                            image_path: material.image_path || null,
+                            sourceType: 'material',
+                            sourceStep: stepIndex + 1,
+                            sourceStepName: step.name
+                        });
+                    });
+                }
+            });
+
+            if (allProjectItems.length === 0) {
+                setSuccessMessage('No tools or materials found in any project steps. Please add some tools or materials to your steps first.');
+                setTimeout(() => setSuccessMessage(''), 5000);
+                return;
+            }
+
+            // Remove duplicates by name and aggregate quantities
+            const aggregatedItems = {};
+            
+            allProjectItems.forEach(item => {
+                // Skip items without a name
+                if (!item.name || typeof item.name !== 'string') {
+                    console.warn('Skipping item without valid name:', item);
+                    return;
+                }
+                
+                const key = item.name.toLowerCase();
+                if (aggregatedItems[key]) {
+                    // If item already exists, add the quantities
+                    aggregatedItems[key].quantity += (item.quantity || 1);
+                } else {
+                    // If item doesn't exist, add it
+                    aggregatedItems[key] = { ...item };
+                }
+            });
+
+            const uniqueProjectItems = Object.values(aggregatedItems);
+
+            // Separate manually added items from project-generated items
+            const manuallyAddedItems = projectBuyList.filter(item => 
+                !item.id.startsWith('buyitem_tool_') && !item.id.startsWith('buyitem_material_')
+            );
+
+            // Get list of items that were manually removed
+            const removedItems = JSON.parse(localStorage.getItem('removedBuyListItems') || '[]');
+            const removedItemsSet = new Set(removedItems);
+
+            // Filter out items that were manually removed
+            const filteredProjectItems = uniqueProjectItems.filter(item => 
+                item.name && !removedItemsSet.has(item.name.toLowerCase())
+            );
+
+            // Combine manually added items with filtered project items
+            const updatedBuyList = [...manuallyAddedItems, ...filteredProjectItems];
+            
+            setProjectBuyList(updatedBuyList);
+            
+            const addedCount = filteredProjectItems.length;
+            const removedCount = removedItems.length;
+            
+            let message = `Buy list updated! `;
+            if (addedCount > 0) {
+                message += `Added ${addedCount} items from project steps. `;
+            }
+            if (removedCount > 0) {
+                message += `Respected ${removedCount} previously removed items. `;
+            }
+            if (manuallyAddedItems.length > 0) {
+                message += `Preserved ${manuallyAddedItems.length} manually added items.`;
+            }
+            
+            setSuccessMessage(message);
+            setTimeout(() => setSuccessMessage(''), 5000);
+
+        } catch (error) {
+            console.error('Error updating buy list from project:', error);
+            setErrorMessage(`Failed to update buy list from project: ${error.message}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // New function to clear the entire buy list
+    const handleClearBuyList = () => {
+        if (projectBuyList.length === 0) {
+            setSuccessMessage('Buy list is already empty.');
+            setTimeout(() => setSuccessMessage(''), 3000);
+            return;
+        }
+
+        const confirmed = window.confirm(`Are you sure you want to clear all ${projectBuyList.length} items from the buy list? This action cannot be undone.`);
+        if (confirmed) {
+            setProjectBuyList([]);
+            // Also clear the removed items list so they can be added back if needed
+            localStorage.removeItem('removedBuyListItems');
+            setSuccessMessage('Buy list cleared successfully. Removed items can now be added back.');
+            setTimeout(() => setSuccessMessage(''), 3000);
+        }
+    };
+
+    // Function to replace buy list with new items (for auto-populate)
+    const handleReplaceBuyList = (newItems) => {
+        setProjectBuyList(newItems);
+    };
+
     const handleFinishProject = async (projectName) => {
         setIsLoading(true);
         setErrorMessage('');
@@ -365,9 +695,6 @@ export const createStepHandlers = (
             // If buy list is empty, explicitly send empty array to prevent backend auto-generation
             console.log(`Finalizing project with ${processedBuyListPayload.length} buy list items (${projectBuyList ? projectBuyList.length : 0} in frontend)`);
 
-            // If buy list is empty, explicitly send empty array to prevent backend auto-generation
-            console.log(`Finalizing project with ${processedBuyListPayload.length} buy list items (${projectBuyList ? projectBuyList.length : 0} in frontend)`);
-
             const finalApiPayload = {
                 project_id: projectId,
                 project_name: projectName,
@@ -378,8 +705,7 @@ export const createStepHandlers = (
                 auto_generate_buy_list: false, // Never auto-generate, only use what's explicitly provided
             };
 
-            // DEBUG: Log the payload being sent to the backend
-            console.log('Payload sent to /upload_steps:', JSON.stringify(finalApiPayload, null, 2));
+            console.log("Final API Payload to send to backend:", JSON.stringify(finalApiPayload, null, 2));
 
             // TODO: Replace with your actual API endpoint for finalizing project steps
             const backendApiUrl = `${getApiUrl()}/upload_steps`; 
@@ -401,11 +727,6 @@ export const createStepHandlers = (
             
             const responseData = await response.json();
             console.log("Backend response from finalize_steps:", responseData);
-
-            // Clear the buy list state from localStorage since project is now finalized
-            localStorage.removeItem(`buyListState_${projectId}`);
-            // Also clear the old sessionStorage flag if it exists
-            sessionStorage.removeItem(`buyListCleared_${projectId}`);
 
             setSuccessMessage("Project finalized and all data saved successfully! Redirecting...");
             navigate(`/videos`);
@@ -430,6 +751,12 @@ export const createStepHandlers = (
         handleSupFileChange,
         removeSupFileFromCurrentStep,
         handleResultImageChange,
+        handleAddBuyListItem,
+        removeBuyListItem,
+        handleAutoPopulateBuyList,
+        handleUpdateBuyListFromProject,
+        handleReplaceBuyList,
+        handleClearBuyList,
         handleFinishProject
     };
 }; 
