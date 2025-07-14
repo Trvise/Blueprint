@@ -78,27 +78,39 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
         }
     };
 
+    // Chrome-specific sidebar adjustments
+    const isChrome = navigator.userAgent.includes('Chrome');
+    const sidebarWidth = isChrome ? (isCollapsed ? 'w-12' : 'w-48') : (isCollapsed ? 'w-16' : 'w-64');
+    
     return (
-        <div className={`h-screen bg-black text-[#D9D9D9] fixed top-0 transition-all duration-300 z-50 ${isCollapsed ? 'w-16' : 'w-64'}`}>
+        <div className={`h-screen bg-black text-[#D9D9D9] fixed top-0 transition-all duration-300 z-50 ${sidebarWidth}`}>
             <div className="flex flex-col h-full relative">
                 {/* Toggle Button */}
-                <div className="flex items-center justify-between h-20 border-b border-gray-800 px-5">
+                <div className={`flex items-center justify-between ${isChrome ? 'h-16' : 'h-20'} border-b border-gray-800 ${isChrome ? 'px-3' : 'px-5'}`}>
                     {!isCollapsed && (
                         <div className="flex items-center space-x-2">
                             <img 
                                 src={logo}
                                 alt="Blueprint Logo" 
-                                className="w-14 h-14"
+                                className={isChrome ? "w-10 h-10" : "w-14 h-14"}
                             />
-                            <h1 className="text-2xl font-semibold whitespace-nowrap" style={{
+                            <h1 className={`${isChrome ? 'text-xl' : 'text-2xl'} font-semibold whitespace-nowrap`} style={{
+                                // Chrome-specific fix: use plain white text instead of gradient
+                                color: isAnimating ? '#ffffff' : '#ffffff',
                                 background: isAnimating 
                                     ? 'linear-gradient(45deg, #0000FF 0%, #F1C232 40%, #0000FF 80%, #F1C232 90%, #0000FF 100%)'
                                     : 'linear-gradient(45deg, #0000FF 0%, #F1C232 100%)',
                                 backgroundSize: isAnimating ? '200% 200%' : '100% 100%',
                                 WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
+                                WebkitTextFillColor: isAnimating ? 'transparent' : 'transparent',
                                 backgroundClip: 'text',
-                                animation: isAnimating ? 'gradientShift 3s ease-in-out infinite' : 'none'
+                                animation: isAnimating ? 'gradientShift 3s ease-in-out infinite' : 'none',
+                                // Chrome fallback
+                                ...(navigator.userAgent.includes('Chrome') && {
+                                    color: '#ffffff',
+                                    WebkitTextFillColor: 'initial',
+                                    background: 'none'
+                                })
                             }}>
                                 Blueprint
                             </h1>
@@ -146,24 +158,24 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                                 <>
                                     <Link
                                         to="/my-projects"
-                                        className="flex items-center py-3 px-4 text-base font-normal hover:bg-[#0000FF]/20 transition-colors"
+                                        className={`flex items-center ${isChrome ? 'py-2 px-3' : 'py-3 px-4'} text-base font-normal hover:bg-[#0000FF]/20 transition-colors`}
                                     >
-                                        <AiOutlineEye size={24} />
-                                        {!isCollapsed && <span className="ml-4">My Projects</span>}
+                                        <AiOutlineEye size={isChrome ? 20 : 24} />
+                                        {!isCollapsed && <span className={isChrome ? "ml-2" : "ml-4"}>My Projects</span>}
                                     </Link>
                                     <Link
                                         to="/repository"
-                                        className="flex items-center py-3 px-4 text-base font-normal hover:bg-[#0000FF]/20 transition-colors"
+                                        className={`flex items-center ${isChrome ? 'py-2 px-3' : 'py-3 px-4'} text-base font-normal hover:bg-[#0000FF]/20 transition-colors`}
                                     >
-                                        <AiOutlineDatabase size={24} />
-                                        {!isCollapsed && <span className="ml-4">Repository</span>}
+                                        <AiOutlineDatabase size={isChrome ? 20 : 24} />
+                                        {!isCollapsed && <span className={isChrome ? "ml-2" : "ml-4"}>Repository</span>}
                                     </Link>
                                     <Link
                                         to="/create"
-                                        className="flex items-center py-3 px-4 text-base font-normal hover:bg-[#0000FF]/20 transition-colors"
+                                        className={`flex items-center ${isChrome ? 'py-2 px-3' : 'py-3 px-4'} text-base font-normal hover:bg-[#0000FF]/20 transition-colors`}
                                     >
-                                        <AiFillTool size={24} />
-                                        {!isCollapsed && <span className="ml-4">Create Project</span>}
+                                        <AiFillTool size={isChrome ? 20 : 24} />
+                                        {!isCollapsed && <span className={isChrome ? "ml-2" : "ml-4"}>Create Project</span>}
                                     </Link>
                                 </>
                             ) : (
@@ -171,50 +183,50 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                                 <div className="px-0 py-2">
                                     <button
                                         onClick={() => handleTabClick('details')}
-                                        className={`w-full flex items-center py-4 px-5 text-base font-medium transition-all duration-200 border-l-3 ${
+                                        className={`w-full flex items-center ${isChrome ? 'py-3 px-3' : 'py-4 px-5'} text-base font-medium transition-all duration-200 border-l-3 ${
                                             activeTab === 'details' 
                                                 ? 'text-[#F1C232] bg-black border-[#F1C232]' 
                                                 : 'text-[#D9D9D9] border-transparent hover:bg-[#0000FF]/20 hover:text-[#D9D9D9]'
                                         }`}
                                     >
-                                        <AiOutlineVideo size={20} />
-                                        {!isCollapsed && <span className="ml-3">Video Steps</span>}
+                                        <AiOutlineVideo size={isChrome ? 18 : 20} />
+                                        {!isCollapsed && <span className={isChrome ? "ml-2" : "ml-3"}>Video Steps</span>}
                                     </button>
                                     
                                     <button
                                         onClick={() => handleTabClick('repository')}
-                                        className={`w-full flex items-center py-4 px-5 text-base font-medium transition-all duration-200 border-l-3 ${
+                                        className={`w-full flex items-center ${isChrome ? 'py-3 px-3' : 'py-4 px-5'} text-base font-medium transition-all duration-200 border-l-3 ${
                                             activeTab === 'repository' 
                                                 ? 'text-[#F1C232] bg-black border-[#F1C232]' 
                                                 : 'text-[#D9D9D9] border-transparent hover:bg-[#0000FF]/20 hover:text-[#D9D9D9]'
                                         }`}
                                     >
-                                        <AiOutlineFolder size={20} />
-                                        {!isCollapsed && <span className="ml-3">Repository</span>}
+                                        <AiOutlineFolder size={isChrome ? 18 : 20} />
+                                        {!isCollapsed && <span className={isChrome ? "ml-2" : "ml-3"}>Repository</span>}
                                     </button>
                                     
                                     <button
                                         onClick={() => handleTabClick('overview')}
-                                        className={`w-full flex items-center py-4 px-5 text-base font-medium transition-all duration-200 border-l-3 ${
+                                        className={`w-full flex items-center ${isChrome ? 'py-3 px-3' : 'py-4 px-5'} text-base font-medium transition-all duration-200 border-l-3 ${
                                             activeTab === 'overview' 
                                                 ? 'text-[#F1C232] bg-black border-[#F1C232]' 
                                                 : 'text-[#D9D9D9] border-transparent hover:bg-[#0000FF]/20 hover:text-[#D9D9D9]'
                                         }`}
                                     >
-                                        <AiOutlineBarChart size={20} />
-                                        {!isCollapsed && <span className="ml-3">Overview</span>}
+                                        <AiOutlineBarChart size={isChrome ? 18 : 20} />
+                                        {!isCollapsed && <span className={isChrome ? "ml-2" : "ml-3"}>Overview</span>}
                                     </button>
                                     
                                     <button
                                         onClick={() => handleTabClick('finalize')}
-                                        className={`w-full flex items-center py-4 px-5 text-base font-medium transition-all duration-200 border-l-3 ${
+                                        className={`w-full flex items-center ${isChrome ? 'py-3 px-3' : 'py-4 px-5'} text-base font-medium transition-all duration-200 border-l-3 ${
                                             activeTab === 'finalize' 
                                                 ? 'text-[#F1C232] bg-black border-[#F1C232]' 
                                                 : 'text-[#D9D9D9] border-transparent hover:bg-green-700 hover:text-[#D9D9D9]'
                                         }`}
                                     >
-                                        <AiOutlineCheck size={20} />
-                                        {!isCollapsed && <span className="ml-3">Finalize Project</span>}
+                                        <AiOutlineCheck size={isChrome ? 18 : 20} />
+                                        {!isCollapsed && <span className={isChrome ? "ml-2" : "ml-3"}>Finalize Project</span>}
                                     </button>
                                 </div>
                             )}

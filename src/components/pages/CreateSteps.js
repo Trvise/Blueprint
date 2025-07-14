@@ -103,17 +103,6 @@ const ProjectStepsPage = () => {
         resultImageInputRef,
         // Buy list data
         projectBuyList,
-        buyListItemName,
-        setBuyListItemName,
-        buyListItemQty,
-        setBuyListItemQty,
-        buyListItemSpec,
-        setBuyListItemSpec,
-        buyListItemLink,
-        setBuyListItemLink,
-        buyListItemImageFile,
-        setBuyListItemImageFile,
-        buyListImageInputRef,
         // Add missing captured annotation frames
         capturedAnnotationFrames,
         setCapturedAnnotationFrames,
@@ -271,10 +260,19 @@ const ProjectStepsPage = () => {
          return <div style={styles.pageContainer}><p style={styles.errorMessage}>{errorMessage} <button onClick={() => navigate(-1)} style={{...styles.backLink, marginLeft: '10px'}}>Go Back</button></p></div>;
     }
 
+    // Chrome-specific layout adjustments
+    const isChrome = navigator.userAgent.includes('Chrome');
+
     return (
         <div style={{
             ...styles.videoTimelineContainer,
-            ...(activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' && styles.contentPadding)
+            ...(activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' && styles.contentPadding),
+            // Chrome-specific adjustments for smaller space
+            ...(isChrome && {
+                marginLeft: '4rem', // Smaller margin for Chrome
+                width: 'calc(100vw - 4rem)', // Adjust width for Chrome
+                maxWidth: 'calc(100vw - 4rem)'
+            })
         }}>
                 {/* Header */}
             <header style={styles.header}>
@@ -394,27 +392,12 @@ const ProjectStepsPage = () => {
                     <FinalizeTab 
                         projectSteps={projectSteps}
                         projectBuyList={projectBuyList}
-                        buyListItemName={buyListItemName}
-                        setBuyListItemName={setBuyListItemName}
-                        buyListItemQty={buyListItemQty}
-                        setBuyListItemQty={setBuyListItemQty}
-                        buyListItemSpec={buyListItemSpec}
-                        setBuyListItemSpec={setBuyListItemSpec}
-                        buyListItemLink={buyListItemLink}
-                        setBuyListItemLink={setBuyListItemLink}
-                        buyListItemImageFile={buyListItemImageFile}
-                        setBuyListItemImageFile={setBuyListItemImageFile}
-                        buyListImageInputRef={buyListImageInputRef}
-                        handleAddBuyListItem={enhancedHandlers.handleAddBuyListItem}
-                        removeBuyListItem={enhancedHandlers.removeBuyListItem}
-                        handleAutoPopulateBuyList={enhancedHandlers.handleAutoPopulateBuyList}
-                        handleUpdateBuyListFromProject={enhancedHandlers.handleUpdateBuyListFromProject}
-                        handleReplaceBuyList={enhancedHandlers.handleReplaceBuyList}
-                        handleClearBuyList={enhancedHandlers.handleClearBuyList}
                         handleFinishProject={enhancedHandlers.handleFinishProject}
                         isLoading={isLoading}
                         formatTime={formatTime}
                         styles={styles}
+                        setProjectBuyList={state.setProjectBuyList}
+                        projectId={projectId}
                     />
                 </div>
             ) : activeTab === 'repository' ? (

@@ -620,14 +620,72 @@ export const createStepActions = (state) => {
                 processedStepsPayload.push(stepPayload);
             }
 
-            // --- 3. VALIDATE AND SEND FINAL PAYLOAD TO THE API ---
+            // --- 3. PROCESS BUY LIST ITEMS ---
+            const processedBuyListPayload = [];
+            for (const item of projectBuyList) {
+                let itemImageUrl = null;
+                let itemImagePath = null;
+                
+                if (item.imageFile) {
+                    // New image file to upload
+                    const uploaded = await uploadFileToFirebase(item.imageFile, `users/${currentUser.uid}/${projectId}/buy_list_images`, currentUser);
+                    if (uploaded) {
+                        itemImageUrl = uploaded.url;
+                        itemImagePath = uploaded.path;
+                    }
+                } else if (item.hasExistingImage && item.image_url && item.image_path) {
+                    // Preserve existing image from database
+                    itemImageUrl = item.image_url;
+                    itemImagePath = item.image_path;
+                }
+                
+                processedBuyListPayload.push({
+                    name: item.name,
+                    quantity: item.quantity,
+                    specification: item.specification,
+                    purchase_link: item.purchase_link,
+                    image_url: itemImageUrl,
+                    image_path: itemImagePath,
+                });
+            }
+
+            // If buy list is empty, explicitly send empty array to prevent backend auto-generation
+            console.log(`Finalizing project with ${processedBuyListPayload.length} buy list items (${projectBuyList ? projectBuyList.length : 0} in frontend)`);
+
+            // --- 4. SYNC BUY LIST TO DATABASE BEFORE FINALIZING ---
+            // Send the buy list data to the database to ensure it's saved
+            try {
+                const buyListSyncResponse = await fetch(`${getApiUrl()}/projects/${projectId}/buy_list?firebase_uid=${currentUser.uid}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(processedBuyListPayload),
+                });
+
+                if (!buyListSyncResponse.ok) {
+                    const errorData = await buyListSyncResponse.json();
+                    console.warn("Failed to sync buy list to database:", errorData);
+                    // Continue with finalization even if sync fails
+                } else {
+                    const syncResult = await buyListSyncResponse.json();
+                    console.log("Buy list synced to database:", syncResult.message);
+                }
+            } catch (syncError) {
+                console.warn("Error syncing buy list to database:", syncError);
+                // Continue with finalization even if sync fails
+            }
+
+            // --- 5. VALIDATE AND SEND FINAL PAYLOAD TO THE API ---
             const finalPayload = {
                 project_name: projectName,
                 project_id: projectId,
                 user_id: currentUser.uid,
                 steps: processedStepsPayload,
-                buy_list: projectBuyList || [],
+                buy_list: processedBuyListPayload,
                 thumbnail_path: uploadedThumbnailInfo ? uploadedThumbnailInfo.path : null,
+                // Explicitly indicate if buy list should be auto-generated from steps
+                auto_generate_buy_list: false, // Never auto-generate, only use what's explicitly provided
             };
 
             // Validate payload before sending
@@ -711,6 +769,11 @@ export const createStepActions = (state) => {
 
             const result = await response.json();
             console.log('API Response:', result);
+
+            // Clear the buy list state from localStorage since project is now finalized
+            localStorage.removeItem(`buyListState_${projectId}`);
+            // Also clear the old sessionStorage flag if it exists
+            sessionStorage.removeItem(`buyListCleared_${projectId}`);
 
             setSuccessMessage('Project finalized successfully! Redirecting to projects...');
             setTimeout(() => navigate('/my-projects'), 2000);

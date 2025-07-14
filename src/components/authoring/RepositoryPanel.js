@@ -9,7 +9,7 @@ const getApiUrl = () => {
     return process.env.REACT_APP_API_URL || 'http://localhost:8000';
 };
 
-const RepositoryPanel = ({ contextType = 'main', onAddToStep }) => {
+const RepositoryPanel = ({ contextType = 'main', onAddToStep, onAddToBuyList }) => {
     const { currentUser } = useAuth();
     const [activeRepo, setActiveRepo] = useState('tools'); // 'tools' or 'materials'
     const [tools, setTools] = useState([]);
@@ -547,6 +547,15 @@ const RepositoryPanel = ({ contextType = 'main', onAddToStep }) => {
                                             >
                                                 <AiOutlineDelete size={16} />
                                             </button>
+                                            {onAddToBuyList && (
+                                                <button 
+                                                    onClick={() => onAddToBuyList(item)}
+                                                    className={`${repositoryStyles.grid.card.actionButton} ${repositoryStyles.grid.card.buyButton}`}
+                                                    title="Add to Buy List"
+                                                >
+                                                    <AiOutlinePlus size={16} />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
