@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/authContext';
 import { doSignOut } from '../../firebase/auth';
 import { AiOutlineMenu, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineEye, AiOutlineArrowLeft, AiOutlineCheck, AiOutlineUser, AiOutlineDatabase, AiOutlineFolder, AiOutlineBarChart } from 'react-icons/ai';
 import logo from '../../assets/trvise_logo.png';
+import { getApiUrl } from '../pages/createsteps helpers/CreateStepsUtils';
 
 const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
     const navigate = useNavigate();
@@ -48,7 +49,8 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
             if (!currentUser?.uid) return;
             
             try {
-                const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/users/${currentUser.uid}`);
+                const apiUrl = getApiUrl();
+                const response = await fetch(`${apiUrl}/users/${currentUser.uid}`);
                 if (response.ok) {
                     const data = await response.json();
                     setProfileData(data);

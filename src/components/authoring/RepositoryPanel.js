@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/authContext';
 import { AiOutlinePlus, AiOutlineSearch, AiOutlineEdit, AiOutlineDelete, AiOutlineClose, AiOutlineUpload } from 'react-icons/ai';
-import { uploadFileToFirebase } from '../pages/createsteps helpers/CreateStepsUtils';
+import { uploadFileToFirebase, getApiUrl } from '../pages/createsteps helpers/CreateStepsUtils';
 import { repositoryStyles } from '../pages/Repository.styles';
 
-// Import the getApiUrl function to match the existing codebase pattern
-const getApiUrl = () => {
-    return process.env.REACT_APP_API_URL || 'http://localhost:8000';
-};
+// No local getApiUrl function
 
 const RepositoryPanel = ({ contextType = 'main', onAddToStep, onAddToBuyList }) => {
     const { currentUser } = useAuth();
