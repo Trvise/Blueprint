@@ -230,6 +230,37 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                                         <AiOutlineCheck size={isChrome ? 18 : 20} />
                                         {!isCollapsed && <span className={isChrome ? "ml-2" : "ml-3"}>Finalize Project</span>}
                                     </button>
+                                    
+                                    {/* Save Step Button */}
+                                    {activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' && (
+                                        <div className="px-5 py-3 border-t border-gray-700 mt-2">
+                                            <button
+                                                onClick={() => {
+                                                    if (window.handleAddStep) {
+                                                        window.handleAddStep();
+                                                    }
+                                                }}
+                                                disabled={window.isStepLoading || !window.currentStepName?.trim() || !window.currentStepDescription?.trim() || 
+                                                         (window.currentStepStartTime === null || window.currentStepStartTime === undefined) || 
+                                                         (window.currentStepEndTime === null || window.currentStepEndTime === undefined)}
+                                                className={`w-full flex items-center justify-center py-3 px-4 text-base font-medium transition-all duration-200 rounded-lg ${
+                                                    (window.isStepLoading || !window.currentStepName?.trim() || !window.currentStepDescription?.trim() || 
+                                                     (window.currentStepStartTime === null || window.currentStepStartTime === undefined) || 
+                                                     (window.currentStepEndTime === null || window.currentStepEndTime === undefined))
+                                                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                                        : 'bg-[#F1C232] text-black hover:bg-[#E6B800] hover:scale-105'
+                                                }`}
+                                            >
+                                                <AiOutlineCheck size={18} />
+                                                {!isCollapsed && (
+                                                    <span className="ml-2">
+                                                        {window.isStepLoading ? 'Saving...' : 
+                                                         window.currentStepIndex >= 0 ? 'Update Step' : 'Save New Step'}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </>
