@@ -31,7 +31,8 @@ export const formatDate = (dateString) => {
 
 // API utility functions
 export const getApiUrl = () => {
-    return process.env.REACT_APP_API_URL || 'http://localhost:8000';
+    // Always return the production URL, ignoring any local environment variables.
+    return 'https://pbsggxqwqp.us-east-1.awsapprunner.com';
 };
 
 export const createApiCall = async (endpoint, options = {}) => {

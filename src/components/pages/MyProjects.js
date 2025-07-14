@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/authContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { isImageUrl, isVideoUrl, formatDate, createApiCall } from './createsteps helpers/CreateStepsUtils';
+import { isImageUrl, isVideoUrl, formatDate, createApiCall, getApiUrl } from './createsteps helpers/CreateStepsUtils';
 import { LazyImage, VideoThumbnail } from './createsteps helpers/CommonComponents';
 
 const responsiveGridCSS = `

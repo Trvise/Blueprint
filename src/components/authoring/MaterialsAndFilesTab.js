@@ -1,17 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../contexts/authContext';
 import { storage } from '../../firebase/firebase'; // Fixed import path
 import { ref, uploadBytes } from 'firebase/storage'; // Added import for Firebase storage functions
 
 import { COMPONENTS, TYPOGRAPHY, LAYOUT, getListItemBorder } from './shared/styles';
 import { AiOutlineSearch, AiOutlinePlus } from 'react-icons/ai';
+import { getApiUrl } from '../pages/createsteps helpers/CreateStepsUtils';
 
-// Import the getApiUrl function to match the existing codebase pattern
-const getApiUrl = () => {
-    return process.env.REACT_APP_API_URL || 'http://localhost:8000';
-};
+// No local getApiUrl function
 
-const MaterialsAndToolsTab = ({
+const MaterialsAndFilesTab = ({
     // Tools props
     currentStepTools,
     currentStepToolName,
@@ -1203,4 +1201,4 @@ const MaterialsAndToolsTab = ({
 );
 };
 
-export default MaterialsAndToolsTab; 
+export default MaterialsAndFilesTab; 
