@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Navigate, Link} from 'react-router-dom';
 import { useAuth } from '../../contexts/authContext';
-import { doCreateUserWithEmailAndPassword } from '../../firebase/auth';
+import { doCreateUserWithEmailAndPassword, doSignInWithGoogle } from '../../firebase/auth';
+import { getApiUrl } from '../pages/createsteps helpers/CreateStepsUtils';
 
 const Register = () => {
-    const { userLoggedIn } = useAuth();
+    const { userLoggedIn, currentUser } = useAuth();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -49,7 +50,6 @@ const Register = () => {
                 console.log('Sending user data to backend:', backendUserData);
 
                 // Use consistent API URL helper
-                const getApiUrl = () => process.env.REACT_APP_API_URL || 'http://localhost:8000';
                 const backendApiUrl = `${getApiUrl()}/users/`;
 
                 const response = await fetch(backendApiUrl, {

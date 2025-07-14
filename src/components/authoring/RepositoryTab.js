@@ -1,11 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/authContext';
 import { AiOutlinePlus, AiOutlineSearch, AiOutlineClose } from 'react-icons/ai';
+import { getApiUrl } from '../pages/createsteps helpers/CreateStepsUtils.js';
 
-// Import the getApiUrl function to match the existing codebase pattern
-const getApiUrl = () => {
-    return process.env.REACT_APP_API_URL || 'http://localhost:8000';
-};
 
 const RepositoryTab = () => {
     const { currentUser } = useAuth();
