@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "vortexlens"
-  }
+  },
+  "targets": {
+    "vortexlens": {
+      "hosting": {
+        "blueprint-trvise": [
+          "blueprint-trvise"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
