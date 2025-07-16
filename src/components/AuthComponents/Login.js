@@ -103,11 +103,11 @@ const Login = () => {
         <div>
             {userLoggedIn && (<Navigate to={'/home'} replace={true} />)}
 
-            <main className="w-full h-screen flex self-center place-content-center place-items-center">
-                <div className="w-96 text-gray-600 space-y-5 p-4 shadow-xl border rounded-xl">
+            <main className="w-full h-screen flex self-center place-content-center place-items-center bg-black">
+                <div className="w-96 text-[#D9D9D9] space-y-5 p-4 shadow-xl border border-[#D9D9D9] rounded-xl bg-[#111111]">
                     <div className="text-center mb-6">
                         <div className="mt-2">
-                            <h3 className="text-gray-800 text-xl font-semibold sm:text-2xl">Welcome Back</h3>
+                            <h3 className="text-[#F1C232] text-xl font-semibold sm:text-2xl">Welcome Back</h3>
                         </div>
                     </div>
                     <form
@@ -115,7 +115,7 @@ const Login = () => {
                         className="space-y-4"
                     >
                         <div>
-                            <label className="text-sm text-gray-600 font-bold">
+                            <label className="text-sm text-[#D9D9D9] font-bold">
                                 Email
                             </label>
                             <input
@@ -124,12 +124,12 @@ const Login = () => {
                                 required
                                 value={email}
                                 onChange={(e) => { setEmail(e.target.value) }}
-                                className="w-full mt-2 px-3 py-2 text-gray-500 bg-transparent outline-none border focus:border-indigo-600 shadow-sm rounded-lg"
+                                className="w-full mt-2 px-3 py-2 text-[#D9D9D9] bg-[#000000] outline-none border border-[#D9D9D9] focus:border-[#F1C232] shadow-sm rounded-lg"
                             />
                         </div>
 
                         <div>
-                            <label className="text-sm text-gray-600 font-bold">
+                            <label className="text-sm text-[#D9D9D9] font-bold">
                                 Password
                             </label>
                             <input
@@ -138,32 +138,32 @@ const Login = () => {
                                 required
                                 value={password}
                                 onChange={(e) => { setPassword(e.target.value) }}
-                                className="w-full mt-2 px-3 py-2 text-gray-500 bg-transparent outline-none border focus:border-indigo-600 shadow-sm rounded-lg"
+                                className="w-full mt-2 px-3 py-2 text-[#D9D9D9] bg-[#000000] outline-none border border-[#D9D9D9] focus:border-[#F1C232] shadow-sm rounded-lg"
                             />
                         </div>
 
                         {errorMessage && (
-                            <span className='text-red-600 font-bold'>{errorMessage}</span>
+                            <span className='text-red-400 font-bold'>{errorMessage}</span>
                         )}
 
                         <button
                             type="submit"
                             disabled={isSigningIn}
-                            className={`w-full px-4 py-2 text-white font-medium rounded-lg ${isSigningIn ? 'bg-gray-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-xl transition duration-300'}`}
+                            className={`w-full px-4 py-2 text-white font-medium rounded-lg ${isSigningIn ? 'bg-gray-600 cursor-not-allowed' : 'bg-[#F1C232] hover:bg-[#0000FF] hover:text-[#D9D9D9] transition duration-300'}`}
                         >
                             {isSigningIn ? 'Signing In...' : 'Sign In'}
                         </button>
                     </form>
-                    <p className="text-center text-sm">Don't have an account? <Link to={'/register'} className="hover:underline font-bold">Sign up</Link></p>
+                    <p className="text-center text-sm text-[#D9D9D9]">Don't have an account? <Link to={'/register'} className="hover:underline font-bold text-[#F1C232]">Sign up</Link></p>
                     <div className='flex flex-row text-center w-full'>
-                        <div className='border-b-2 mb-2.5 mr-2 w-full'></div>
-                        <div className='text-sm font-bold w-fit'>OR</div>
-                        <div className='border-b-2 mb-2.5 ml-2 w-full'></div>
+                        <div className='border-b-2 mb-2.5 mr-2 w-full border-[#D9D9D9]'></div>
+                        <div className='text-sm font-bold w-fit text-[#D9D9D9]'>OR</div>
+                        <div className='border-b-2 mb-2.5 ml-2 w-full border-[#D9D9D9]'></div>
                     </div>
                     <button
                         disabled={isSigningIn}
                         onClick={onGoogleSignIn}
-                        className={`w-full flex items-center justify-center gap-x-3 py-2.5 border rounded-lg text-sm font-medium  ${isSigningIn ? 'cursor-not-allowed' : 'hover:bg-gray-100 transition duration-300 active:bg-gray-100'}`}>
+                        className={`w-full flex items-center justify-center gap-x-3 py-2.5 border border-[#D9D9D9] rounded-lg text-sm font-medium text-[#D9D9D9] bg-[#000000] ${isSigningIn ? 'cursor-not-allowed' : 'hover:bg-[#111111] hover:border-[#F1C232] transition duration-300 active:bg-[#111111]'}`}>
                         <svg className="w-5 h-5" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <g clipPath="url(#clip0_17_40)">
                                 <path d="M47.532 24.5528C47.532 22.9214 47.3997 21.2811 47.1175 19.6761H24.48V28.9181H37.4434C36.9055 31.8988 35.177 34.5356 32.6461 36.2111V42.2078H40.3801C44.9217 38.0239 47.532 31.8547 47.532 24.5528Z" fill="#4285F4" />
