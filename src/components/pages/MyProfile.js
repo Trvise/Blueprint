@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/authContext';
 import { useNavigate } from 'react-router-dom';
 import { getApiUrl } from './createsteps helpers/CreateStepsUtils';
+import { AnimatedLogo } from './createsteps helpers/CommonComponents';
 
 const styles = {
     container: {
@@ -304,8 +305,18 @@ const MyProfile = () => {
 
     if (loading) {
         return (
-            <div style={styles.loading}>
-                <div>Loading your profile...</div>
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: 400,
+                gap: 16,
+            }}>
+                <AnimatedLogo size={80} />
+                <div style={{ marginTop: 16, fontSize: 20, fontWeight: 600, color: '#D9D9D9', letterSpacing: 1 }}>
+                    Loading your profile...
+                </div>
             </div>
         );
     }

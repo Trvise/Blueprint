@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/authContext';
 import { AiOutlinePlus, AiOutlineSearch, AiOutlineClose } from 'react-icons/ai';
 import { getApiUrl } from '../pages/createsteps helpers/CreateStepsUtils.js';
+import { AnimatedLogo } from '../pages/createsteps helpers/CommonComponents';
 
 
 const RepositoryTab = () => {
@@ -255,9 +256,9 @@ const RepositoryTab = () => {
             )}
 
             {loading ? (
-                <div className="flex justify-center items-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F1C232]"></div>
-                    <span className="ml-3 text-[#D9D9D9]">Loading {activeRepo}...</span>
+                <div className="flex flex-col items-center justify-center py-12" style={{ minHeight: 200, gap: 16 }}>
+                    <AnimatedLogo size={80} />
+                    <span style={{ marginTop: 16, fontSize: 20, fontWeight: 600, color: '#D9D9D9', letterSpacing: 1 }}>Loading {activeRepo}...</span>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

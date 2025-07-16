@@ -1,5 +1,7 @@
 // CommonComponents.js - Reusable UI components for pages
 import React, { useState, useEffect, useRef } from 'react';
+import trviseLogo from '../../../assets/trvise_logo.png';
+
 
 // Lazy loading component for images
 export const LazyImage = ({ src, alt, style, onError }) => {
@@ -129,4 +131,71 @@ export const VideoThumbnail = ({ videoUrl, projectName }) => {
             )}
         </div>
     );
-}; 
+};
+
+// AnimatedLogo - Branded loading spinner with logo and rotating arc
+export function AnimatedLogo({ size = 120, style = {} }) {
+  const logoRef = useRef();
+  const arc1Ref = useRef();
+  const arc2Ref = useRef();
+  const arc3Ref = useRef();
+
+  useEffect(() => {
+    let frame = 0;
+    let running = true;
+    function animate() {
+      if (!running) return;
+      frame++;
+      const t = frame / 60;
+      if (arc1Ref.current) arc1Ref.current.style.transform = `translate(-50%, -50%) rotate(${t * 360}deg)`;
+      if (arc2Ref.current) arc2Ref.current.style.transform = `translate(-50%, -50%) rotate(${120 + t * 360}deg)`;
+      if (arc3Ref.current) arc3Ref.current.style.transform = `translate(-50%, -50%) rotate(${240 + t * 360}deg)`;
+      if (logoRef.current) {
+        const scale = 1 + 0.06 * Math.sin(t * 2 * Math.PI);
+        logoRef.current.style.transform = `translate(-50%, -50%) scale(${scale})`;
+      }
+      requestAnimationFrame(animate);
+    }
+    animate();
+    return () => { running = false; };
+  }, []);
+
+  const arcStyle = (color) => ({
+    position: 'absolute',
+    width: size * 1.25,
+    height: size * 1.25,
+    borderRadius: '50%',
+    borderWidth: 6,
+    borderStyle: 'solid',
+    borderColor: `${color} transparent transparent transparent`,
+    background: 'transparent',
+    opacity: 0.85,
+    top: '50%',
+    left: '50%',
+    pointerEvents: 'none',
+    boxSizing: 'border-box',
+    // transform is set dynamically in the animation loop
+  });
+
+  return (
+    <div style={{ width: size, height: size, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', ...style }}>
+      <div ref={arc1Ref} style={arcStyle('#F1C232')} />
+      <div ref={arc2Ref} style={arcStyle('#0050FF')} />
+      <div ref={arc3Ref} style={arcStyle('#D9D9D9')} />
+      <div ref={logoRef} style={{
+        position: 'absolute',
+        width: size * 0.82,
+        height: size * 0.82,
+        left: '50%',
+        top: '50%',
+        transform: 'translate(-50%, -50%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        filter: 'drop-shadow(0 0 16px #F1C23288)'
+      }}>
+        <img src={trviseLogo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none', userSelect: 'none' }} />
+      </div>
+    </div>
+  );
+} 

@@ -7,6 +7,7 @@ import { createStepHandlers } from './createsteps helpers/CreateStepsHandlers';
 import { createStepActions } from './createsteps helpers/CreateStepsActions';
 import { styles } from './createsteps helpers/CreateStepsStyles';
 import { formatTime, navigateFrame, captureFrameForAnnotation } from './createsteps helpers/CreateStepsUtils';
+import { AnimatedLogo } from './createsteps helpers/CommonComponents';
 
 // Import Tab Components
 import StepDetailsTab from '../authoring/StepDetailsTab';
@@ -460,7 +461,14 @@ const ProjectStepsPage = () => {
     };
 
     // Early returns for loading/error states
-    if (!currentUser) return <div style={chromeStyles.pageContainer}><p>Loading...</p></div>;
+    if (!currentUser) return <div style={chromeStyles.pageContainer}><div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 400,
+        gap: 16,
+    }}><AnimatedLogo size={80} /><div style={{ marginTop: 16, fontSize: 20, fontWeight: 600, color: '#D9D9D9', letterSpacing: 1 }}>Loading...</div></div></div>;
     if (errorMessage && uploadedVideos.length === 0 && !location.state) {
          return <div style={chromeStyles.pageContainer}><p style={chromeStyles.errorMessage}>{errorMessage} <button onClick={() => navigate(-1)} style={{...chromeStyles.backLink, marginLeft: '10px'}}>Go Back</button></p></div>;
     }

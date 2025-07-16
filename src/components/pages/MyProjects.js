@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/authContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { isImageUrl, isVideoUrl, formatDate, createApiCall, getApiUrl } from './createsteps helpers/CreateStepsUtils';
-import { LazyImage, VideoThumbnail } from './createsteps helpers/CommonComponents';
+import { isImageUrl, isVideoUrl, formatDate, createApiCall } from './createsteps helpers/CreateStepsUtils';
+import { LazyImage, VideoThumbnail, AnimatedLogo } from './createsteps helpers/CommonComponents';
 
 const responsiveGridCSS = `
 .projects-grid {
@@ -561,8 +561,18 @@ const MyProjects = () => {
 
     if (loading) {
         return (
-            <div style={styles.loading}>
-                <div>Loading your projects...</div>
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: 400,
+                gap: 16,
+            }}>
+                <AnimatedLogo size={80} />
+                <div style={{ marginTop: 16, fontSize: 20, fontWeight: 600, color: '#D9D9D9', letterSpacing: 1 }}>
+                    Loading your projects...
+                </div>
             </div>
         );
     }

@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/authContext';
 import { AiOutlinePlus, AiOutlineSearch, AiOutlineEdit, AiOutlineDelete, AiOutlineClose, AiOutlineUpload } from 'react-icons/ai';
 import { uploadFileToFirebase, getApiUrl } from '../pages/createsteps helpers/CreateStepsUtils';
 import { repositoryStyles } from '../pages/Repository.styles';
+import { AnimatedLogo } from '../pages/createsteps helpers/CommonComponents';
 
 // No local getApiUrl function
 
@@ -492,9 +493,9 @@ const RepositoryPanel = ({ contextType = 'main', onAddToStep, onAddToBuyList }) 
 
                         {/* Items Grid */}
                         {loading ? (
-                            <div className={repositoryStyles.loading.container}>
-                                <div className={repositoryStyles.loading.spinner}></div>
-                                <span className={repositoryStyles.loading.text}>Loading {activeRepo}...</span>
+                            <div className={repositoryStyles.loading.container} style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 200, gap: 16, display: 'flex' }}>
+                                <AnimatedLogo size={80} />
+                                <span className={repositoryStyles.loading.text} style={{ marginTop: 16, fontSize: 20, fontWeight: 600, color: '#D9D9D9', letterSpacing: 1 }}>Loading {activeRepo}...</span>
                             </div>
                         ) : (
                             <div className={repositoryStyles.grid.container}>
