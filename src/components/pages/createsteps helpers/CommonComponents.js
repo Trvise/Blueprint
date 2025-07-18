@@ -131,7 +131,7 @@ export const VideoThumbnail = ({ videoUrl, projectName }) => {
             )}
         </div>
     );
-};
+}; 
 
 // AnimatedLogo - Branded loading spinner with logo and rotating arc
 export function AnimatedLogo({ size = 120, style = {} }) {

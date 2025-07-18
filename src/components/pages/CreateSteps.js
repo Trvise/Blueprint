@@ -925,7 +925,11 @@ const ProjectStepsPage = () => {
                                     }}
                                 >
                                     <div
-                                        onClick={() => stepActions.loadStepForEditing(step, index)}
+                                        onClick={() => {
+                                            window.currentStepIndex = index;
+                                            window.dispatchEvent(new Event('stepIndexChanged'));
+                                            stepActions.loadStepForEditing(step, index);
+                                        }}
                                         style={{flex: 1, cursor: 'pointer'}}
                                 >
                                     <div style={chromeStyles.stepItemHeader}>

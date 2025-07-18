@@ -13,6 +13,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
     const [activeTab, setActiveTab] = useState('details');
     const [isAnimating, setIsAnimating] = useState(false);
     const [profileData, setProfileData] = useState(null);
+    const [, forceUpdate] = useState(0);
 
     // Add CSS animation for gradient
     useEffect(() => {
@@ -72,6 +73,13 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
             };
         }
     }, [isCreateStepsPage]);
+
+    // Listen for the 'stepIndexChanged' event and force a re-render
+    useEffect(() => {
+        const handler = () => forceUpdate(n => n + 1);
+        window.addEventListener('stepIndexChanged', handler);
+        return () => window.removeEventListener('stepIndexChanged', handler);
+    }, []);
 
     const handleTabClick = (tabName) => {
         setActiveTab(tabName);
@@ -240,16 +248,9 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                                                         window.handleAddStep();
                                                     }
                                                 }}
-                                                disabled={window.isStepLoading || !window.currentStepName?.trim() || !window.currentStepDescription?.trim() || 
-                                                         (window.currentStepStartTime === null || window.currentStepStartTime === undefined) || 
-                                                         (window.currentStepEndTime === null || window.currentStepEndTime === undefined)}
-                                                className={`w-full flex items-center justify-center py-3 px-4 text-base font-medium transition-all duration-200 rounded-lg ${
-                                                    (window.isStepLoading || !window.currentStepName?.trim() || !window.currentStepDescription?.trim() || 
-                                                     (window.currentStepStartTime === null || window.currentStepStartTime === undefined) || 
-                                                     (window.currentStepEndTime === null || window.currentStepEndTime === undefined))
-                                                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                                                        : 'bg-[#F1C232] text-black hover:bg-[#E6B800] hover:scale-105'
-                                                }`}
+                                                className={
+                                                    'w-full flex items-center justify-center py-3 px-4 text-base font-medium transition-all duration-200 rounded-lg bg-[#F1C232] text-black hover:bg-[#E6B800] hover:scale-105'
+                                                }
                                             >
                                                 <AiOutlineCheck size={18} />
                                                 {!isCollapsed && (
