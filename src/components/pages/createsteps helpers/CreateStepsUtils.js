@@ -31,7 +31,7 @@ export const formatDate = (dateString) => {
 
 // API utility functions
 export const getApiUrl = () => {
-    return 'https://pbsggxqwqp.us-east-1.awsapprunner.com';
+    return process.env.REACT_APP_API_URL;
 };
 
 export const createApiCall = async (endpoint, options = {}) => {
