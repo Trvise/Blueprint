@@ -637,6 +637,9 @@ const ProjectStepsPage = () => {
         window.currentStepEndTime = currentStepEndTime;
         window.currentStepIndex = currentStepIndex;
         
+        // Debug logging to help track the issue
+        console.log('Window currentStepIndex updated:', currentStepIndex);
+        
         return () => {
             delete window.handleAddStep;
             delete window.isStepLoading;

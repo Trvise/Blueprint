@@ -332,10 +332,13 @@ export const createStepActions = (state) => {
                     index === currentStepIndex ? newStepData : step
                 ));
             setSuccessMessage(`Step "${currentStepName}" updated successfully!`);
+            // Keep the step in edit mode after update
         } else {
             // Add new step
                 setProjectSteps(prev => [...prev, newStepData]);
             setSuccessMessage(`Step "${currentStepName}" added successfully!`);
+            // Clear form after adding new step
+            clearCurrentStepForm();
         }
 
         } catch (error) {

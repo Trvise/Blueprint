@@ -251,13 +251,13 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                                                 className={
                                                     `w-full flex items-center justify-center ${isCollapsed ? 'py-2 px-2' : 'py-3 px-4'} text-base font-medium transition-all duration-200 rounded-lg bg-[#F1C232] text-black hover:bg-[#E6B800] hover:scale-105`
                                                 }
-                                                title={isCollapsed ? (window.isStepLoading ? 'Saving...' : window.currentStepIndex >= 0 ? 'Update Step' : 'Save New Step') : ''}
+                                                title={isCollapsed ? (window.isStepLoading ? 'Saving...' : (window.currentStepIndex !== undefined && window.currentStepIndex >= 0) ? 'Update Step' : 'Save New Step') : ''}
                                             >
                                                 <AiOutlineCheck size={isCollapsed ? 16 : 18} />
                                                 {!isCollapsed && (
                                                     <span className="ml-2">
                                                         {window.isStepLoading ? 'Saving...' : 
-                                                         window.currentStepIndex >= 0 ? 'Update Step' : 'Save New Step'}
+                                                         (window.currentStepIndex !== undefined && window.currentStepIndex >= 0) ? 'Update Step' : 'Save New Step'}
                                                     </span>
                                                 )}
                                             </button>
