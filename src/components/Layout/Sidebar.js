@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/authContext';
 import { doSignOut } from '../../firebase/auth';
-import { AiOutlineMenu, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineEye, AiOutlineArrowLeft, AiOutlineCheck, AiOutlineUser, AiOutlineDatabase, AiOutlineFolder, AiOutlineBarChart } from 'react-icons/ai';
+import { AiOutlineMenu, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineEye, AiOutlineArrowLeft, AiOutlineCheck, AiOutlineUser, AiOutlineDatabase, AiOutlineFolder, AiOutlineBarChart, AiOutlineSend } from 'react-icons/ai';
 import logo from '../../assets/trvise_logo.png';
 import { getApiUrl } from '../pages/createsteps helpers/CreateStepsUtils';
 
@@ -235,13 +235,13 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                                                 : 'text-[#D9D9D9] border-transparent hover:bg-green-700 hover:text-[#D9D9D9]'
                                         }`}
                                     >
-                                        <AiOutlineCheck size={isChrome ? 18 : 20} />
+                                        <AiOutlineSend size={isChrome ? 18 : 20} />
                                         {!isCollapsed && <span className={isChrome ? "ml-2" : "ml-3"}>Finalize Project</span>}
                                     </button>
                                     
                                     {/* Save Step Button */}
                                     {activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' && (
-                                        <div className="px-5 py-3 border-t border-gray-700 mt-2">
+                                        <div className={`${isCollapsed ? 'px-2 py-2' : 'px-5 py-3'} border-t border-gray-700 mt-2`}>
                                             <button
                                                 onClick={() => {
                                                     if (window.handleAddStep) {
@@ -249,10 +249,11 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                                                     }
                                                 }}
                                                 className={
-                                                    'w-full flex items-center justify-center py-3 px-4 text-base font-medium transition-all duration-200 rounded-lg bg-[#F1C232] text-black hover:bg-[#E6B800] hover:scale-105'
+                                                    `w-full flex items-center justify-center ${isCollapsed ? 'py-2 px-2' : 'py-3 px-4'} text-base font-medium transition-all duration-200 rounded-lg bg-[#F1C232] text-black hover:bg-[#E6B800] hover:scale-105`
                                                 }
+                                                title={isCollapsed ? (window.isStepLoading ? 'Saving...' : window.currentStepIndex >= 0 ? 'Update Step' : 'Save New Step') : ''}
                                             >
-                                                <AiOutlineCheck size={18} />
+                                                <AiOutlineCheck size={isCollapsed ? 16 : 18} />
                                                 {!isCollapsed && (
                                                     <span className="ml-2">
                                                         {window.isStepLoading ? 'Saving...' : 
@@ -290,9 +291,10 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                     {isCreateStepsPage && (
                         <button 
                             onClick={() => navigate('/')} 
-                            className="w-full flex items-center py-4 px-5 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                            className={`w-full flex items-center justify-center ${isCollapsed ? 'py-3 px-2' : 'py-4 px-5'} text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors`}
+                            title={isCollapsed ? "Back to Home" : ""}
                         >
-                            <AiOutlineArrowLeft size={20} />
+                            <AiOutlineArrowLeft size={isCollapsed ? 18 : 20} />
                             {!isCollapsed && <span className="ml-3">Back to Home</span>}
                         </button>
                     )}
@@ -301,12 +303,13 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                         <>
                             <Link
                                 to="/profile"
-                                className="w-full flex items-center py-4 px-5 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                                className={`w-full flex items-center justify-center ${isCollapsed ? 'py-3 px-2' : 'py-4 px-5'} text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors`}
+                                title={isCollapsed ? "My Profile" : ""}
                             >
                                 <img
                                     src={profileData?.profile_photo_url || currentUser.photoURL || `https://api.dicebear.com/7.x/adventurer/png?seed=${currentUser.email}&backgroundColor=b6e3f4&size=32`}
                                     alt="Profile"
-                                    className="w-8 h-8 rounded-full object-cover"
+                                    className={`${isCollapsed ? 'w-6 h-6' : 'w-8 h-8'} rounded-full object-cover`}
                                     onError={(e) => {
                                         e.target.src = `https://api.dicebear.com/7.x/adventurer/png?seed=${currentUser.email}&backgroundColor=b6e3f4&size=32`;
                                     }}
@@ -319,9 +322,10 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                                         navigate('/login');
                                     });
                                 }}
-                                className="w-full flex items-center py-4 px-5 text-base font-medium text-red-400 hover:bg-gray-700 hover:text-red-300 transition-colors"
+                                className={`w-full flex items-center justify-center ${isCollapsed ? 'py-3 px-2' : 'py-4 px-5'} text-base font-medium text-red-400 hover:bg-gray-700 hover:text-red-300 transition-colors`}
+                                title={isCollapsed ? "Logout" : ""}
                             >
-                                <AiOutlineLogout size={20} />
+                                <AiOutlineLogout size={isCollapsed ? 18 : 20} />
                                 {!isCollapsed && <span className="ml-3">Logout</span>}
                             </button>
                         </>

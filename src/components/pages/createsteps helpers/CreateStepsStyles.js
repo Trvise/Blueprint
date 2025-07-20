@@ -188,8 +188,8 @@ export const styles = {
         backgroundColor: '#000000',
         marginBottom: '20px',
         ...(isChrome() && {
-            padding: '8px',
-            marginBottom: '8px',
+            padding: '2px',
+            marginBottom: '4px',
             width: '100%',
             minWidth: '0',
             boxSizing: 'border-box',
@@ -204,7 +204,8 @@ export const styles = {
         borderBottom: '1px solid #D9D9D9',
         ...(isChrome() && {
             fontSize: '1.2rem',
-            marginBottom: '12px',
+            marginBottom: '4px',
+            paddingBottom: '4px',
             width: '100%',
             minWidth: '0',
         }),
@@ -737,8 +738,8 @@ export const styles = {
     floatingTimeline: {
         position: 'fixed',
         bottom: 0,
-        left: '256px', // Account for sidebar width
-        right: 0,
+        left: '320px', // Account for left sidebar width (320px)
+        right: '64px', // Account for collapsed steps sidebar width
         height: '140px',
         backgroundColor: '#18181b', // darker
         borderTop: '2px solid #F1C232',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/authContext';
 import { storage } from '../../firebase/firebase'; // Fixed import path
 import { ref, uploadBytes } from 'firebase/storage'; // Added import for Firebase storage functions
@@ -60,6 +60,12 @@ const MaterialsAndFilesTab = ({
     const [selectedMaterialForQuantity, setSelectedMaterialForQuantity] = useState(null);
     const [tempToolQuantity, setTempToolQuantity] = useState(1);
     const [tempMaterialQuantity, setTempMaterialQuantity] = useState(1);
+    
+    // Edit quantity states
+    const [editingToolId, setEditingToolId] = useState(null);
+    const [editingMaterialId, setEditingMaterialId] = useState(null);
+    const [editToolQuantity, setEditToolQuantity] = useState(1);
+    const [editMaterialQuantity, setEditMaterialQuantity] = useState(1);
 
     const fetchRepoItems = useCallback(async () => {
         try {
@@ -204,6 +210,54 @@ const MaterialsAndFilesTab = ({
     const cancelAddMaterial = () => {
         setSelectedMaterialForQuantity(null);
         setTempMaterialQuantity(1);
+    };
+
+    // Edit quantity functions for tools
+    const startEditToolQuantity = (tool) => {
+        setEditingToolId(tool.id);
+        setEditToolQuantity(tool.quantity || 1);
+    };
+
+    const saveEditToolQuantity = () => {
+        if (editingToolId) {
+            const updatedTools = currentStepTools.map(tool => 
+                tool.id === editingToolId 
+                    ? { ...tool, quantity: editToolQuantity }
+                    : tool
+            );
+            setCurrentStepTools(updatedTools);
+            setEditingToolId(null);
+            setEditToolQuantity(1);
+        }
+    };
+
+    const cancelEditToolQuantity = () => {
+        setEditingToolId(null);
+        setEditToolQuantity(1);
+    };
+
+    // Edit quantity functions for materials
+    const startEditMaterialQuantity = (material) => {
+        setEditingMaterialId(material.id);
+        setEditMaterialQuantity(material.quantity || 1);
+    };
+
+    const saveEditMaterialQuantity = () => {
+        if (editingMaterialId) {
+            const updatedMaterials = currentStepMaterials.map(material => 
+                material.id === editingMaterialId 
+                    ? { ...material, quantity: editMaterialQuantity }
+                    : material
+            );
+            setCurrentStepMaterials(updatedMaterials);
+            setEditingMaterialId(null);
+            setEditMaterialQuantity(1);
+        }
+    };
+
+    const cancelEditMaterialQuantity = () => {
+        setEditingMaterialId(null);
+        setEditMaterialQuantity(1);
     };
 
     // Save new tool to repository
@@ -787,14 +841,14 @@ const MaterialsAndFilesTab = ({
                                                     display: 'none',
                                                     fontSize: '12px',
                                                     color: '#D9D9D9'
-                                                }}>📷</div>
+                                                }}>IMG</div>
                                             </div>
                                         )}
                                         
                                         <div style={{flex: 1}}>
                                             <p style={COMPONENTS.fileListItemTitle}>
                                                 {tool.name}
-                                                {tool.tool_id && <span style={{color: '#007bff', marginLeft: '8px'}}>📚</span>}
+                                                {tool.tool_id && <span style={{color: '#007bff', marginLeft: '8px', fontSize: '0.8rem'}}>[Repository]</span>}
                                             </p>
                                             <p style={COMPONENTS.fileListItemSubtext}>
                                                 {tool.specification ? `Specification: ${tool.specification}` : 'No specification'}
@@ -818,12 +872,69 @@ const MaterialsAndFilesTab = ({
                                             </p>
                                         </div>
                                     </div>
-                                    <button 
-                                        onClick={() => removeToolFromCurrentStep(tool.id)} 
-                                        style={COMPONENTS.removeButton}
-                                    >
-                                        Remove
-                                    </button>
+                                    <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                                        {editingToolId === tool.id ? (
+                                            <>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={editToolQuantity}
+                                                    onChange={(e) => setEditToolQuantity(parseInt(e.target.value) || 1)}
+                                                    style={{
+                                                        ...styles.inputField,
+                                                        width: '60px',
+                                                        padding: '4px 8px',
+                                                        fontSize: '0.8rem'
+                                                    }}
+                                                />
+                                                <button
+                                                    onClick={saveEditToolQuantity}
+                                                    style={{
+                                                        ...styles.button,
+                                                        backgroundColor: '#059669',
+                                                        color: 'white',
+                                                        padding: '4px 8px',
+                                                        fontSize: '0.8rem'
+                                                    }}
+                                                >
+                                                    Save
+                                                </button>
+                                                <button
+                                                    onClick={cancelEditToolQuantity}
+                                                    style={{
+                                                        ...styles.button,
+                                                        backgroundColor: '#666666',
+                                                        color: '#D9D9D9',
+                                                        padding: '4px 8px',
+                                                        fontSize: '0.8rem'
+                                                    }}
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <button
+                                                    onClick={() => startEditToolQuantity(tool)}
+                                                    style={{
+                                                        ...styles.button,
+                                                        backgroundColor: '#007bff',
+                                                        color: 'white',
+                                                        padding: '4px 8px',
+                                                        fontSize: '0.8rem'
+                                                    }}
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button 
+                                                    onClick={() => removeToolFromCurrentStep(tool.id)} 
+                                                    style={COMPONENTS.removeButton}
+                                                >
+                                                    Remove
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -1153,7 +1264,7 @@ const MaterialsAndFilesTab = ({
                                         <div style={{flex: 1}}>
                                             <p style={COMPONENTS.fileListItemTitle}>
                                                 {material.name}
-                                                {material.material_id && <span style={{color: '#007bff', marginLeft: '8px'}}>📚</span>}
+                                                {material.material_id && <span style={{color: '#007bff', marginLeft: '8px', fontSize: '0.8rem'}}>[Repository]</span>}
                                             </p>
                                             <p style={COMPONENTS.fileListItemSubtext}>
                                                 {material.specification ? `Specification: ${material.specification}` : 'No specification'}
@@ -1177,12 +1288,69 @@ const MaterialsAndFilesTab = ({
                                             </p>
                                         </div>
         </div>
-                                    <button 
-                                        onClick={() => removeMaterialFromCurrentStep(material.id)} 
-                                        style={COMPONENTS.removeButton}
-                                    >
-                                    Remove
-                                </button>
+                                    <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                                        {editingMaterialId === material.id ? (
+                                            <>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={editMaterialQuantity}
+                                                    onChange={(e) => setEditMaterialQuantity(parseInt(e.target.value) || 1)}
+                                                    style={{
+                                                        ...styles.inputField,
+                                                        width: '60px',
+                                                        padding: '4px 8px',
+                                                        fontSize: '0.8rem'
+                                                    }}
+                                                />
+                                                <button
+                                                    onClick={saveEditMaterialQuantity}
+                                                    style={{
+                                                        ...styles.button,
+                                                        backgroundColor: '#059669',
+                                                        color: 'white',
+                                                        padding: '4px 8px',
+                                                        fontSize: '0.8rem'
+                                                    }}
+                                                >
+                                                    Save
+                                                </button>
+                                                <button
+                                                    onClick={cancelEditMaterialQuantity}
+                                                    style={{
+                                                        ...styles.button,
+                                                        backgroundColor: '#666666',
+                                                        color: '#D9D9D9',
+                                                        padding: '4px 8px',
+                                                        fontSize: '0.8rem'
+                                                    }}
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <button
+                                                    onClick={() => startEditMaterialQuantity(material)}
+                                                    style={{
+                                                        ...styles.button,
+                                                        backgroundColor: '#007bff',
+                                                        color: 'white',
+                                                        padding: '4px 8px',
+                                                        fontSize: '0.8rem'
+                                                    }}
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button 
+                                                    onClick={() => removeMaterialFromCurrentStep(material.id)} 
+                                                    style={COMPONENTS.removeButton}
+                                                >
+                                                    Remove
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                         ))}
                         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 // Chrome detection
 const isChrome = typeof window !== 'undefined' && /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
@@ -12,7 +12,9 @@ const FloatingTimeline = ({
     setCurrentStepEndTime,
     formatTime,
     styles,
-    isVisible = true
+    isVisible = true,
+    isStepsSidebarCollapsed = false,
+    onStepClick = null
 }) => {
     const [zoomLevel, setZoomLevel] = useState(1);
     const [scrollPosition, setScrollPosition] = useState(0);
@@ -111,6 +113,12 @@ const FloatingTimeline = ({
     const handleScroll = (e) => {
         setScrollPosition(e.target.scrollLeft);
     };
+
+    // Determine if scrolling should be enabled
+    const shouldEnableScrolling = useCallback(() => {
+        // Enable scrolling if zoom level is above 100% OR if there are more than 20 steps
+        return zoomLevel > 1 || projectSteps.length > 20;
+    }, [zoomLevel, projectSteps.length]);
     
     // Zoom functions
     const zoomIn = () => {
@@ -153,7 +161,7 @@ const FloatingTimeline = ({
     
     // Optimized auto-scroll with throttling
     useEffect(() => {
-        if (!scrollContainerRef.current || !videoRef.current) return;
+        if (!scrollContainerRef.current || !videoRef.current || !shouldEnableScrolling()) return;
         
         // Throttle auto-scroll for Chrome
         const scrollTimeout = setTimeout(() => {
@@ -167,7 +175,7 @@ const FloatingTimeline = ({
         }, isChrome ? 100 : 0);
         
         return () => clearTimeout(scrollTimeout);
-    }, [currentTime, videoDuration, timelineWidth, videoRef]);
+    }, [currentTime, videoDuration, timelineWidth, videoRef, zoomLevel, projectSteps.length, shouldEnableScrolling]);
     
     if (!isVisible) return null;
     
@@ -176,7 +184,8 @@ const FloatingTimeline = ({
             {/* Floating Timeline */}
             <div style={{
                 ...styles.floatingTimeline,
-                ...(isCollapsed && styles.floatingTimelineCollapsed)
+                ...(isCollapsed && styles.floatingTimelineCollapsed),
+                right: isStepsSidebarCollapsed ? '64px' : '256px' // Adjust for steps sidebar
             }}>
                 {/* Timeline Header */}
                 <div style={styles.timelineHeader}>
@@ -216,8 +225,11 @@ const FloatingTimeline = ({
                     <div style={styles.timelineBody}>
                         <div 
                             ref={scrollContainerRef}
-                            style={styles.timelineScrollContainer}
-                            onScroll={handleScroll}
+                            style={{
+                                ...styles.timelineScrollContainer,
+                                overflowX: shouldEnableScrolling() ? 'auto' : 'hidden'
+                            }}
+                            onScroll={shouldEnableScrolling() ? handleScroll : undefined}
                         >
                             <div 
                                 ref={timelineRef}
@@ -279,6 +291,10 @@ const FloatingTimeline = ({
                                             const stepStartTime = step.video_start_time_ms / 1000;
                                             if (videoRef.current) {
                                                 videoRef.current.currentTime = stepStartTime;
+                                            }
+                                            // Call onStepClick to edit the step
+                                            if (onStepClick) {
+                                                onStepClick(step, index);
                                             }
                                         }}
                                         onMouseEnter={(e) => {

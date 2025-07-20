@@ -19,6 +19,7 @@ const FinalizeTab = ({
     const [showQuantityModal, setShowQuantityModal] = useState(false);
     const [selectedRepoItem, setSelectedRepoItem] = useState(null);
     const [selectedQuantity, setSelectedQuantity] = useState(1);
+    const [isRepositoryCollapsed, setIsRepositoryCollapsed] = useState(true);
     
     // Handler to clear the entire buy list
     const handleClearBuyList = async () => {
@@ -123,14 +124,59 @@ const FinalizeTab = ({
         <div>
             {/* Repository Section */}
             <div style={styles.card}>
-                <h2 style={styles.sectionTitle}>Add from Repository</h2>
-                <p style={{fontSize: '0.9rem', color: '#D9D9D9', marginBottom: '20px'}}>
-                    Add tools and materials from your repository to the shopping list.
-                </p>
-                <RepositoryPanel 
-                    contextType="project" 
-                    onAddToBuyList={handleShowQuantityModal}
-                />
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '20px'
+                }}>
+                    <div>
+                        <h2 style={styles.sectionTitle}>Add from Repository</h2>
+                        <p style={{fontSize: '0.9rem', color: '#D9D9D9', marginTop: '4px'}}>
+                            Add tools and materials from your repository to the shopping list.
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => setIsRepositoryCollapsed(!isRepositoryCollapsed)}
+                        style={{
+                            backgroundColor: '#333',
+                            color: '#D9D9D9',
+                            border: '1px solid #666',
+                            borderRadius: '4px',
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }}
+                        title={isRepositoryCollapsed ? "Expand Repository" : "Collapse Repository"}
+                    >
+                        {isRepositoryCollapsed ? '▼' : '▲'}
+                        {isRepositoryCollapsed ? 'Show' : 'Hide'}
+                    </button>
+                </div>
+                
+                {!isRepositoryCollapsed && (
+                    <RepositoryPanel 
+                        contextType="project" 
+                        onAddToBuyList={handleShowQuantityModal}
+                    />
+                )}
+                
+                {isRepositoryCollapsed && (
+                    <div style={{
+                        backgroundColor: '#111111',
+                        border: '1px solid #333',
+                        borderRadius: '6px',
+                        padding: '16px',
+                        textAlign: 'center',
+                        color: '#9ca3af',
+                        fontStyle: 'italic'
+                    }}>
+                        Repository panel is collapsed. Click "Show" to expand and add items.
+                    </div>
+                )}
             </div>
 
             {/* Buy List Management */}

@@ -32,6 +32,7 @@ export const formatDate = (dateString) => {
 // API utility functions
 export const getApiUrl = () => {
     return process.env.REACT_APP_API_URL;
+    
 };
 
 export const createApiCall = async (endpoint, options = {}) => {

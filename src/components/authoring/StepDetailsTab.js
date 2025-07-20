@@ -108,38 +108,7 @@ const StepDetailsTab = ({
                 />
             </div>
 
-            {/* Video Time Range */}
-            <div style={subCardStyle}>
-                <label style={subCardTitleStyle}>
-                    Step Time Range
-                    {(currentStepStartTime === null || currentStepEndTime === null) && (
-                        <span style={{...blueAccent, fontSize: '0.93rem', marginLeft: '0.5rem'}}> (Required)</span>
-                    )}
-                </label>
-                <div style={{fontSize: '0.97rem', marginTop: '0.3rem'}}>
-                    <div style={{
-                        marginBottom: '2px',
-                        ...subCardTextStyle,
-                    }}>
-                        <span style={{color: '#F5F5F5'}}>Start:</span> <span style={currentStepStartTime === null ? goldAccent : blueAccent}>{currentStepStartTime !== null ? formatTime(currentStepStartTime) : 'Not set'}</span>
-                    </div>
-                    <div style={{
-                        ...subCardTextStyle,
-                    }}>
-                        <span style={{color: '#F5F5F5'}}>End:</span> <span style={currentStepEndTime === null ? goldAccent : blueAccent}>{currentStepEndTime !== null ? formatTime(currentStepEndTime) : 'Not set'}</span>
-                    </div>
-                </div>
-                {(currentStepStartTime === null || currentStepEndTime === null) && (
-                    <div style={{
-                        fontSize: '0.93rem',
-                        color: '#BDBDBD',
-                        marginTop: '8px',
-                        fontStyle: 'italic',
-                    }}>
-                        💡 Play the video and click "Mark Start" and "Mark End" below the video to set the time range.
-                    </div>
-                )}
-            </div>
+
 
             {/* Annotations Management Section */}
             <div style={subCardStyle}>

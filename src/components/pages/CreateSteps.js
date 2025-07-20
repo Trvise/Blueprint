@@ -1,5 +1,5 @@
 // CreateSteps.js - Refactored CreateSteps component using modular files
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 // Import modular components
 import { useCreateStepsState, useCreateStepsEffects } from './createsteps helpers/CreateStepsHooks';
@@ -20,6 +20,7 @@ import FinalizeTab from '../authoring/FinalizeTab';
 import ProjectRepositoryTab from '../authoring/ProjectRepositoryTab';
 import AnnotationPopup from '../authoring/AnnotationPopup';
 import FloatingTimeline from '../authoring/FloatingTimeline';
+import StepsSidebar from '../authoring/StepsSidebar';
 
 // Chrome detection
 const isChrome = typeof window !== 'undefined' && /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
@@ -59,7 +60,7 @@ const getChromeStyles = () => {
         // Scale down content areas
         leftPanelContent: {
             ...styles.leftPanelContent,
-            padding: `${12 * chromeScale}px`,
+            padding: isChrome ? '4px' : `${12 * chromeScale}px`,
         },
         videoSection: {
             ...styles.videoSection,
@@ -299,6 +300,218 @@ const ProjectStepsPage = () => {
         navigate
     } = state;
 
+    // Chrome-specific layout adjustments
+    const isChrome = navigator.userAgent.includes('Chrome');
+
+    // State for scrollable tabs
+    const [showLeftArrow, setShowLeftArrow] = useState(false);
+    const [showRightArrow, setShowRightArrow] = useState(false);
+    const [scrollPosition, setScrollPosition] = useState(0);
+    const tabsContainerRef = useRef(null);
+
+    // State for resizable panels
+    const [leftPanelWidth, setLeftPanelWidth] = useState(isChrome ? 0.48 : 0.45);
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStartX, setDragStartX] = useState(0);
+    const [dragStartWidth, setDragStartWidth] = useState(0);
+    
+    // State for video current time
+    const [currentVideoTime, setCurrentVideoTime] = useState(0);
+    
+    // Minimum and maximum panel widths (as percentages)
+    const MIN_LEFT_PANEL_WIDTH = 0.25; // 25% minimum
+    const MAX_LEFT_PANEL_WIDTH = 0.75; // 75% maximum
+
+    // Check if tabs need scrolling
+    useEffect(() => {
+        const checkScrollNeeded = () => {
+            if (tabsContainerRef.current) {
+                const container = tabsContainerRef.current;
+                const scrollWidth = container.scrollWidth;
+                const clientWidth = container.clientWidth;
+                
+                // Always show arrows if content could potentially overflow
+                const shouldShowLeft = scrollPosition > 0;
+                const shouldShowRight = scrollWidth > clientWidth;
+                
+                console.log('Tab scroll check:', { scrollWidth, clientWidth, scrollPosition, shouldShowLeft, shouldShowRight });
+                
+                setShowLeftArrow(shouldShowLeft);
+                setShowRightArrow(shouldShowRight || scrollWidth > clientWidth + 10); // Add small buffer
+            }
+        };
+
+        checkScrollNeeded();
+        window.addEventListener('resize', checkScrollNeeded);
+        return () => window.removeEventListener('resize', checkScrollNeeded);
+    }, [scrollPosition]);
+
+    // Scroll handlers
+    const scrollLeft = () => {
+        if (tabsContainerRef.current) {
+            tabsContainerRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+        }
+    };
+
+    const scrollRight = () => {
+        if (tabsContainerRef.current) {
+            tabsContainerRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+        }
+    };
+
+    // Handle scroll event
+    const handleScroll = (e) => {
+        setScrollPosition(e.target.scrollLeft);
+    };
+
+    // Add CSS for hiding scrollbar
+    useEffect(() => {
+        const style = document.createElement('style');
+        style.textContent = `
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .scrollbar-hide {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+        `;
+        document.head.appendChild(style);
+        return () => document.head.removeChild(style);
+    }, []);
+
+    // Panel resize handlers
+    const handleDragStart = (e) => {
+        setIsDragging(true);
+        setDragStartX(e.clientX);
+        setDragStartWidth(leftPanelWidth);
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    };
+
+    const handleDragMove = useCallback((e) => {
+        if (!isDragging) return;
+        
+        const deltaX = e.clientX - dragStartX;
+        const containerWidth = window.innerWidth;
+        const deltaPercent = deltaX / containerWidth;
+        
+        let newWidth = dragStartWidth + deltaPercent;
+        newWidth = Math.max(MIN_LEFT_PANEL_WIDTH, Math.min(MAX_LEFT_PANEL_WIDTH, newWidth));
+        
+        setLeftPanelWidth(newWidth);
+    }, [isDragging, dragStartX, dragStartWidth]);
+
+    const handleDragEnd = useCallback(() => {
+        setIsDragging(false);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    }, []);
+
+    // Add global mouse event listeners for dragging
+    useEffect(() => {
+        if (isDragging) {
+            const handleMouseMove = handleDragMove;
+            const handleMouseUp = handleDragEnd;
+            
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            
+            return () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+        }
+    }, [isDragging, dragStartX, dragStartWidth, handleDragMove, handleDragEnd]);
+
+    // Update current video time with smooth cross-browser updates
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        // Wait for video to be ready
+        const setupTimeListeners = () => {
+            // All browsers - use smooth animation frame updates
+            let animationFrameId = null;
+            let lastUpdateTime = 0;
+            const updateInterval = 16; // ~60fps for smooth updates
+
+            const smoothUpdate = (timestamp) => {
+                if (timestamp - lastUpdateTime >= updateInterval) {
+                    setCurrentVideoTime(video.currentTime);
+                    lastUpdateTime = timestamp;
+                }
+                animationFrameId = requestAnimationFrame(smoothUpdate);
+            };
+
+            const handleTimeUpdate = () => {
+                setCurrentVideoTime(video.currentTime);
+            };
+
+            const handleSeeked = () => {
+                setCurrentVideoTime(video.currentTime);
+            };
+
+            const handleLoadedMetadata = () => {
+                setCurrentVideoTime(video.currentTime);
+            };
+
+            const handlePlay = () => {
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                }
+                animationFrameId = requestAnimationFrame(smoothUpdate);
+            };
+
+            const handlePause = () => {
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+                setCurrentVideoTime(video.currentTime);
+            };
+
+            video.addEventListener('timeupdate', handleTimeUpdate);
+            video.addEventListener('seeked', handleSeeked);
+            video.addEventListener('loadedmetadata', handleLoadedMetadata);
+            video.addEventListener('play', handlePlay);
+            video.addEventListener('pause', handlePause);
+
+            setCurrentVideoTime(video.currentTime);
+
+            if (!video.paused) {
+                animationFrameId = requestAnimationFrame(smoothUpdate);
+            }
+
+            return () => {
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                }
+                video.removeEventListener('timeupdate', handleTimeUpdate);
+                video.removeEventListener('seeked', handleSeeked);
+                video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                video.removeEventListener('play', handlePlay);
+                video.removeEventListener('pause', handlePause);
+            };
+        };
+
+        // Setup listeners immediately if video is ready
+        let cleanup = setupTimeListeners();
+
+        // Also setup when video becomes ready
+        const handleCanPlay = () => {
+            if (cleanup) cleanup();
+            cleanup = setupTimeListeners();
+        };
+
+        video.addEventListener('canplay', handleCanPlay);
+
+        return () => {
+            if (cleanup) cleanup();
+            video.removeEventListener('canplay', handleCanPlay);
+        };
+    }, [videoRef, activeVideoUrl]);
+
     // Enhanced handlers with utilities
     const enhancedHandlers = {
         ...handlers,
@@ -473,19 +686,12 @@ const ProjectStepsPage = () => {
          return <div style={chromeStyles.pageContainer}><p style={chromeStyles.errorMessage}>{errorMessage} <button onClick={() => navigate(-1)} style={{...chromeStyles.backLink, marginLeft: '10px'}}>Go Back</button></p></div>;
     }
 
-    // Chrome-specific layout adjustments
-    const isChrome = navigator.userAgent.includes('Chrome');
-
     return (
         <div style={{
             ...styles.videoTimelineContainer,
             ...(activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' && styles.contentPadding),
-            // Chrome-specific adjustments for smaller space
-            ...(isChrome && {
-                marginLeft: '4rem', // Smaller margin for Chrome
-                width: 'calc(100vw - 4rem)', // Adjust width for Chrome
-                maxWidth: 'calc(100vw - 4rem)'
-            })
+            // Add bottom padding to prevent content from being covered by floating timeline
+            paddingBottom: activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' ? '180px' : '20px'
         }}>
                 {/* Header */}
             <header style={chromeStyles.header}>
@@ -638,234 +844,314 @@ const ProjectStepsPage = () => {
                     />
                 </div>
             ) : (
-                // Regular step authoring layout
-                <div style={chromeStyles.videoTimelineLayout}>
-
-                {/* Left side - Tabs and controls (2/5ths) */}
-                <div style={chromeStyles.leftPanel}>
-                    {/* Tab navigation */}
-                    <div style={chromeStyles.tabNavigation}>
-                        <button 
-                            onClick={() => safeSetActiveTab('details')}
-                            style={{
-                                ...chromeStyles.tabButton,
-                                ...(activeTab === 'details' ? chromeStyles.tabButtonActive : {})
-                            }}
-                        >
-                            Step Details
-                                        </button>
-                        <button 
-                            onClick={() => safeSetActiveTab('materials')}
-                                style={{
-                                ...chromeStyles.tabButton,
-                                ...(activeTab === 'materials' ? chromeStyles.tabButtonActive : {})
-                            }}
-                        >
-                            Step Materials
-                        </button>
-                        <button 
-                            onClick={() => safeSetActiveTab('files')}
-                            style={{
-                                ...chromeStyles.tabButton,
-                                ...(activeTab === 'files' ? chromeStyles.tabButtonActive : {})
-                            }}
-                        >
-                            Files
-                        </button>
-                        <button 
-                            onClick={() => safeSetActiveTab('result')}
-                            style={{
-                                ...chromeStyles.tabButton,
-                                ...(activeTab === 'result' ? chromeStyles.tabButtonActive : {})
-                            }}
-                        >
-                            Result
-                        </button>
-                        <button 
-                            onClick={() => safeSetActiveTab('signoff')}
-                            style={{
-                                ...chromeStyles.tabButton,
-                                ...(activeTab === 'signoff' ? chromeStyles.tabButtonActive : {})
-                            }}
-                        >
-                            Sign Off
-                        </button>
-                            </div>
-
-                {/* Tab content */}
-                    <div style={chromeStyles.leftPanelContent}>
-                        {activeTab === 'details' && (
-                            <StepDetailsTab 
-                                currentStepName={currentStepName}
-                                setCurrentStepName={state.setCurrentStepName}
-                                currentStepDescription={currentStepDescription}
-                                setCurrentStepDescription={state.setCurrentStepDescription}
-                                currentStepStartTime={currentStepStartTime}
-                                currentStepEndTime={currentStepEndTime}
-                                currentStepAnnotations={state.currentStepAnnotations}
-                                formatTime={formatTime}
-                                onEditAnnotation={enhancedHandlers.onEditAnnotation}
-                                styles={chromeStyles}
-                            />
-                        )}
-
-                        {activeTab === 'materials' && (
-                            <MaterialsAndToolsTab 
-                                // Tools props
-                                currentStepTools={currentStepTools}
-                                currentStepToolName={currentStepToolName}
-                                setCurrentStepToolName={setCurrentStepToolName}
-                                currentStepToolSpec={currentStepToolSpec}
-                                setCurrentStepToolSpec={setCurrentStepToolSpec}
-                                currentStepToolImageFile={currentStepToolImageFile}
-                                setCurrentStepToolImageFile={setCurrentStepToolImageFile}
-                                currentStepToolPurchaseLink={currentStepToolPurchaseLink}
-                                setCurrentStepToolPurchaseLink={setCurrentStepToolPurchaseLink}
-                                currentStepToolQuantity={currentStepToolQuantity}
-                                setCurrentStepToolQuantity={setCurrentStepToolQuantity}
-                                toolImageInputRef={toolImageInputRef}
-                                handleAddToolToCurrentStep={enhancedHandlers.handleAddToolToCurrentStep}
-                                removeToolFromCurrentStep={enhancedHandlers.removeToolFromCurrentStep}
-                                // Add direct state setters for repository items
-                                setCurrentStepTools={state.setCurrentStepTools}
-                                setCurrentStepMaterials={state.setCurrentStepMaterials}
-                                // Materials props
-                                currentStepMaterials={currentStepMaterials}
-                                currentStepMaterialName={currentStepMaterialName}
-                                setCurrentStepMaterialName={setCurrentStepMaterialName}
-                                currentStepMaterialSpec={currentStepMaterialSpec}
-                                setCurrentStepMaterialSpec={setCurrentStepMaterialSpec}
-                                currentStepMaterialImageFile={currentStepMaterialImageFile}
-                                setCurrentStepMaterialImageFile={setCurrentStepMaterialImageFile}
-                                currentStepMaterialPurchaseLink={currentStepMaterialPurchaseLink}
-                                setCurrentStepMaterialPurchaseLink={setCurrentStepMaterialPurchaseLink}
-                                currentStepMaterialQuantity={currentStepMaterialQuantity}
-                                setCurrentStepMaterialQuantity={setCurrentStepMaterialQuantity}
-                                materialImageInputRef={materialImageInputRef}
-                                handleAddMaterialToCurrentStep={enhancedHandlers.handleAddMaterialToCurrentStep}
-                                removeMaterialFromCurrentStep={enhancedHandlers.removeMaterialFromCurrentStep}
-                                // Repository refresh trigger
-                                repositoryRefreshTrigger={state.repositoryRefreshTrigger}
-                                styles={chromeStyles}
-                            />
-                        )}
-
-                        {activeTab === 'files' && (
-                            <FilesTab 
-                                currentStepSupFiles={currentStepSupFiles}
-                                currentStepSupFileName={currentStepSupFileName}
-                                setCurrentStepSupFileName={setCurrentStepSupFileName}
-                                supFileInputRef={supFileInputRef}
-                                handleSupFileChange={enhancedHandlers.handleSupFileChange}
-                                removeSupFileFromCurrentStep={enhancedHandlers.removeSupFileFromCurrentStep}
-                                styles={chromeStyles}
-                            />
-                        )}
-
-                        {activeTab === 'result' && (
-                            <ResultTab 
-                                currentStepResultImage={currentStepResultImage}
-                                currentStepResultImageFile={currentStepResultImageFile}
-                                handleResultImageChange={enhancedHandlers.handleResultImageChange}
-                                resultImageInputRef={resultImageInputRef}
-                                styles={chromeStyles}
-                            />
-                        )}
-
-                        {activeTab === 'signoff' && (
-                            <SignOffTab 
-                                currentCautionaryNotes={currentCautionaryNotes}
-                                setCurrentCautionaryNotes={state.setCurrentCautionaryNotes}
-                                currentBestPracticeNotes={currentBestPracticeNotes}
-                                setBestPracticeNotes={state.setCurrentBestPracticeNotes}
-                                currentStepValidationQuestion={currentStepValidationQuestion}
-                                setCurrentStepValidationQuestion={state.setCurrentStepValidationQuestion}
-                                currentStepValidationAnswer={currentStepValidationAnswer}
-                                setCurrentStepValidationAnswer={state.setCurrentStepValidationAnswer}
-                                styles={chromeStyles}
-                            />
-                        )}
-                    </div>
-
-
-            </div>
-            
-                {/* Right side - Video and steps (3/5ths) */}
-                <div style={chromeStyles.rightPanel}>
-                    
-                    {/* Video section */}
-                    <div style={chromeStyles.videoSection}>
-                        <div style={chromeStyles.videoContainer}>
-                            {uploadedVideos.length > 0 && activeVideoUrl ? (
-                                <div>
-                                    {/* Video selection */}
-                                    {uploadedVideos.length > 1 && (
-                                        <div style={chromeStyles.videoSelection}>
-                                            {uploadedVideos.map((video, index) => (
-                    <button 
-                                                    key={video.path || index} 
-                                                    onClick={() => enhancedHandlers.handleVideoSelection(index)}
-                        style={{
-                                                        ...chromeStyles.videoSelectButton,
-                                                        ...(activeVideoIndex === index ? chromeStyles.videoSelectButtonActive : {})
+                // New layout with StepsSidebar
+                <div className="flex h-screen">
+                    {/* Left side - Tabs and controls */}
+                    <div
+                        className="bg-black border-r border-gray-800 flex flex-col"
+                        style={{ 
+                            flex: leftPanelWidth, 
+                            minWidth: `${MIN_LEFT_PANEL_WIDTH * 100}%`,
+                            maxWidth: `${MAX_LEFT_PANEL_WIDTH * 100}%`
                         }}
                     >
+                        {/* Tab navigation */}
+                        <div className="relative border-b border-gray-800">
+                            {/* Left arrow */}
+                            <button
+                                onClick={scrollLeft}
+                                className={`absolute left-0 top-0 bottom-0 z-20 bg-black bg-opacity-90 hover:bg-opacity-100 text-white px-3 flex items-center justify-center transition-all duration-200 ${
+                                    showLeftArrow ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                                }`}
+                                style={{ 
+                                    minWidth: '36px',
+                                    boxShadow: '2px 0 4px rgba(0,0,0,0.5)'
+                                }}
+                                title="Scroll left"
+                            >
+                                ◀
+                            </button>
+                            
+                            {/* Right arrow */}
+                            <button
+                                onClick={scrollRight}
+                                className={`absolute right-0 top-0 bottom-0 z-20 bg-black bg-opacity-90 hover:bg-opacity-100 text-white px-3 flex items-center justify-center transition-all duration-200 ${
+                                    showRightArrow ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                                }`}
+                                style={{ 
+                                    minWidth: '36px',
+                                    boxShadow: '-2px 0 4px rgba(0,0,0,0.5)'
+                                }}
+                                title="Scroll right"
+                            >
+                                ▶
+                            </button>
+                            
+                            {/* Scrollable tabs container */}
+                            <div 
+                                ref={tabsContainerRef}
+                                onScroll={handleScroll}
+                                className="flex overflow-x-auto scrollbar-hide"
+                                style={{ 
+                                    scrollbarWidth: 'none',
+                                    msOverflowStyle: 'none',
+                                    paddingLeft: showLeftArrow ? '32px' : '0',
+                                    paddingRight: showRightArrow ? '32px' : '0'
+                                }}
+                            >
+                                <button 
+                                    onClick={() => safeSetActiveTab('details')}
+                                    className={`flex-shrink-0 py-3 px-4 text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                                        activeTab === 'details' 
+                                            ? 'text-black bg-[#F1C232] border-b-2 border-[#0000FF]' 
+                                            : 'text-[#D9D9D9] hover:bg-gray-800'
+                                    }`}
+                                >
+                                    Step Details
+                                </button>
+                                <button 
+                                    onClick={() => safeSetActiveTab('materials')}
+                                    className={`flex-shrink-0 py-3 px-4 text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                                        activeTab === 'materials' 
+                                            ? 'text-black bg-[#F1C232] border-b-2 border-[#0000FF]' 
+                                            : 'text-[#D9D9D9] hover:bg-gray-800'
+                                    }`}
+                                >
+                                    Step Materials
+                                </button>
+                                <button 
+                                    onClick={() => safeSetActiveTab('files')}
+                                    className={`flex-shrink-0 py-3 px-4 text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                                        activeTab === 'files' 
+                                            ? 'text-black bg-[#F1C232] border-b-2 border-[#0000FF]' 
+                                            : 'text-[#D9D9D9] hover:bg-gray-800'
+                                    }`}
+                                >
+                                    Files
+                                </button>
+                                <button 
+                                    onClick={() => safeSetActiveTab('result')}
+                                    className={`flex-shrink-0 py-3 px-4 text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                                        activeTab === 'result' 
+                                            ? 'text-black bg-[#F1C232] border-b-2 border-[#0000FF]' 
+                                            : 'text-[#D9D9D9] hover:bg-gray-800'
+                                    }`}
+                                >
+                                    Result
+                                </button>
+                                <button 
+                                    onClick={() => safeSetActiveTab('signoff')}
+                                    className={`flex-shrink-0 py-3 px-4 text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                                        activeTab === 'signoff' 
+                                            ? 'text-black bg-[#F1C232] border-b-2 border-[#0000FF]' 
+                                            : 'text-[#D9D9D9] hover:bg-gray-800'
+                                    }`}
+                                >
+                                    Sign Off
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Tab content */}
+                        <div className={`flex-1 overflow-y-auto ${isChrome ? 'p-1' : 'p-4'}`} style={{
+                            // Add bottom margin to ensure content isn't covered by floating timeline
+                            marginBottom: activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' ? '160px' : '0'
+                        }}>
+                            {activeTab === 'details' && (
+                                <StepDetailsTab 
+                                    currentStepName={currentStepName}
+                                    setCurrentStepName={state.setCurrentStepName}
+                                    currentStepDescription={currentStepDescription}
+                                    setCurrentStepDescription={state.setCurrentStepDescription}
+                                    currentStepStartTime={currentStepStartTime}
+                                    currentStepEndTime={currentStepEndTime}
+                                    currentStepAnnotations={state.currentStepAnnotations}
+                                    formatTime={formatTime}
+                                    onEditAnnotation={enhancedHandlers.onEditAnnotation}
+                                    styles={chromeStyles}
+                                />
+                            )}
+
+                            {activeTab === 'materials' && (
+                                <MaterialsAndToolsTab 
+                                    // Tools props
+                                    currentStepTools={currentStepTools}
+                                    currentStepToolName={currentStepToolName}
+                                    setCurrentStepToolName={setCurrentStepToolName}
+                                    currentStepToolSpec={currentStepToolSpec}
+                                    setCurrentStepToolSpec={setCurrentStepToolSpec}
+                                    currentStepToolImageFile={currentStepToolImageFile}
+                                    setCurrentStepToolImageFile={setCurrentStepToolImageFile}
+                                    currentStepToolPurchaseLink={currentStepToolPurchaseLink}
+                                    setCurrentStepToolPurchaseLink={setCurrentStepToolPurchaseLink}
+                                    currentStepToolQuantity={currentStepToolQuantity}
+                                    setCurrentStepToolQuantity={setCurrentStepToolQuantity}
+                                    toolImageInputRef={toolImageInputRef}
+                                    handleAddToolToCurrentStep={enhancedHandlers.handleAddToolToCurrentStep}
+                                    removeToolFromCurrentStep={enhancedHandlers.removeToolFromCurrentStep}
+                                    // Add direct state setters for repository items
+                                    setCurrentStepTools={state.setCurrentStepTools}
+                                    setCurrentStepMaterials={state.setCurrentStepMaterials}
+                                    // Materials props
+                                    currentStepMaterials={currentStepMaterials}
+                                    currentStepMaterialName={currentStepMaterialName}
+                                    setCurrentStepMaterialName={setCurrentStepMaterialName}
+                                    currentStepMaterialSpec={currentStepMaterialSpec}
+                                    setCurrentStepMaterialSpec={setCurrentStepMaterialSpec}
+                                    currentStepMaterialImageFile={currentStepMaterialImageFile}
+                                    setCurrentStepMaterialImageFile={setCurrentStepMaterialImageFile}
+                                    currentStepMaterialPurchaseLink={currentStepMaterialPurchaseLink}
+                                    setCurrentStepMaterialPurchaseLink={setCurrentStepMaterialPurchaseLink}
+                                    currentStepMaterialQuantity={currentStepMaterialQuantity}
+                                    setCurrentStepMaterialQuantity={setCurrentStepMaterialQuantity}
+                                    materialImageInputRef={materialImageInputRef}
+                                    handleAddMaterialToCurrentStep={enhancedHandlers.handleAddMaterialToCurrentStep}
+                                    removeMaterialFromCurrentStep={enhancedHandlers.removeMaterialFromCurrentStep}
+                                    // Repository refresh trigger
+                                    repositoryRefreshTrigger={state.repositoryRefreshTrigger}
+                                    styles={chromeStyles}
+                                />
+                            )}
+
+                            {activeTab === 'files' && (
+                                <FilesTab 
+                                    currentStepSupFiles={currentStepSupFiles}
+                                    currentStepSupFileName={currentStepSupFileName}
+                                    setCurrentStepSupFileName={setCurrentStepSupFileName}
+                                    supFileInputRef={supFileInputRef}
+                                    handleSupFileChange={enhancedHandlers.handleSupFileChange}
+                                    removeSupFileFromCurrentStep={enhancedHandlers.removeSupFileFromCurrentStep}
+                                    styles={chromeStyles}
+                                />
+                            )}
+
+                            {activeTab === 'result' && (
+                                <ResultTab 
+                                    currentStepResultImage={currentStepResultImage}
+                                    currentStepResultImageFile={currentStepResultImageFile}
+                                    handleResultImageChange={enhancedHandlers.handleResultImageChange}
+                                    resultImageInputRef={resultImageInputRef}
+                                    styles={chromeStyles}
+                                />
+                            )}
+
+                            {activeTab === 'signoff' && (
+                                <SignOffTab 
+                                    currentCautionaryNotes={currentCautionaryNotes}
+                                    setCurrentCautionaryNotes={state.setCurrentCautionaryNotes}
+                                    currentBestPracticeNotes={currentBestPracticeNotes}
+                                    setBestPracticeNotes={state.setCurrentBestPracticeNotes}
+                                    currentStepValidationQuestion={currentStepValidationQuestion}
+                                    setCurrentStepValidationQuestion={state.setCurrentStepValidationQuestion}
+                                    currentStepValidationAnswer={currentStepValidationAnswer}
+                                    setCurrentStepValidationAnswer={state.setCurrentStepValidationAnswer}
+                                    styles={chromeStyles}
+                                />
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Draggable divider */}
+                    <div
+                        className="w-1 bg-gray-700 hover:bg-[#F1C232] cursor-col-resize transition-colors duration-200 relative"
+                        onMouseDown={handleDragStart}
+                        style={{
+                            backgroundColor: isDragging ? '#F1C232' : '#374151',
+                            cursor: 'col-resize',
+                            marginLeft: '4px',
+                            marginRight: '4px'
+                        }}
+                        title="Drag to resize panels"
+                    >
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-0.5 h-8 bg-gray-500 rounded-full opacity-50"></div>
+                        </div>
+                    </div>
+
+                    {/* Center - Video content */}
+                    <div
+                        className={`bg-black flex flex-col ${state.isStepsSidebarCollapsed ? 'mr-12' : 'mr-64'}`}
+                        style={{ 
+                            flex: 1 - leftPanelWidth, 
+                            minWidth: `${(1 - MAX_LEFT_PANEL_WIDTH) * 100}%`,
+                            padding: isChrome ? '2px 1px 0 1px' : '20px 16px 0 16px'
+                        }}
+                    >
+                        {/* Video section */}
+                        <div className="flex-1" style={isChrome ? { padding: 0 } : {}}>
+                            {uploadedVideos.length > 0 && activeVideoUrl ? (
+                                <div className="h-full flex flex-col">
+                                    {/* Video selection */}
+                                    {uploadedVideos.length > 1 && (
+                                        <div className="flex gap-2 mb-4 flex-wrap">
+                                            {uploadedVideos.map((video, index) => (
+                                                <button 
+                                                    key={video.path || index} 
+                                                    onClick={() => enhancedHandlers.handleVideoSelection(index)}
+                                                    className={`px-3 py-1 text-sm font-medium border rounded-md transition-all duration-200 ${
+                                                        activeVideoIndex === index 
+                                                            ? 'bg-[#0000FF] text-[#D9D9D9] border-[#0000FF]' 
+                                                            : 'bg-black text-[#D9D9D9] border-[#D9D9D9] hover:bg-gray-800'
+                                                    }`}
+                                                >
                                                     Video {index + 1}
-                    </button>
+                                                </button>
                                             ))}
                                         </div>
                                     )}
                                     
                                     {/* Video player */}
-                                    <video 
-                                        ref={videoRef} 
-                                        key={activeVideoUrl} 
-                                        controls 
-                                        src={activeVideoUrl} 
-                                        crossOrigin="anonymous"
-                                        style={chromeStyles.videoPlayer}
-                                        onError={(e) => { 
-                                            console.error("Video Error:", e);
-                                            console.error("Failed video URL:", activeVideoUrl);
-                                            setErrorMessage(`Error loading video: ${uploadedVideos[activeVideoIndex]?.name || 'Unknown video'}`); 
-                                        }}
-                                        onTimeUpdate={(e) => {
-                                            // Debug log for current time
-                                            if (videoRef.current) {
-                                                console.log('Video currentTime:', videoRef.current.currentTime);
-                                            }
-                                        }}
-                                    />
-            
-                                    {/* Video controls */}
-                                    <div style={chromeStyles.videoControls}>
-                    <button 
-                                            onClick={() => enhancedHandlers.navigateFrame('backward')} 
-                                            style={{...chromeStyles.button, ...chromeStyles.buttonSecondarySm}}
-                                        >
-                                            ◀ Frame
-                                        </button>
-                                        <button 
-                                            onClick={() => enhancedHandlers.navigateFrame('forward')} 
-                                            style={{...chromeStyles.button, ...chromeStyles.buttonSecondarySm}}
-                                        >
-                                            Frame ▶
-                                        </button>
-                                        <button 
-                                            onClick={enhancedHandlers.captureFrameForAnnotation} 
-                                            style={{...chromeStyles.button, backgroundColor: '#3498db', color: 'white'}}
-                                        >
-                                            Capture Frame
-                                        </button>
-                                        {/* Mark Start/End/Clear buttons */}
+                                    <div>
+                                        <video
+                                            ref={videoRef}
+                                            key={activeVideoUrl}
+                                            controls
+                                            src={activeVideoUrl}
+                                            crossOrigin="anonymous"
+                                            className="w-full max-w-4xl rounded-lg bg-black"
+                                            style={isChrome ? { aspectRatio: '16 / 9', maxWidth: '90vw', margin: 0 } : { aspectRatio: '16 / 9' }}
+                                            onError={(e) => {
+                                                console.error("Video Error:", e);
+                                                console.error("Failed video URL:", activeVideoUrl);
+                                                setErrorMessage(`Error loading video: ${uploadedVideos[activeVideoIndex]?.name || 'Unknown video'}`);
+                                            }}
+                                            onTimeUpdate={(e) => {
+                                                if (videoRef.current) {
+                                                    console.log('Video currentTime:', videoRef.current.currentTime);
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                    
+                                    {/* Video controls below video */}
+                                    <div className="border-t border-gray-800 pt-4">
+                                        <div className="flex gap-2 mb-4 flex-wrap">
+                                            <button 
+                                                onClick={() => enhancedHandlers.navigateFrame('backward')} 
+                                                className="px-3 py-2 text-sm bg-[#0000FF] text-[#D9D9D9] rounded-md hover:bg-blue-700 transition-colors"
+                                            >
+                                                ◀ Frame
+                                            </button>
+                                            <button 
+                                                onClick={() => enhancedHandlers.navigateFrame('forward')} 
+                                                className="px-3 py-2 text-sm bg-[#0000FF] text-[#D9D9D9] rounded-md hover:bg-blue-700 transition-colors"
+                                            >
+                                                Frame ▶
+                                            </button>
+                                            <button 
+                                                onClick={enhancedHandlers.captureFrameForAnnotation} 
+                                                className="px-3 py-2 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                                            >
+                                                Capture Frame
+                                            </button>
                                             <button
                                                 onClick={() => {
                                                     if (videoRef.current) {
                                                         const currentTime = videoRef.current.currentTime;
                                                         state.setCurrentStepStartTime(currentTime);
-                                                }
-                                            }}
-                                            style={{...chromeStyles.button, ...chromeStyles.buttonPrimary, marginLeft: 8}}
+                                                    }
+                                                }}
+                                                className="px-3 py-2 text-sm bg-[#F1C232] text-black rounded-md hover:bg-yellow-600 transition-colors"
                                             >
                                                 Mark Start
                                             </button>
@@ -873,13 +1159,13 @@ const ProjectStepsPage = () => {
                                                 onClick={() => {
                                                     if (videoRef.current) {
                                                         const currentTime = videoRef.current.currentTime;
-                                                    if (state.currentStepStartTime !== null && currentTime <= state.currentStepStartTime) {
-                                                        return; // End time must be after start time
+                                                        if (state.currentStepStartTime !== null && currentTime <= state.currentStepStartTime) {
+                                                            return;
                                                         }
                                                         state.setCurrentStepEndTime(currentTime);
-                                                }
-                                            }}
-                                            style={{...chromeStyles.button, ...chromeStyles.buttonSecondary, marginLeft: 8}}
+                                                    }
+                                                }}
+                                                className="px-3 py-2 text-sm bg-[#0000FF] text-[#D9D9D9] rounded-md hover:bg-blue-700 transition-colors"
                                             >
                                                 Mark End
                                             </button>
@@ -888,95 +1174,73 @@ const ProjectStepsPage = () => {
                                                     state.setCurrentStepStartTime(null);
                                                     state.setCurrentStepEndTime(null);
                                                 }}
-                                            style={{...chromeStyles.button, ...chromeStyles.buttonDanger, marginLeft: 8}}
+                                                className="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
                                             >
                                                 Clear
-                                        </button>
+                                            </button>
+                                        </div>
+                                        
+                                        {/* Current time and timing info */}
+                                        <div className="flex gap-4">
+                                            <div className="p-3 bg-gray-800 rounded-lg">
+                                                <h3 className="text-[#F1C232] font-semibold mb-2">Current Time</h3>
+                                                <p className="text-white text-lg">
+                                                    {formatTime(currentVideoTime)}
+                                                </p>
+                                            </div>
+                                            
+                                            {(currentStepStartTime !== null || currentStepEndTime !== null) && (
+                                                <div className="p-3 bg-gray-800 rounded-lg">
+                                                    <h3 className="text-[#F1C232] font-semibold mb-2">Step Timing</h3>
+                                                    <div className="space-y-1 text-sm">
+                                                        {currentStepStartTime !== null && (
+                                                            <p className="text-white">
+                                                                Start: {formatTime(currentStepStartTime)}
+                                                            </p>
+                                                        )}
+                                                        {currentStepEndTime !== null && (
+                                                            <p className="text-white">
+                                                                End: {formatTime(currentStepEndTime)}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             ) : (
-                                <div style={chromeStyles.noVideoMessage}>
+                                <div className="h-full flex items-center justify-center text-[#D9D9D9]">
                                     <p>No videos available</p>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Steps section */}
-                    <div style={chromeStyles.stepsSection}>
-                        <div style={chromeStyles.stepsSectionHeader}>
-                            <h3 style={chromeStyles.stepsSectionTitle}>Project Steps</h3>
-                            <button 
-                                onClick={stepActions.addNewStep}
-                                style={{...chromeStyles.button, ...chromeStyles.buttonPrimary}}
-                            >
-                                + Add Step
-                            </button>
-                        </div>
-                        
-                        <div style={chromeStyles.stepsList}>
-                            {projectSteps.map((step, index) => (
-                                <div
-                                    key={step.id || `step-${index}`}
-                        style={{
-                                        ...chromeStyles.stepItem,
-                                        ...(currentStepIndex === index ? chromeStyles.stepItemActive : {}),
-                                        position: 'relative'
-                                    }}
-                                >
-                                    <div
-                                        onClick={() => {
-                                            window.currentStepIndex = index;
-                                            window.dispatchEvent(new Event('stepIndexChanged'));
-                                            stepActions.loadStepForEditing(step, index);
-                                        }}
-                                        style={{flex: 1, cursor: 'pointer'}}
-                                >
-                                    <div style={chromeStyles.stepItemHeader}>
-                                        <span style={currentStepIndex === index ? chromeStyles.stepItemNumberActive : chromeStyles.stepItemNumber}>Step {index + 1}</span>
-                                        <span style={currentStepIndex === index ? chromeStyles.stepItemTimeActive : chromeStyles.stepItemTime}>
-                                            {formatTime(step.video_start_time_ms / 1000)} - {formatTime(step.video_end_time_ms / 1000)}
-                                        </span>
-                                    </div>
-                                    <div style={currentStepIndex === index ? chromeStyles.stepItemNameActive : chromeStyles.stepItemName}>{step.name}</div>
-                                </div>
-                                    
-                    <button 
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (window.confirm(`Are you sure you want to delete "Step ${index + 1}: ${step.name}"? This action cannot be undone.`)) {
-                                                stepActions.deleteStep(index);
-                                                setSuccessMessage(`Step "${step.name}" deleted successfully!`);
-                                                setTimeout(() => setSuccessMessage(''), 3000);
-                                            }
-                                        }}
-                        style={{
-                                            position: 'absolute',
-                                            bottom: '8px',
-                                            right: '8px',
-                                            backgroundColor: '#ef4444',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '4px',
-                                            padding: '4px 8px',
-                                            fontSize: '0.75rem',
-                                            cursor: 'pointer',
-                                            opacity: 0.7,
-                                            transition: 'opacity 0.2s ease'
-                                        }}
-                                        onMouseEnter={(e) => e.target.style.opacity = 1}
-                                        onMouseLeave={(e) => e.target.style.opacity = 0.7}
-                                        title="Delete step"
-                                    >
-                                        ×
-                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                    {/* Steps Sidebar */}
+                    <StepsSidebar
+                        isCollapsed={state.isStepsSidebarCollapsed}
+                        toggleStepsSidebar={() => state.setIsStepsSidebarCollapsed(!state.isStepsSidebarCollapsed)}
+                        projectSteps={projectSteps}
+                        currentStepIndex={currentStepIndex}
+                        onStepClick={(step, index) => {
+                            window.currentStepIndex = index;
+                            window.dispatchEvent(new Event('stepIndexChanged'));
+                            stepActions.loadStepForEditing(step, index);
+                        }}
+                        onAddStep={stepActions.addNewStep}
+                        onDeleteStep={(index) => {
+                            const step = projectSteps[index];
+                            if (window.confirm(`Are you sure you want to delete "Step ${index + 1}: ${step.name}"? This action cannot be undone.`)) {
+                                stepActions.deleteStep(index);
+                                setSuccessMessage(`Step "${step.name}" deleted successfully!`);
+                                setTimeout(() => setSuccessMessage(''), 3000);
+                            }
+                        }}
+                        formatTime={formatTime}
+                    />
                 </div>
-                </div>
-                )}
+            )}
             
 
 
@@ -1008,6 +1272,19 @@ const ProjectStepsPage = () => {
                     formatTime={formatTime}
                     styles={chromeStyles}
                     isVisible={true}
+                    isStepsSidebarCollapsed={state.isStepsSidebarCollapsed}
+                    onStepClick={(step, index) => {
+                        // Update global step index for sidebar
+                        window.currentStepIndex = index;
+                        window.dispatchEvent(new Event('stepIndexChanged'));
+                        // Load step for editing
+                        stepActions.loadStepForEditing(step, index);
+                        // Switch to details tab
+                        state.setActiveTab('details');
+                        // Show success message
+                        setSuccessMessage(`Loaded step "${step.name}" for editing`);
+                        setTimeout(() => setSuccessMessage(''), 2000);
+                    }}
                 />
             )}
         </div>

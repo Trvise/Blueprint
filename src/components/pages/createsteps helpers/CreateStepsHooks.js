@@ -89,6 +89,9 @@ export const useCreateStepsState = () => {
     // Repository refresh trigger
     const [repositoryRefreshTrigger, setRepositoryRefreshTrigger] = useState(0);
     
+    // Steps sidebar state
+    const [isStepsSidebarCollapsed, setIsStepsSidebarCollapsed] = useState(false);
+    
     // Refs
     const videoRef = useRef(null);
     const toolImageInputRef = useRef(null); 
@@ -284,6 +287,10 @@ export const useCreateStepsState = () => {
         // Repository refresh trigger
         repositoryRefreshTrigger,
         setRepositoryRefreshTrigger,
+        
+        // Steps sidebar state
+        isStepsSidebarCollapsed,
+        setIsStepsSidebarCollapsed,
         
         // Refs
         videoRef,
