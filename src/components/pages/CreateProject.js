@@ -6,6 +6,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { v4 as uuidv4 } from "uuid";
 import { createApiCall } from './createsteps helpers/CreateStepsUtils';
 import { AnimatedLogo } from './createsteps helpers/CommonComponents';
+import { googleCloudApi } from '../../services/googleCloudApi';
 
 const MAX_FILENAME_STEM_LENGTH = 25; 
 
@@ -27,6 +28,11 @@ const CreateProjectPage = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+    
+    // AI Video Breakdown states
+    const [isAiProcessing, setIsAiProcessing] = useState(false);
+    const [aiProgress, setAiProgress] = useState('');
+    const [aiBreakdownData, setAiBreakdownData] = useState(null);
 
     // Snippet for the updated handleVideoChange function
 // in src/pages/ProjectStepsPage.js
@@ -177,6 +183,117 @@ const CreateProjectPage = () => {
         }
     };
 
+    // AI Video Breakdown Function
+    const handleAiVideoBreakdown = async () => {
+        if (videoFiles.length === 0) {
+            setErrorMessage("Please upload at least one video for AI analysis.");
+            return;
+        }
+
+        setIsAiProcessing(true);
+        setAiProgress('Starting AI video breakdown...');
+        setErrorMessage('');
+        setSuccessMessage('');
+
+        try {
+            const projectContext = {
+                project_name: projectName,
+                project_description: projectDescription,
+                tags: selectedTags,
+            };
+
+            const breakdownResults = await googleCloudApi.processVideoBreakdown(videoFiles, projectContext, setAiProgress);
+            setAiBreakdownData(breakdownResults);
+            setSuccessMessage('AI video breakdown completed successfully! You can now review and edit the generated steps.');
+            setAiProgress('');
+
+        } catch (error) {
+            console.error('AI video breakdown error:', error);
+            setErrorMessage(`AI processing failed: ${error.message}`);
+            setAiProgress('');
+        } finally {
+            setIsAiProcessing(false);
+        }
+    };
+
+    const handleSubmitWithAiData = async (e) => {
+        e.preventDefault();
+        setErrorMessage('');
+        setSuccessMessage('');
+
+        if (!currentUser) {
+            setErrorMessage("You must be logged in to create a project.");
+            return;
+        }
+        if (!projectName.trim()) {
+            setErrorMessage("Project name is required.");
+            return;
+        }
+        if (videoFiles.length === 0) {
+            setErrorMessage("Please upload at least one video for the project.");
+            return;
+        }
+
+        setIsLoading(true);
+
+        const uploadedVideoUrls = [];
+        try {
+            for (const file of videoFiles) {
+                const videoFileName = `${file.name}_${uuidv4()}`;
+                const videoStoragePath = `users/${currentUser.uid}/videos/${videoFileName}`;
+                const videoStorageRef = ref(storage, videoStoragePath);
+                const snapshot = await uploadBytes(videoStorageRef, file);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                uploadedVideoUrls.push({ name: file.name, url: downloadURL, path: videoStoragePath });
+            }
+        } catch (uploadError) {
+            console.error("Error uploading videos to Firebase Storage:", uploadError);
+            setErrorMessage(`Failed to upload videos: ${uploadError.message}`);
+            setIsLoading(false);
+            return;
+        }
+
+        const projectDataForBackend = {
+            name: projectName,
+            description: projectDescription,
+            tags: selectedTags,
+            firebase_uid: currentUser.uid,
+            UploadVideos: uploadedVideoUrls,
+            frame_url: uploadedVideoUrls.length > 0 ? uploadedVideoUrls[0].url : null,
+            ai_breakdown_data: aiBreakdownData, // Include AI breakdown data
+        };
+
+        try {
+            const token = currentUser.uid;
+            const responseData = await createApiCall('/projects/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(projectDataForBackend),
+            });
+
+            const createdProjectId = responseData.project_id;
+            setSuccessMessage(`Project "${projectName}" created successfully! Preparing next step...`);
+            console.log('Project created in backend:', responseData);
+            navigate(`/annotate`, { 
+                state: { 
+                    projectName: projectName,
+                    projectId: createdProjectId,
+                    uploadedVideos: uploadedVideoUrls,
+                    aiBreakdownData: aiBreakdownData, // Pass AI data to annotation page
+                } 
+            });
+
+        } catch (error) {
+            console.error('Project creation error:', error);
+            setErrorMessage(error.message || "An unexpected error occurred while creating the project.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <div className="max-w-2xl mx-auto p-6 md:p-8 bg-black shadow-xl rounded-lg mt-10 border border-[#D9D9D9]">
             <h1 className="text-3xl font-bold text-[#F1C232] mb-8 text-center">Create New Project</h1>
@@ -197,7 +314,7 @@ const CreateProjectPage = () => {
                 </div>
             )}
             {!isLoading && (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={aiBreakdownData ? handleSubmitWithAiData : handleSubmit} className="space-y-6">
                 <div>
                     <label htmlFor="projectName" className="block text-sm font-medium text-[#D9D9D9] mb-1">
                         Project Name <span className="text-red-500">*</span>
@@ -283,6 +400,59 @@ const CreateProjectPage = () => {
                     )}
                 </div>
 
+                {/* AI Video Breakdown Section */}
+                {videoFiles.length > 0 && (
+                    <div className="border-t border-gray-700 pt-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-[#F1C232]">AI Video Analysis</h3>
+                            <button
+                                type="button"
+                                onClick={handleAiVideoBreakdown}
+                                disabled={isAiProcessing || aiBreakdownData}
+                                className={`px-4 py-2 text-sm font-medium rounded-lg transition duration-150 ease-in-out ${
+                                    isAiProcessing || aiBreakdownData
+                                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                        : 'bg-[#0000FF] text-[#D9D9D9] hover:bg-[#0000FF]/80'
+                                }`}
+                            >
+                                {isAiProcessing ? 'Processing...' : aiBreakdownData ? 'Analysis Complete' : 'Analyze with AI'}
+                            </button>
+                        </div>
+                        
+                        {isAiProcessing && (
+                            <div className="bg-gray-800 p-4 rounded-lg">
+                                <div className="flex items-center space-x-3">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#F1C232]"></div>
+                                    <span className="text-[#D9D9D9]">{aiProgress}</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {aiBreakdownData && (
+                            <div className="bg-green-900/20 border border-green-700 p-4 rounded-lg">
+                                <h4 className="text-green-400 font-semibold mb-2">AI Analysis Results</h4>
+                                <div className="space-y-2 text-sm text-[#D9D9D9]">
+                                    {aiBreakdownData.map((result, index) => (
+                                        <div key={index} className="border-l-2 border-green-500 pl-3">
+                                            <p className="font-medium">{result.videoName}</p>
+                                            <p>Steps detected: {result.steps?.length || 0}</p>
+                                            <p>Materials found: {result.materials?.length || 0}</p>
+                                            <p>Tools identified: {result.tools?.length || 0}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setAiBreakdownData(null)}
+                                    className="mt-3 text-sm text-red-400 hover:text-red-300"
+                                >
+                                    Clear AI Analysis
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {errorMessage && (
                     <div role="alert" className="p-3 bg-red-900 border border-red-700 text-red-200 rounded-md text-sm">
                         {errorMessage}
@@ -300,7 +470,7 @@ const CreateProjectPage = () => {
                     className={`w-full px-6 py-3 text-black font-semibold rounded-lg transition duration-150 ease-in-out
                                 ${isLoading ? 'bg-[#222222] cursor-not-allowed text-[#D9D9D9]' : 'bg-[#F1C232] hover:bg-[#0000FF] hover:text-[#D9D9D9] focus:outline-none focus:ring-2 focus:ring-[#F1C232] focus:ring-opacity-50'}`}
                 >
-                    {isLoading ? 'Saving Project...' : 'Save and Continue to Annotate'}
+                    {isLoading ? 'Saving Project...' : aiBreakdownData ? 'Save with AI Data & Continue' : 'Save and Continue to Annotate'}
                 </button>
             </form>
             )}
