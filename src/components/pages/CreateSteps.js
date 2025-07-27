@@ -1230,6 +1230,10 @@ const ProjectStepsPage = () => {
                             window.currentStepIndex = index;
                             window.dispatchEvent(new Event('stepIndexChanged'));
                             stepActions.loadStepForEditing(step, index);
+                            // Switch to details tab to show the Update Step button
+                            state.setActiveTab('details');
+                            setSuccessMessage(`Loaded step "${step.name}" for editing`);
+                            setTimeout(() => setSuccessMessage(''), 2000);
                         }}
                         onAddStep={stepActions.addNewStep}
                         onDeleteStep={(index) => {

@@ -308,7 +308,7 @@ export const createStepHandlers = (
                     const uploaded = await uploadFileToFirebase(supFileObj, `users/${currentUser.uid}/${projectId}/supplementary_files`, currentUser);
                     if (uploaded) {
                         stepPayload.supplementary_files.push({
-                            display_name: step.supplementary_files.find(sf => sf.fileName === supFileObj.name)?.displayName || supFileObj.name,
+                            display_name: (step.supplementary_files || []).find(sf => sf.fileName === supFileObj.name)?.displayName || supFileObj.name,
                             file_url: uploaded.url,
                             file_path: uploaded.path,
                             original_filename: uploaded.name,

@@ -11,7 +11,7 @@ test_transcript = "Epigenetics is a rapidly growing field with even work being d
 
 test_video_metadata = {
     "filename": "test_video.mp4",
-    "duration": 30,
+    "duration": 67,  # 1 minute 7 seconds to match the video in the image
     "size": 1000000
 }
 
@@ -68,6 +68,17 @@ def test_analyze_transcript():
             print(f"   Tools: {len(result.get('tools', []))}")
             print(f"   Cautions: {len(result.get('cautions', []))}")
             print(f"   Questions: {len(result.get('questions', []))}")
+            
+            # Show step details with timestamps
+            print(f"\n📝 STEP DETAILS:")
+            for i, step in enumerate(result.get('steps', [])):
+                print(f"   Step {i+1}: {step.get('name', 'Unknown')}")
+                timestamps = step.get('timestamps', {})
+                if timestamps:
+                    print(f"      Timestamps: {timestamps.get('start', '00:00.000')} - {timestamps.get('end', '00:00.000')}")
+                print(f"      Duration: {step.get('estimated_duration', 0)} seconds")
+                print(f"      Difficulty: {step.get('difficulty_level', 'Unknown')}")
+                print()
                 
         else:
             print(f"❌ Analysis failed with status code: {response.status_code}")

@@ -321,6 +321,7 @@ export const useCreateStepsEffects = (state) => {
         videoRef,
         setVideoDimensions,
         setActiveTab,
+        activeTab,
         activeVideoUrl
     } = state;
 
@@ -331,6 +332,14 @@ export const useCreateStepsEffects = (state) => {
             delete window.setActiveTab;
         };
     }, [setActiveTab]);
+
+    // Expose activeTab globally for sidebar synchronization
+    useEffect(() => {
+        window.globalActiveTab = activeTab;
+        return () => {
+            delete window.globalActiveTab;
+        };
+    }, [activeTab]);
 
     // Handle screen resize
     useEffect(() => {
@@ -581,6 +590,10 @@ export const useCreateStepsEffects = (state) => {
                 location.state.aiBreakdownData.forEach((breakdown, breakdownIndex) => {
                     if (breakdown.steps && breakdown.steps.length > 0) {
                         breakdown.steps.forEach((aiStep, stepIndexInBreakdown) => {
+                            // Use the timestamps provided by the backend if available
+                            const startTimeMs = aiStep.video_start_time_ms || 0;
+                            const endTimeMs = aiStep.video_end_time_ms || 0;
+                            
                             const newStep = {
                                 id: `ai-step-${stepIndex}`,
                                 name: aiStep.name || `Step ${stepIndex + 1}`,
@@ -592,10 +605,22 @@ export const useCreateStepsEffects = (state) => {
                                 cautions: breakdown.cautions || [],
                                 questions: breakdown.questions || [],
                                 video_index: breakdownIndex,
-                                timestamp: 0, // Will be set by user
+                                // Use backend-provided timestamps
+                                video_start_time_ms: startTimeMs,
+                                video_end_time_ms: endTimeMs,
+                                // Use backend-provided timestamp data
+                                timestamps: aiStep.timestamps || {
+                                    start: aiStep.timestamps?.start || "00:00.000",
+                                    end: aiStep.timestamps?.end || "00:00.000",
+                                    start_seconds: startTimeMs / 1000,
+                                    end_seconds: endTimeMs / 1000,
+                                    duration_seconds: (endTimeMs - startTimeMs) / 1000
+                                },
+                                timestamp_display: aiStep.timestamp_display || "00:00.000 - 00:00.000",
                                 thumbnail_url: null,
                                 annotation_frames: [],
                                 is_ai_generated: true, // Flag to identify AI-generated steps
+                                step_order: stepIndex + 1, // Add step_order based on timestamp order
                             };
                             aiSteps.push(newStep);
                             stepIndex++;

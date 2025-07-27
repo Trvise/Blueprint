@@ -3,6 +3,27 @@
 
 const GOOGLE_CLOUD_API_BASE = process.env.REACT_APP_VIDEO_BREAKDOWN_API_URL || 'http://localhost:8000';
 
+// Helper function to get video duration from a video file
+const getVideoDuration = (videoFile) => {
+    return new Promise((resolve) => {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        
+        video.onloadedmetadata = () => {
+            const duration = video.duration || 0;
+            console.log(`📹 Video duration for ${videoFile.name}: ${duration} seconds`);
+            resolve(duration);
+        };
+        
+        video.onerror = () => {
+            console.warn(`⚠️ Could not get duration for ${videoFile.name}, using 0`);
+            resolve(0);
+        };
+        
+        video.src = URL.createObjectURL(videoFile);
+    });
+};
+
 export const googleCloudApi = {
     // Extract audio from video using FFmpeg (handled by backend)
     extractAudio: async (videoFile) => {
@@ -28,9 +49,10 @@ export const googleCloudApi = {
         return result;
     },
 
-    // Transcribe audio using Google Speech-to-Text API
-    transcribeAudio: async (audioUrl, languageCode = 'en-US') => {
+    // Transcribe audio using Google Speech-to-Text
+    transcribeAudio: async (audioUrl) => {
         console.log('🎤 Starting transcription for:', audioUrl);
+        
         const response = await fetch(`${GOOGLE_CLOUD_API_BASE}/transcribe`, {
             method: 'POST',
             headers: {
@@ -38,11 +60,11 @@ export const googleCloudApi = {
             },
             body: JSON.stringify({
                 audio_url: audioUrl,
-                language_code: languageCode,
+                language_code: 'en-US'
             }),
         });
         
-        console.log('📥 Transcription response status:', response.status);
+        console.log('📥 Response status:', response.status);
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             console.error('❌ Transcription failed:', errorData);
@@ -50,12 +72,14 @@ export const googleCloudApi = {
         }
         
         const result = await response.json();
-        console.log('✅ Transcription completed:', result.transcript?.substring(0, 100) + '...');
+        console.log('✅ Transcription completed:', result.transcript.length, 'characters');
         return result;
     },
 
-    // Analyze transcript using Google Gemini AI
+    // Analyze transcript using AI
     analyzeTranscript: async (transcript, videoMetadata, projectContext) => {
+        console.log('🤖 Starting AI analysis for transcript');
+        
         const response = await fetch(`${GOOGLE_CLOUD_API_BASE}/analyze-transcript`, {
             method: 'POST',
             headers: {
@@ -64,16 +88,20 @@ export const googleCloudApi = {
             body: JSON.stringify({
                 transcript: transcript,
                 video_metadata: videoMetadata,
-                project_context: projectContext,
+                project_context: projectContext
             }),
         });
         
+        console.log('📥 Response status:', response.status);
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.detail || 'Failed to analyze transcript with AI');
+            console.error('❌ AI analysis failed:', errorData);
+            throw new Error(errorData.detail || 'Failed to analyze transcript');
         }
         
-        return await response.json();
+        const result = await response.json();
+        console.log('✅ AI analysis completed:', result.steps?.length || 0, 'steps');
+        return result;
     },
 
     // Process multiple videos for AI breakdown
@@ -91,13 +119,17 @@ export const googleCloudApi = {
             if (onProgress) onProgress(`Processing video ${i + 1}/${videoFiles.length}: Transcribing audio...`);
             const transcriptionResult = await googleCloudApi.transcribeAudio(audioResult.audio_url);
             
-            // Step 3: Analyze with AI
+            // Step 3: Get video duration
+            if (onProgress) onProgress(`Processing video ${i + 1}/${videoFiles.length}: Getting video duration...`);
+            const videoDuration = await getVideoDuration(videoFile);
+            
+            // Step 4: Analyze with AI
             if (onProgress) onProgress(`Processing video ${i + 1}/${videoFiles.length}: Analyzing with AI...`);
             const analysisResult = await googleCloudApi.analyzeTranscript(
                 transcriptionResult.transcript,
                 {
                     filename: videoFile.name,
-                    duration: videoFile.duration || 0,
+                    duration: videoDuration,
                     size: videoFile.size,
                 },
                 projectContext
@@ -109,8 +141,6 @@ export const googleCloudApi = {
                 steps: analysisResult.steps,
                 materials: analysisResult.materials,
                 tools: analysisResult.tools,
-                cautions: analysisResult.cautions,
-                questions: analysisResult.questions,
             });
         }
         

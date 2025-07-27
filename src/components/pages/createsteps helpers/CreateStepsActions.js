@@ -572,7 +572,7 @@ export const createStepActions = (state) => {
                             currentUser
                         );
                     if (uploaded) {
-                            const supFileData = step.supplementary_files.find(sf => sf.fileName === supFile.name);
+                            const supFileData = (step.supplementary_files || []).find(sf => sf.fileName === supFile.name);
                         stepPayload.supplementary_files.push({
                                 display_name: supFileData?.displayName || supFile.name,
                                 file_url: uploaded.url,
@@ -588,7 +588,7 @@ export const createStepActions = (state) => {
                 }
 
                 // Add existing supplementary files (without new uploads)
-                for (const supFile of step.supplementary_files.filter(sf => sf.hasExistingFile)) {
+                for (const supFile of (step.supplementary_files || []).filter(sf => sf.hasExistingFile)) {
                     stepPayload.supplementary_files.push({
                         display_name: supFile.displayName,
                         file_url: supFile.file_url,

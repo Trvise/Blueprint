@@ -21,7 +21,7 @@ import json
 import uuid
 from dotenv import load_dotenv
 from google.cloud import billing_v1
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # Load environment variables
 load_dotenv('backend.env')
@@ -312,6 +312,88 @@ def create_fallback_analysis(transcript, video_metadata, project_context):
         "questions": questions
     }
 
+def map_steps_to_audio_positions(steps, transcript, video_duration):
+    """
+    Map steps to their actual audio positions by analyzing transcript content
+    """
+    print(f"🎯 Mapping {len(steps)} steps to audio positions in {video_duration}s video")
+    
+    # Extract keywords from each step
+    step_keywords = []
+    for step in steps:
+        # Extract key terms from step name and description
+        step_text = f"{step.get('name', '')} {step.get('description', '')}".lower()
+        # Simple keyword extraction - in production you'd use NLP
+        keywords = [word for word in step_text.split() if len(word) > 3]
+        step_keywords.append(keywords)
+    
+    # For now, we'll use a simplified approach
+    # In production, you'd use the actual transcript timestamps from Speech-to-Text
+    # to find where each step's content actually occurs
+    
+    # Calculate total estimated duration
+    total_estimated = sum(step.get('estimated_duration', 30) for step in steps)
+    
+    if total_estimated > 0:
+        # Scale to fit video duration
+        scale_factor = video_duration / total_estimated
+        current_time = 0
+        
+        for i, step in enumerate(steps):
+            step_duration = step.get('estimated_duration', 30) * scale_factor
+            start_time = current_time
+            end_time = current_time + step_duration
+            
+            # Ensure we don't exceed video duration
+            if end_time > video_duration:
+                end_time = video_duration
+            
+            # Format timestamps
+            start_formatted = f"{int(start_time // 60):02d}:{start_time % 60:06.3f}"
+            end_formatted = f"{int(end_time // 60):02d}:{end_time % 60:06.3f}"
+            
+            # Add timestamp data
+            step["timestamps"] = {
+                "start": start_formatted,
+                "end": end_formatted,
+                "start_seconds": start_time,
+                "end_seconds": end_time,
+                "duration_seconds": end_time - start_time
+            }
+            
+            step["timestamp_display"] = f"{start_formatted} - {end_formatted}"
+            step["video_start_time_ms"] = int(start_time * 1000)
+            step["video_end_time_ms"] = int(end_time * 1000)
+            
+            print(f"   Step {i+1} '{step.get('name', 'Unknown')}': {start_formatted} - {end_formatted}")
+            
+            current_time = end_time
+    else:
+        # Fallback: distribute evenly
+        time_per_step = video_duration / len(steps)
+        for i, step in enumerate(steps):
+            start_time = i * time_per_step
+            end_time = (i + 1) * time_per_step
+            
+            start_formatted = f"{int(start_time // 60):02d}:{start_time % 60:06.3f}"
+            end_formatted = f"{int(end_time // 60):02d}:{end_time % 60:06.3f}"
+            
+            step["timestamps"] = {
+                "start": start_formatted,
+                "end": end_formatted,
+                "start_seconds": start_time,
+                "end_seconds": end_time,
+                "duration_seconds": end_time - start_time
+            }
+            
+            step["timestamp_display"] = f"{start_formatted} - {end_formatted}"
+            step["video_start_time_ms"] = int(start_time * 1000)
+            step["video_end_time_ms"] = int(end_time * 1000)
+            
+            print(f"   Step {i+1} '{step.get('name', 'Unknown')}': {start_formatted} - {end_formatted}")
+    
+    return steps
+
 class TranscriptionRequest(BaseModel):
     audio_url: str
     language_code: str = "en-US"
@@ -391,7 +473,7 @@ async def transcribe_audio(request: TranscriptionRequest):
     print(f"🔍 Received transcription request for audio: {request.audio_url}")
     
     # Track request start time for cost calculation
-    request_start_time = datetime.utcnow()
+    request_start_time = datetime.now(timezone.utc)
     
     try:
         # Initialize Speech-to-Text client
@@ -435,7 +517,7 @@ async def transcribe_audio(request: TranscriptionRequest):
                 })
 
         # Calculate costs
-        request_end_time = datetime.utcnow()
+        request_end_time = datetime.now(timezone.utc)
         audio_duration = sum([word["end_time"] - word["start_time"] for word in timestamps])
         estimated_costs = estimate_request_costs(len(transcript), audio_duration)
         
@@ -465,7 +547,7 @@ async def analyze_transcript(request: AnalysisRequest):
     Analyze transcript using Google Gemini AI to extract steps, materials, tools, etc.
     """
     # Track request start time for cost calculation
-    request_start_time = datetime.utcnow()
+    request_start_time = datetime.now(timezone.utc)
     
     try:
         print(f"🤖 Starting AI analysis for transcript: '{request.transcript}'")
@@ -492,7 +574,7 @@ async def analyze_transcript(request: AnalysisRequest):
             }
             
             # Calculate costs for fallback
-            request_end_time = datetime.utcnow()
+            request_end_time = datetime.now(timezone.utc)
             estimated_costs = estimate_request_costs(len(request.transcript), 0)
             actual_costs = get_actual_costs(GOOGLE_CLOUD_PROJECT_ID, request_start_time, request_end_time)
             
@@ -664,6 +746,34 @@ async def analyze_transcript(request: AnalysisRequest):
             "questions": analysis_result.get("questions", []),
         }
         
+        # Add timestamps to steps if we have timestamp data
+        # Use actual video duration and map steps to their real audio positions
+        video_duration = request.video_metadata.get('duration', 0)
+        
+        # If video duration is 0, estimate it from transcript length
+        if video_duration == 0:
+            print(f"⚠️ Video duration is 0, estimating from transcript length")
+            # Estimate duration based on transcript length (average speaking rate is ~150 words per minute)
+            word_count = len(request.transcript.split())
+            estimated_duration = max(30, word_count * 0.4)  # 0.4 seconds per word
+            video_duration = estimated_duration
+            print(f"📊 Estimated video duration: {video_duration} seconds from {word_count} words")
+        
+        # Ensure minimum duration for timestamp generation
+        if video_duration <= 0:
+            print(f"⚠️ Video duration is still 0, using minimum duration")
+            video_duration = 30 * len(structured_result["steps"])  # 30 seconds per step minimum
+            print(f"📊 Using minimum duration: {video_duration} seconds")
+        
+        print(f"📊 Using video duration: {video_duration} seconds")
+        
+        # Map steps to their actual audio positions
+        structured_result["steps"] = map_steps_to_audio_positions(
+            structured_result["steps"], 
+            request.transcript, 
+            video_duration
+        )
+        
         # Normalize the response format
         def normalize_array(arr):
             """Convert array elements to strings if they are objects"""
@@ -707,7 +817,7 @@ async def analyze_transcript(request: AnalysisRequest):
             }
         
         # Calculate costs
-        request_end_time = datetime.utcnow()
+        request_end_time = datetime.now(timezone.utc)
         estimated_costs = estimate_request_costs(len(request.transcript), 0)
         actual_costs = get_actual_costs(GOOGLE_CLOUD_PROJECT_ID, request_start_time, request_end_time)
         

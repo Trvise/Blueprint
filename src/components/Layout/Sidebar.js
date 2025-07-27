@@ -81,6 +81,20 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
         return () => window.removeEventListener('stepIndexChanged', handler);
     }, []);
 
+    // Listen for global activeTab changes from CreateSteps component
+    useEffect(() => {
+        const handleGlobalActiveTabChange = () => {
+            if (window.globalActiveTab && window.globalActiveTab !== activeTab) {
+                setActiveTab(window.globalActiveTab);
+            }
+        };
+
+        // Check for global activeTab changes periodically
+        const interval = setInterval(handleGlobalActiveTabChange, 100);
+        
+        return () => clearInterval(interval);
+    }, [activeTab]);
+
     const handleTabClick = (tabName) => {
         setActiveTab(tabName);
         if (window.setActiveTab) {
