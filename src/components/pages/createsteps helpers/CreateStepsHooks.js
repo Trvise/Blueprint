@@ -569,6 +569,47 @@ export const useCreateStepsEffects = (state) => {
                  console.warn("First video from state is missing a URL:", videosFromState[0]);
                  setErrorMessage("A primary video URL is missing. Please re-upload.");
             }
+            
+            // Handle AI breakdown data if available
+            if (location.state.aiBreakdownData && location.state.aiBreakdownData.length > 0) {
+                console.log('🎯 Processing AI breakdown data:', location.state.aiBreakdownData);
+                
+                // Process AI breakdown data to create steps
+                const aiSteps = [];
+                let stepIndex = 0;
+                
+                location.state.aiBreakdownData.forEach((breakdown, breakdownIndex) => {
+                    if (breakdown.steps && breakdown.steps.length > 0) {
+                        breakdown.steps.forEach((aiStep, stepIndexInBreakdown) => {
+                            const newStep = {
+                                id: `ai-step-${stepIndex}`,
+                                name: aiStep.name || `Step ${stepIndex + 1}`,
+                                description: aiStep.description || '',
+                                estimated_duration: aiStep.estimated_duration || 30,
+                                difficulty_level: aiStep.difficulty_level || 'Beginner',
+                                materials: breakdown.materials || [],
+                                tools: breakdown.tools || [],
+                                cautions: breakdown.cautions || [],
+                                questions: breakdown.questions || [],
+                                video_index: breakdownIndex,
+                                timestamp: 0, // Will be set by user
+                                thumbnail_url: null,
+                                annotation_frames: [],
+                                is_ai_generated: true, // Flag to identify AI-generated steps
+                            };
+                            aiSteps.push(newStep);
+                            stepIndex++;
+                        });
+                    }
+                });
+                
+                if (aiSteps.length > 0) {
+                    console.log(`✅ Auto-populated ${aiSteps.length} steps from AI analysis`);
+                    setProjectSteps(aiSteps);
+                    setSuccessMessage(`AI analysis completed! ${aiSteps.length} steps have been auto-populated. You can now review and edit them.`);
+                    setTimeout(() => setSuccessMessage(''), 5000);
+                }
+            }
         } else if (projectId) {
             // If no navigation state or no videos, fetch from API
             fetchProjectData();

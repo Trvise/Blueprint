@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AiOutlineMenu, AiOutlinePlus, AiOutlineDelete, AiOutlineEye } from 'react-icons/ai';
+import { AiOutlineMenu, AiOutlinePlus, AiOutlineDelete, AiOutlineEye, AiOutlineRobot } from 'react-icons/ai';
 
 const StepsSidebar = ({ 
     isCollapsed, 
@@ -108,11 +108,22 @@ const StepsSidebar = ({
                                         {!isCollapsed ? (
                                             <>
                                                 <div className="flex justify-between items-start mb-2">
-                                                    <span className={`font-semibold text-sm ${
-                                                        currentStepIndex === index ? 'text-black' : 'text-[#F1C232]'
-                                                    }`}>
-                                                        Step {index + 1}
-                                                    </span>
+                                                    <div className="flex items-center space-x-2">
+                                                        <span className={`font-semibold text-sm ${
+                                                            currentStepIndex === index ? 'text-black' : 'text-[#F1C232]'
+                                                        }`}>
+                                                            Step {index + 1}
+                                                        </span>
+                                                        {step.is_ai_generated && (
+                                                            <AiOutlineRobot 
+                                                                size={14} 
+                                                                className={`${
+                                                                    currentStepIndex === index ? 'text-black/70' : 'text-blue-400'
+                                                                }`}
+                                                                title="AI Generated Step"
+                                                            />
+                                                        )}
+                                                    </div>
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();

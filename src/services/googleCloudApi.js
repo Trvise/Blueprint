@@ -1,29 +1,36 @@
 // Google Cloud API Service
 // This file contains functions to interact with Google Cloud services
 
-const GOOGLE_CLOUD_API_BASE = process.env.REACT_APP_API_URL;
+const GOOGLE_CLOUD_API_BASE = process.env.REACT_APP_VIDEO_BREAKDOWN_API_URL || 'http://localhost:8000';
 
 export const googleCloudApi = {
     // Extract audio from video using FFmpeg (handled by backend)
     extractAudio: async (videoFile) => {
+        console.log('🎵 Starting audio extraction for:', videoFile.name);
         const formData = new FormData();
         formData.append('video', videoFile);
         
+        console.log('📤 Sending request to:', `${GOOGLE_CLOUD_API_BASE}/extract-audio`);
         const response = await fetch(`${GOOGLE_CLOUD_API_BASE}/extract-audio`, {
             method: 'POST',
             body: formData,
         });
         
+        console.log('📥 Response status:', response.status);
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
+            console.error('❌ Audio extraction failed:', errorData);
             throw new Error(errorData.detail || 'Failed to extract audio from video');
         }
         
-        return await response.json();
+        const result = await response.json();
+        console.log('✅ Audio extraction completed:', result);
+        return result;
     },
 
     // Transcribe audio using Google Speech-to-Text API
     transcribeAudio: async (audioUrl, languageCode = 'en-US') => {
+        console.log('🎤 Starting transcription for:', audioUrl);
         const response = await fetch(`${GOOGLE_CLOUD_API_BASE}/transcribe`, {
             method: 'POST',
             headers: {
@@ -35,12 +42,16 @@ export const googleCloudApi = {
             }),
         });
         
+        console.log('📥 Transcription response status:', response.status);
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
+            console.error('❌ Transcription failed:', errorData);
             throw new Error(errorData.detail || 'Failed to transcribe audio');
         }
         
-        return await response.json();
+        const result = await response.json();
+        console.log('✅ Transcription completed:', result.transcript?.substring(0, 100) + '...');
+        return result;
     },
 
     // Analyze transcript using Google Gemini AI
