@@ -14,6 +14,7 @@ import StepDetailsTab from '../authoring/StepDetailsTab';
 import MaterialsAndToolsTab from '../authoring/MaterialsAndFilesTab';
 import FilesTab from '../authoring/FilesTab';
 import ResultTab from '../authoring/ResultTab';
+import ResultAnnotationPopup from '../authoring/ResultAnnotationPopup';
 import ProjectOverviewTab from '../authoring/ProjectOverviewTab';
 import SignOffTab from '../authoring/SignOffTab';
 import FinalizeTab from '../authoring/FinalizeTab';
@@ -1035,6 +1036,13 @@ const ProjectStepsPage = () => {
                                     handleResultImageChange={enhancedHandlers.handleResultImageChange}
                                     resultImageInputRef={resultImageInputRef}
                                     styles={chromeStyles}
+                                    // Video frame capture props
+                                    videoRef={videoRef}
+                                    activeVideoUrl={activeVideoUrl}
+                                    state={state}
+                                    formatTime={formatTime}
+                                    setSuccessMessage={setSuccessMessageState}
+                                    setErrorMessage={setErrorMessage}
                                 />
                             )}
 
@@ -1262,9 +1270,29 @@ const ProjectStepsPage = () => {
                 formatTime={formatTime}
                 styles={chromeStyles}
             />
+
+            {/* Result Annotation Popup */}
+            <ResultAnnotationPopup
+                isOpen={state.isResultAnnotationPopupOpen}
+                onClose={() => state.setIsResultAnnotationPopupOpen(false)}
+                resultFrameForCapture={state.resultFrameForCapture}
+                resultFrameTimestamp={state.resultFrameTimestamp}
+                resultAnnotations={state.resultAnnotations}
+                resultAnnotationTool={state.resultAnnotationTool}
+                setResultAnnotationTool={state.setResultAnnotationTool}
+                handleResultAnnotationSubmit={handlers.handleResultAnnotationSubmit}
+                removeResultAnnotation={handlers.removeResultAnnotation}
+                handleClearResultAnnotations={handlers.handleClearResultAnnotations}
+                formatTime={formatTime}
+                styles={chromeStyles}
+                // Additional props for generating final image
+                setCurrentStepResultImageFile={state.setCurrentStepResultImageFile}
+                setCurrentStepResultImage={state.setCurrentStepResultImage}
+                setSuccessMessage={setSuccessMessageState}
+            />
             
             {/* Floating Timeline - always visible on video steps page */}
-            {activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' && !isAnnotationPopupOpen && (
+            {activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' && !isAnnotationPopupOpen && !state.isResultAnnotationPopupOpen && (
                 <FloatingTimeline
                     videoRef={videoRef}
                     projectSteps={projectSteps}

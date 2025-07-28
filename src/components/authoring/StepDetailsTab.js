@@ -52,7 +52,6 @@ const subCardTextStyle = {
   }),
 };
 const goldAccent = { color: '#F1C232', fontWeight: 500 };
-const blueAccent = { color: '#3B82F6', fontWeight: 500 };
 
 const StepDetailsTab = ({
     currentStepName,
