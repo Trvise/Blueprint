@@ -500,31 +500,48 @@ export const useCreateStepsEffects = (state) => {
                     if (stepsData.length > 0) {
                         
                         // Transform the steps data to match frontend expectations
-                        const transformedSteps = stepsData.map(step => ({
-                            ...step,
-                            // Transform tools from nested format to flat format for frontend
-                            tools: step.tools?.map(toolData => ({
-                                id: toolData.tool?.tool_id || toolData.tool_id,
-                                name: toolData.tool?.name || toolData.name,
-                                specification: toolData.tool?.specification || toolData.specification,
-                                purchase_link: toolData.tool?.purchase_link || toolData.purchase_link,
-                                quantity: toolData.quantity || 1,
-                                image_url: toolData.tool?.image_file?.file_url || toolData.image_url,
-                                image_path: toolData.tool?.image_file?.file_key || toolData.image_path,
-                                hasExistingImage: !!(toolData.tool?.image_file?.file_url || toolData.image_url)
-                            })) || [],
-                            // Transform materials from nested format to flat format for frontend
-                            materials: step.materials?.map(materialData => ({
-                                id: materialData.material?.material_id || materialData.material_id,
-                                name: materialData.material?.name || materialData.name,
-                                specification: materialData.material?.specification || materialData.specification,
-                                purchase_link: materialData.material?.purchase_link || materialData.purchase_link,
-                                quantity: materialData.quantity || 1,
-                                image_url: materialData.material?.image_file?.file_url || materialData.image_url,
-                                image_path: materialData.material?.image_file?.file_key || materialData.image_path,
-                                hasExistingImage: !!(materialData.material?.image_file?.file_url || materialData.image_url)
-                            })) || []
-                        }));
+                        const transformedSteps = stepsData.map(step => {
+                            // Transform validation data from backend format to frontend format
+                            const transformedValidationMetric = step.validation_metric ? {
+                                question: step.validation_metric.validation_data?.question || step.validation_metric.question || '',
+                                expected_answer: step.validation_metric.validation_data?.expected_answer || step.validation_metric.expected_answer || ''
+                            } : null;
+                            
+                            // Debug logging for validation data transformation
+                            console.log('Transforming step validation data:', {
+                                stepName: step.name,
+                                originalValidationMetric: step.validation_metric,
+                                transformedValidationMetric: transformedValidationMetric
+                            });
+                            
+                            return {
+                                ...step,
+                                // Transform tools from nested format to flat format for frontend
+                                tools: step.tools?.map(toolData => ({
+                                    id: toolData.tool?.tool_id || toolData.tool_id,
+                                    name: toolData.tool?.name || toolData.name,
+                                    specification: toolData.tool?.specification || toolData.specification,
+                                    purchase_link: toolData.tool?.purchase_link || toolData.purchase_link,
+                                    quantity: toolData.quantity || 1,
+                                    image_url: toolData.tool?.image_file?.file_url || toolData.image_url,
+                                    image_path: toolData.tool?.image_file?.file_key || toolData.image_path,
+                                    hasExistingImage: !!(toolData.tool?.image_file?.file_url || toolData.image_url)
+                                })) || [],
+                                // Transform materials from nested format to flat format for frontend
+                                materials: step.materials?.map(materialData => ({
+                                    id: materialData.material?.material_id || materialData.material_id,
+                                    name: materialData.material?.name || materialData.name,
+                                    specification: materialData.material?.specification || materialData.specification,
+                                    purchase_link: materialData.material?.purchase_link || materialData.purchase_link,
+                                    quantity: materialData.quantity || 1,
+                                    image_url: materialData.material?.image_file?.file_url || materialData.image_url,
+                                    image_path: materialData.material?.image_file?.file_key || materialData.image_path,
+                                    hasExistingImage: !!(materialData.material?.image_file?.file_url || materialData.image_url)
+                                })) || [],
+                                // Use the transformed validation metric
+                                validation_metric: transformedValidationMetric
+                            };
+                        });
                         
                         setProjectSteps(transformedSteps);
                         

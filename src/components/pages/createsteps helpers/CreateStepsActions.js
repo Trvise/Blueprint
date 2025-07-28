@@ -154,6 +154,15 @@ export const createStepActions = (state) => {
         setCurrentStepValidationQuestion(step.validation_metric?.validation_data?.question || step.validation_metric?.question || '');
         setCurrentStepValidationAnswer(step.validation_metric?.validation_data?.expected_answer || step.validation_metric?.expected_answer || '');
         
+        // Debug logging to help track validation data
+        console.log('Loading step validation data:', {
+            stepId: step.id,
+            validationMetric: step.validation_metric,
+            validationData: step.validation_metric?.validation_data,
+            question: step.validation_metric?.validation_data?.question || step.validation_metric?.question || '',
+            answer: step.validation_metric?.validation_data?.expected_answer || step.validation_metric?.expected_answer || ''
+        });
+        
         // Handle result image - show existing if available
         const resultImageUrl = step.result_image_url || step.result_image_file?.file_url;
         const resultImagePath = step.result_image_path || step.result_image_file?.file_key;
@@ -301,8 +310,8 @@ export const createStepActions = (state) => {
                 hasExistingFile: f.hasExistingFile && !f.fileObject,
             })), 
             validation_metric: { 
-                question: currentStepValidationQuestion,
-                expected_answer: currentStepValidationAnswer 
+                question: currentStepValidationQuestion || '',
+                expected_answer: currentStepValidationAnswer || ''
             },
             result_image_file_info: currentStepResultImageFile && (currentStepResultImageFile instanceof File || currentStepResultImageFile.hasExistingImage)
                 ? { 
@@ -326,18 +335,45 @@ export const createStepActions = (state) => {
                 result_image_path: currentStepResultImageFile && !(currentStepResultImageFile instanceof File) ? currentStepResultImageFile.image_path : null
         };
 
+        // Debug logging for validation data
+        console.log('Saving step validation data:', {
+            stepName: currentStepName,
+            validationMetric: {
+                question: currentStepValidationQuestion || '',
+                expected_answer: currentStepValidationAnswer || ''
+            },
+            validationData: {
+                question: currentStepValidationQuestion || '',
+                expected_answer: currentStepValidationAnswer || ''
+            }
+        });
+
         if (currentStepIndex >= 0 && currentStepIndex < projectSteps.length) {
             // Update existing step
-                setProjectSteps(prev => prev.map((step, index) => 
+            setProjectSteps(prev => {
+                const updatedSteps = prev.map((step, index) => 
                     index === currentStepIndex ? newStepData : step
-                ));
+                );
+                console.log('Updated steps array:', updatedSteps.map(s => ({
+                    name: s.name,
+                    validationMetric: s.validation_metric
+                })));
+                return updatedSteps;
+            });
             setSuccessMessage(`Step "${currentStepName}" updated successfully!`);
             // Keep the step in edit mode after update
         } else {
             // Add new step
-                setProjectSteps(prev => [...prev, newStepData]);
+            setProjectSteps(prev => {
+                const newSteps = [...prev, newStepData];
+                console.log('Added new step to array:', newSteps.map(s => ({
+                    name: s.name,
+                    validationMetric: s.validation_metric
+                })));
+                return newSteps;
+            });
             setSuccessMessage(`Step "${currentStepName}" added successfully!`);
-            // Clear form after adding new step
+            // Clear form after adding new step, but preserve the step data in the array
             clearCurrentStepForm();
         }
 
