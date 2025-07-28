@@ -222,7 +222,12 @@ const CreateProjectPage = () => {
                 const videoStorageRef = ref(storage, videoStoragePath);
                 const snapshot = await uploadBytes(videoStorageRef, file);
                 const downloadURL = await getDownloadURL(snapshot.ref);
-                uploadedVideoUrls.push({ name: file.name, url: downloadURL, path: videoStoragePath });
+                uploadedVideoUrls.push({ 
+                    name: file.name, 
+                    url: downloadURL, 
+                    path: videoStoragePath,
+                    file: file  // Preserve the original file for regeneration
+                });
             }
         } catch (uploadError) {
             console.error("Error uploading videos to Firebase Storage:", uploadError);
@@ -319,7 +324,12 @@ const CreateProjectPage = () => {
                 const videoStorageRef = ref(storage, videoStoragePath);
                 const snapshot = await uploadBytes(videoStorageRef, file);
                 const downloadURL = await getDownloadURL(snapshot.ref);
-                uploadedVideoUrls.push({ name: file.name, url: downloadURL, path: videoStoragePath });
+                uploadedVideoUrls.push({ 
+                    name: file.name, 
+                    url: downloadURL, 
+                    path: videoStoragePath,
+                    file: file  // Preserve the original file for regeneration
+                });
             }
         } catch (uploadError) {
             console.error("Error uploading videos to Firebase Storage:", uploadError);

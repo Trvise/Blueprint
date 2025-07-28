@@ -630,26 +630,30 @@ const ProjectStepsPage = () => {
     // Expose functions and state to global window for sidebar access
     useEffect(() => {
         window.handleAddStep = enhancedHandlers.handleAddStep;
+        window.handleRegenerateStep = stepActions.handleRegenerateStep;
         window.isStepLoading = isStepLoading;
         window.currentStepName = currentStepName;
         window.currentStepDescription = currentStepDescription;
         window.currentStepStartTime = currentStepStartTime;
         window.currentStepEndTime = currentStepEndTime;
         window.currentStepIndex = currentStepIndex;
+        window.projectSteps = projectSteps;
         
         // Debug logging to help track the issue
         console.log('Window currentStepIndex updated:', currentStepIndex);
         
         return () => {
             delete window.handleAddStep;
+            delete window.handleRegenerateStep;
             delete window.isStepLoading;
             delete window.currentStepName;
             delete window.currentStepDescription;
             delete window.currentStepStartTime;
             delete window.currentStepEndTime;
             delete window.currentStepIndex;
+            delete window.projectSteps;
         };
-    }, [enhancedHandlers.handleAddStep, isStepLoading, currentStepName, currentStepDescription, currentStepStartTime, currentStepEndTime, currentStepIndex]);
+    }, [enhancedHandlers.handleAddStep, stepActions.handleRegenerateStep, isStepLoading, currentStepName, currentStepDescription, currentStepStartTime, currentStepEndTime, currentStepIndex, projectSteps]);
 
     // Get missing fields for warning message
     const getMissingFields = () => {

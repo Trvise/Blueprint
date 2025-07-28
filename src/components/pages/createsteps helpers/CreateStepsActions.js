@@ -28,6 +28,8 @@ export const createStepActions = (state) => {
         setIsLoading,
         projectSteps,
         currentStepIndex,
+        currentStepStartTime,
+        currentStepEndTime,
         activeVideoIndex,
         uploadedVideos,
         projectId,
@@ -382,6 +384,238 @@ export const createStepActions = (state) => {
             setErrorMessage(`Error adding step: ${error.message}`);
         } finally {
         setIsStepLoading(false);
+        }
+    };
+
+    // Function to regenerate a step with AI
+    const handleRegenerateStep = async (stepIndex) => {
+        if (stepIndex < 0 || stepIndex >= projectSteps.length) {
+            setErrorMessage("Invalid step index for regeneration.");
+            return;
+        }
+
+        const currentStep = projectSteps[stepIndex];
+        
+        console.log('Regenerating step:', currentStep);
+        console.log('Current step index:', currentStepIndex);
+        console.log('Current form timestamps:', { currentStepStartTime, currentStepEndTime });
+        console.log('Uploaded videos:', uploadedVideos);
+        
+        // Check if this is an AI-generated step or has valid timestamps
+        const isAiGenerated = currentStep.is_ai_generated;
+        
+        // Check for timestamps in various formats (milliseconds, seconds, or current form values)
+        const hasValidTimestamps = (
+            (currentStep.video_start_time_ms && currentStep.video_end_time_ms) ||
+            (currentStep.video_start_time && currentStep.video_end_time) ||
+            (currentStep.start_time && currentStep.end_time)
+        );
+        
+        // Also check if we're currently editing a step with timestamps set
+        const currentStepHasTimestamps = currentStepIndex === stepIndex && 
+            (currentStepStartTime !== null && currentStepEndTime !== null);
+        
+        if (!isAiGenerated && !hasValidTimestamps && !currentStepHasTimestamps) {
+            setErrorMessage("Step must be AI-generated or have valid start/end timestamps to regenerate. Please set start and end times for this step first.");
+            return;
+        }
+
+        setIsStepLoading(true);
+        setErrorMessage('');
+        setSuccessMessage('Regenerating step with AI...');
+
+        try {
+            // Get the video data for this step
+            const videoIndex = currentStep.associated_video_index || currentStep.video_index || 0;
+            const videoData = uploadedVideos[videoIndex];
+            
+            if (!videoData) {
+                throw new Error("Video file not found for regeneration.");
+            }
+            
+            console.log('Video data:', videoData);
+            
+            // Get video file - either from preserved file or download from Firebase
+            let videoFile;
+            if (videoData.file && videoData.file instanceof File) {
+                // Use preserved file if available
+                videoFile = videoData.file;
+                console.log('Using preserved file');
+            } else {
+                // Download from Firebase URL
+                console.log('Downloading video from Firebase:', videoData.url);
+                setSuccessMessage('Downloading video from Firebase...');
+                
+                try {
+                    const response = await fetch(videoData.url);
+                    if (!response.ok) {
+                        throw new Error(`Failed to download video: ${response.status}`);
+                    }
+                    
+                    const videoBlob = await response.blob();
+                    videoFile = new File([videoBlob], videoData.name || 'video.mp4', { 
+                        type: 'video/mp4' 
+                    });
+                    console.log('Successfully downloaded video from Firebase');
+                } catch (downloadError) {
+                    console.error('Error downloading video:', downloadError);
+                    throw new Error(`Failed to download video from Firebase: ${downloadError.message}`);
+                }
+            }
+            
+            console.log('Final videoFile:', videoFile);
+            console.log('VideoFile type:', typeof videoFile);
+            console.log('VideoFile instanceof File:', videoFile instanceof File);
+
+            // Import the Google Cloud API service
+            const { googleCloudApi } = await import('../../../services/googleCloudApi');
+
+            let analysisResult;
+
+            if (isAiGenerated) {
+                // For AI-generated steps: use full video analysis
+                setSuccessMessage('Extracting audio from video...');
+                const audioResult = await googleCloudApi.extractAudio(videoFile);
+
+                setSuccessMessage('Transcribing audio...');
+                const transcriptionResult = await googleCloudApi.transcribeAudio(audioResult.audio_url);
+
+                setSuccessMessage('Analyzing transcript for step regeneration...');
+                analysisResult = await googleCloudApi.analyzeTranscript(
+                    transcriptionResult.transcript,
+                    {
+                        filename: videoFile.name,
+                        duration: videoFile.duration || 0,
+                        size: videoFile.size,
+                    },
+                    {
+                        project_name: 'Step Regeneration',
+                        project_description: 'Regenerating individual step with AI',
+                        tags: ['Regeneration']
+                    }
+                );
+            } else {
+                // For non-AI steps: use existing transcript and analyze specific time range
+                setSuccessMessage('Reading existing transcript...');
+                
+                // Get the step's time range in seconds - handle various timestamp formats
+                let startTimeSeconds, endTimeSeconds;
+                
+                if (currentStep.video_start_time_ms && currentStep.video_end_time_ms) {
+                    // Timestamps stored in milliseconds
+                    startTimeSeconds = currentStep.video_start_time_ms / 1000;
+                    endTimeSeconds = currentStep.video_end_time_ms / 1000;
+                } else if (currentStep.video_start_time && currentStep.video_end_time) {
+                    // Timestamps stored in seconds
+                    startTimeSeconds = currentStep.video_start_time;
+                    endTimeSeconds = currentStep.video_end_time;
+                } else if (currentStepIndex === stepIndex && currentStepStartTime !== null && currentStepEndTime !== null) {
+                    // Using current form values
+                    startTimeSeconds = currentStepStartTime;
+                    endTimeSeconds = currentStepEndTime;
+                } else {
+                    throw new Error("Could not determine step time range for regeneration.");
+                }
+                
+                // Extract audio and transcribe
+                const audioResult = await googleCloudApi.extractAudio(videoFile);
+                const transcriptionResult = await googleCloudApi.transcribeAudio(audioResult.audio_url);
+                
+                // Check if transcript is too short (less than 10 characters)
+                if (transcriptionResult.transcript.length < 10) {
+                    setSuccessMessage('Transcript too short, analyzing full video for context...');
+                    
+                    // For short transcripts, analyze the full video (up to 10 minutes) for context
+                    const maxAnalysisDuration = Math.min(600, videoFile.duration || 600); // 10 minutes max
+                    
+                    analysisResult = await googleCloudApi.analyzeTranscript(
+                        transcriptionResult.transcript,
+                        {
+                            filename: videoFile.name,
+                            duration: videoFile.duration || 0,
+                            size: videoFile.size,
+                            step_start_time: startTimeSeconds,
+                            step_end_time: endTimeSeconds,
+                            full_video_context: true,
+                            max_context_duration: maxAnalysisDuration,
+                        },
+                        {
+                            project_name: 'Step Regeneration',
+                            project_description: `Regenerating step from ${startTimeSeconds}s to ${endTimeSeconds}s with full video context`,
+                            tags: ['Regeneration', 'TimeRange', 'FullContext']
+                        }
+                    );
+                } else {
+                    // Use normal analysis for longer transcripts
+                    setSuccessMessage('Analyzing transcript for specific step time range...');
+                    analysisResult = await googleCloudApi.analyzeTranscript(
+                        transcriptionResult.transcript,
+                        {
+                            filename: videoFile.name,
+                            duration: videoFile.duration || 0,
+                            size: videoFile.size,
+                            step_start_time: startTimeSeconds,
+                            step_end_time: endTimeSeconds,
+                        },
+                        {
+                            project_name: 'Step Regeneration',
+                            project_description: `Regenerating step from ${startTimeSeconds}s to ${endTimeSeconds}s`,
+                            tags: ['Regeneration', 'TimeRange']
+                        }
+                    );
+                }
+            }
+
+            // Check for no-voice response from backend
+            if (analysisResult.error === 'no_voice') {
+                setErrorMessage(analysisResult.message || "No voice detected in this video segment. The step content will remain unchanged.");
+                return;
+            }
+            
+            // Update the specific step with new AI-generated data
+            if (analysisResult.steps && analysisResult.steps.length > 0) {
+                // Use the first step from the analysis or create a new one
+                const aiStep = analysisResult.steps[0];
+                
+                const updatedStep = {
+                    ...currentStep,
+                    name: aiStep.name || currentStep.name,
+                    description: aiStep.description || currentStep.description,
+                    estimated_duration: aiStep.estimated_duration || currentStep.estimated_duration,
+                    difficulty_level: aiStep.difficulty_level || currentStep.difficulty_level,
+                    materials: analysisResult.materials || currentStep.materials,
+                    tools: analysisResult.tools || currentStep.tools,
+                    cautions: analysisResult.cautions || currentStep.cautions,
+                    questions: analysisResult.questions || currentStep.questions,
+                    is_ai_generated: isAiGenerated, // Preserve original AI status
+                    regenerated_at: new Date().toISOString(),
+                };
+
+                setProjectSteps(prev => {
+                    const updatedSteps = prev.map((step, index) => 
+                        index === stepIndex ? updatedStep : step
+                    );
+                    return updatedSteps;
+                });
+
+                // If this is the currently selected step, update the form
+                if (currentStepIndex === stepIndex) {
+                    setCurrentStepName(updatedStep.name);
+                    setCurrentStepDescription(updatedStep.description);
+                    setCurrentStepTools(updatedStep.tools || []);
+                    setCurrentStepMaterials(updatedStep.materials || []);
+                }
+
+                setSuccessMessage(`Step "${updatedStep.name}" regenerated successfully!`);
+            } else {
+                throw new Error("No steps generated from AI analysis.");
+            }
+
+        } catch (error) {
+            console.error('Error regenerating step:', error);
+            setErrorMessage(`Error regenerating step: ${error.message}`);
+        } finally {
+            setIsStepLoading(false);
         }
     };
 
@@ -851,6 +1085,7 @@ export const createStepActions = (state) => {
         deleteStep,
         addNewStep,
         handleAddStep,
+        handleRegenerateStep,
         handleFinishProject
     };
 }; 

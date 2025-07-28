@@ -109,11 +109,11 @@ const StepsSidebar = ({
                                             <>
                                                 <div className="flex justify-between items-start mb-2">
                                                     <div className="flex items-center space-x-2">
-                                                        <span className={`font-semibold text-sm ${
-                                                            currentStepIndex === index ? 'text-black' : 'text-[#F1C232]'
-                                                        }`}>
-                                                            Step {index + 1}
-                                                        </span>
+                                                    <span className={`font-semibold text-sm ${
+                                                        currentStepIndex === index ? 'text-black' : 'text-[#F1C232]'
+                                                    }`}>
+                                                        Step {index + 1}
+                                                    </span>
                                                         {step.is_ai_generated && (
                                                             <AiOutlineRobot 
                                                                 size={14} 

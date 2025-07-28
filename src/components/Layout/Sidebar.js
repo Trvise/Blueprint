@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/authContext';
 import { doSignOut } from '../../firebase/auth';
-import { AiOutlineMenu, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineEye, AiOutlineArrowLeft, AiOutlineCheck, AiOutlineUser, AiOutlineDatabase, AiOutlineFolder, AiOutlineBarChart, AiOutlineSend } from 'react-icons/ai';
+import { AiOutlineMenu, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineEye, AiOutlineArrowLeft, AiOutlineCheck, AiOutlineUser, AiOutlineDatabase, AiOutlineFolder, AiOutlineBarChart, AiOutlineSend, AiOutlineRobot } from 'react-icons/ai';
 import logo from '../../assets/trvise_logo.png';
 import { getApiUrl } from '../pages/createsteps helpers/CreateStepsUtils';
 
@@ -275,6 +275,28 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                                                     </span>
                                                 )}
                                             </button>
+                                            
+                                            {/* Regenerate Step Button - Show for all steps */}
+                                            {window.currentStepIndex !== undefined && window.currentStepIndex >= 0 && window.projectSteps && window.projectSteps[window.currentStepIndex] && (
+                                                <button
+                                                    onClick={() => {
+                                                        if (window.handleRegenerateStep) {
+                                                            window.handleRegenerateStep(window.currentStepIndex);
+                                                        }
+                                                    }}
+                                                    className={
+                                                        `w-full flex items-center justify-center ${isCollapsed ? 'py-2 px-2' : 'py-3 px-4'} text-base font-medium transition-all duration-200 rounded-lg bg-[#3B82F6] text-white hover:bg-[#2563EB] hover:scale-105 mt-2`
+                                                    }
+                                                    title={isCollapsed ? (window.isStepLoading ? 'Regenerating...' : 'Regenerate Step with AI') : ''}
+                                                >
+                                                    <AiOutlineRobot size={isCollapsed ? 16 : 18} />
+                                                    {!isCollapsed && (
+                                                        <span className="ml-2">
+                                                            {window.isStepLoading ? 'Regenerating...' : 'Regenerate Step'}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            )}
                                         </div>
                                     )}
                                 </div>

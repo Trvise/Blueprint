@@ -409,6 +409,13 @@ async def extract_audio(video: UploadFile = File(...)):
     Extract audio from uploaded video file using FFmpeg
     """
     print(f"🔍 Received audio extraction request for file: {video.filename}")
+    print(f"📋 File details - Content-Type: {video.content_type}, Size: {video.size if hasattr(video, 'size') else 'Unknown'}")
+    
+    if not video.filename:
+        raise HTTPException(status_code=422, detail="No video file provided")
+    
+    if not video.content_type or not video.content_type.startswith('video/'):
+        raise HTTPException(status_code=422, detail=f"Invalid file type: {video.content_type}. Expected video file.")
     try:
         # Create temporary file for video
         with tempfile.NamedTemporaryFile(delete=False, suffix=f".{video.filename.split('.')[-1]}") as temp_video:
@@ -556,22 +563,38 @@ async def analyze_transcript(request: AnalysisRequest):
         
         # Check if transcript is too short
         if len(request.transcript.strip()) < 10:
-            print(f"⚠️ Transcript is very short ({len(request.transcript)} characters), using fallback analysis")
-            # Return a basic structure for short/empty transcripts
-            result = {
-                "steps": [
-                    {
-                        "name": "Video Analysis",
-                        "description": "This video appears to be very short or silent. Please review the video manually.",
-                        "estimated_duration": 30,
-                        "difficulty_level": "Beginner"
-                    }
-                ],
-                "materials": [],
-                "tools": [],
-                "cautions": ["Please ensure the video contains clear audio before processing"],
-                "questions": ["Does the video contain clear audio narration?"]
-            }
+            print(f"⚠️ Transcript is very short ({len(request.transcript)} characters)")
+            
+            # Check if this is a step regeneration request
+            if request.project_context.get('tags') and 'Regeneration' in request.project_context.get('tags'):
+                print(f"🔄 Step regeneration with no voice detected - returning no-voice response")
+                # For step regeneration, return special response indicating no voice
+                return {
+                    "error": "no_voice",
+                    "message": "No voice detected in this video segment. The step content will remain unchanged.",
+                    "steps": [],
+                    "materials": [],
+                    "tools": [],
+                    "cautions": [],
+                    "questions": []
+                }
+            else:
+                print(f"Using fallback analysis for regular request")
+                # Return a basic structure for short/empty transcripts
+                result = {
+                    "steps": [
+                        {
+                            "name": "Video Analysis",
+                            "description": "This video appears to be very short or silent. Please review the video manually.",
+                            "estimated_duration": 30,
+                            "difficulty_level": "Beginner"
+                        }
+                    ],
+                    "materials": [],
+                    "tools": [],
+                    "cautions": ["Please ensure the video contains clear audio before processing"],
+                    "questions": ["Does the video contain clear audio narration?"]
+                }
             
             # Calculate costs for fallback
             request_end_time = datetime.now(timezone.utc)
