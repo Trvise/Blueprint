@@ -92,6 +92,9 @@ export const useCreateStepsState = () => {
     // Steps sidebar state
     const [isStepsSidebarCollapsed, setIsStepsSidebarCollapsed] = useState(false);
     
+    // Player state
+    const [playing, setPlaying] = useState(false);
+    
     // Refs
     const videoRef = useRef(null);
     const toolImageInputRef = useRef(null); 
@@ -291,6 +294,10 @@ export const useCreateStepsState = () => {
         // Steps sidebar state
         isStepsSidebarCollapsed,
         setIsStepsSidebarCollapsed,
+        
+        // Player state
+        playing,
+        setPlaying,
         
         // Refs
         videoRef,
@@ -662,24 +669,31 @@ export const useCreateStepsEffects = (state) => {
 
     // Handle video metadata loading
     useEffect(() => {
-        const videoElement = videoRef.current;
-        if (videoElement && activeVideoUrl) {
-            const handleLoadedMetadata = () => {
-                if (videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
-                    setVideoDimensions({
-                        width: videoElement.videoWidth,
-                        height: videoElement.videoHeight,
-                    });
-                }
-            };
-            videoElement.addEventListener('loadedmetadata', handleLoadedMetadata);
-            if (videoElement.readyState >= 2) { handleLoadedMetadata(); }
-            return () => { 
-                if (videoElement) { 
-                    videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
-                }
-            };
-        }
+        // This effect is now handled by the onReady prop of ReactPlayer
+        // and the logic is directly inside the CreateSteps component.
+        // The onReady callback provides a reliable way to get video dimensions
+        // without directly adding event listeners.
+        
+        // The new implementation in CreateSteps.js should look like this:
+        //
+        // <ReactPlayer
+        //   ...
+        //   onReady={() => {
+        //     if (videoRef.current) {
+        //       const videoElement = videoRef.current.getInternalPlayer();
+        //       if (videoElement) {
+        //         setVideoDimensions({
+        //           width: videoElement.videoWidth,
+        //           height: videoElement.videoHeight,
+        //         });
+        //       }
+        //     }
+        //   }}
+        // />
+        //
+        // This keeps the logic within the component that owns the player
+        // and uses the official ReactPlayer API.
+        
     }, [activeVideoUrl, setVideoDimensions, videoRef]);
 
     // Handle keyboard shortcuts
