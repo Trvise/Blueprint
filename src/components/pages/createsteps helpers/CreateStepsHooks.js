@@ -369,6 +369,7 @@ export const useCreateStepsEffects = (state) => {
                 }
 
                 const projectData = await response.json();
+                console.log('Project data received:', projectData);
                 
                 setProjectName(projectData.name || `Project ${projectId}`);
                 
@@ -395,6 +396,73 @@ export const useCreateStepsEffects = (state) => {
                     
                     // Check if this is an existing project (has steps) or a new project
                     const isExistingProject = stepsData && stepsData.length > 0;
+                    
+                    // If this is a new project (no steps yet), try to get videos from location.state
+                    if (!isExistingProject && location.state?.uploadedVideos) {
+                        console.log('New project detected, using videos from location.state:', location.state.uploadedVideos);
+                        videosFromAPI = location.state.uploadedVideos;
+                        setUploadedVideos(videosFromAPI);
+                    } else if (!isExistingProject) {
+                        // If no location.state videos, try to fetch from project data
+                        console.log('No location.state videos, trying to fetch from project data...');
+                        console.log('Project ID:', projectId);
+                        console.log('Location state:', location.state);
+                        
+                        try {
+                            const projectFilesResponse = await fetch(`${getApiUrl()}/projects/${projectId}/files`, {
+                                method: 'GET',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                            });
+                            
+                            console.log('Project files response status:', projectFilesResponse.status);
+                            
+                            if (projectFilesResponse.ok) {
+                                const projectFiles = await projectFilesResponse.json();
+                                console.log('Project files response:', projectFiles);
+                                
+                                const videoFiles = projectFiles.filter(file => file.role === 'PRIMARY_VIDEO');
+                                console.log('Video files found:', videoFiles);
+                                
+                                for (const videoFile of videoFiles) {
+                                    try {
+                                        const fileRef = storageRef(storage, videoFile.file_key);
+                                        const downloadURL = await getDownloadURL(fileRef);
+                                        
+                                        videosFromAPI.push({
+                                            name: videoFile.original_filename,
+                                            url: downloadURL,
+                                            path: videoFile.file_key
+                                        });
+                                    } catch (error) {
+                                        console.error('Error getting download URL for video file:', error);
+                                        // Use file_url as fallback if available
+                                        if (videoFile.file_url) {
+                                            videosFromAPI.push({
+                                                name: videoFile.original_filename,
+                                                url: videoFile.file_url,
+                                                path: videoFile.file_key
+                                            });
+                                        }
+                                    }
+                                }
+                                
+                                if (videosFromAPI.length > 0) {
+                                    console.log('Found videos from project files:', videosFromAPI);
+                                    setUploadedVideos(videosFromAPI);
+                                } else {
+                                    console.log('No videos found in project files');
+                                }
+                            } else {
+                                console.error('Project files response not ok:', projectFilesResponse.status, projectFilesResponse.statusText);
+                                const errorText = await projectFilesResponse.text();
+                                console.error('Error response:', errorText);
+                            }
+                        } catch (error) {
+                            console.error('Error fetching project files:', error);
+                        }
+                    }
                     
                     if (savedBuyListState) {
                         // If there's a saved state, use it (handles both cleared and modified states)
@@ -493,8 +561,53 @@ export const useCreateStepsEffects = (state) => {
                         }
                     }
                     
-                    videosFromAPI = Array.from(videoFilesMap.values());
-                    setUploadedVideos(videosFromAPI);
+                    // If we have videos from steps, use them
+                    if (videoFilesMap.size > 0) {
+                        videosFromAPI = Array.from(videoFilesMap.values());
+                        setUploadedVideos(videosFromAPI);
+                    } else if (isExistingProject) {
+                        // If no videos from steps but project exists, try to fetch from project files
+                        try {
+                            const projectFilesResponse = await fetch(`${getApiUrl()}/projects/${projectId}/files`, {
+                                method: 'GET',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                            });
+                            
+                            if (projectFilesResponse.ok) {
+                                const projectFiles = await projectFilesResponse.json();
+                                const videoFiles = projectFiles.filter(file => file.role === 'PRIMARY_VIDEO');
+                                
+                                for (const videoFile of videoFiles) {
+                                    try {
+                                        const fileRef = storageRef(storage, videoFile.file_key);
+                                        const downloadURL = await getDownloadURL(fileRef);
+                                        
+                                        videosFromAPI.push({
+                                            name: videoFile.original_filename,
+                                            url: downloadURL,
+                                            path: videoFile.file_key
+                                        });
+                                    } catch (error) {
+                                        console.error('Error getting download URL for video file:', error);
+                                        // Use file_url as fallback if available
+                                        if (videoFile.file_url) {
+                                            videosFromAPI.push({
+                                                name: videoFile.original_filename,
+                                                url: videoFile.file_url,
+                                                path: videoFile.file_key
+                                            });
+                                        }
+                                    }
+                                }
+                                
+                                setUploadedVideos(videosFromAPI);
+                            }
+                        } catch (error) {
+                            console.error('Error fetching project files:', error);
+                        }
+                    }
                     
                     // Also load the existing steps for editing
                     if (stepsData.length > 0) {
@@ -515,28 +628,28 @@ export const useCreateStepsEffects = (state) => {
                             });
                             
                             return {
-                                ...step,
-                                // Transform tools from nested format to flat format for frontend
-                                tools: step.tools?.map(toolData => ({
-                                    id: toolData.tool?.tool_id || toolData.tool_id,
-                                    name: toolData.tool?.name || toolData.name,
-                                    specification: toolData.tool?.specification || toolData.specification,
-                                    purchase_link: toolData.tool?.purchase_link || toolData.purchase_link,
-                                    quantity: toolData.quantity || 1,
-                                    image_url: toolData.tool?.image_file?.file_url || toolData.image_url,
-                                    image_path: toolData.tool?.image_file?.file_key || toolData.image_path,
-                                    hasExistingImage: !!(toolData.tool?.image_file?.file_url || toolData.image_url)
-                                })) || [],
-                                // Transform materials from nested format to flat format for frontend
-                                materials: step.materials?.map(materialData => ({
-                                    id: materialData.material?.material_id || materialData.material_id,
-                                    name: materialData.material?.name || materialData.name,
-                                    specification: materialData.material?.specification || materialData.specification,
-                                    purchase_link: materialData.material?.purchase_link || materialData.purchase_link,
-                                    quantity: materialData.quantity || 1,
-                                    image_url: materialData.material?.image_file?.file_url || materialData.image_url,
-                                    image_path: materialData.material?.image_file?.file_key || materialData.image_path,
-                                    hasExistingImage: !!(materialData.material?.image_file?.file_url || materialData.image_url)
+                            ...step,
+                            // Transform tools from nested format to flat format for frontend
+                            tools: step.tools?.map(toolData => ({
+                                id: toolData.tool?.tool_id || toolData.tool_id,
+                                name: toolData.tool?.name || toolData.name,
+                                specification: toolData.tool?.specification || toolData.specification,
+                                purchase_link: toolData.tool?.purchase_link || toolData.purchase_link,
+                                quantity: toolData.quantity || 1,
+                                image_url: toolData.tool?.image_file?.file_url || toolData.image_url,
+                                image_path: toolData.tool?.image_file?.file_key || toolData.image_path,
+                                hasExistingImage: !!(toolData.tool?.image_file?.file_url || toolData.image_url)
+                            })) || [],
+                            // Transform materials from nested format to flat format for frontend
+                            materials: step.materials?.map(materialData => ({
+                                id: materialData.material?.material_id || materialData.material_id,
+                                name: materialData.material?.name || materialData.name,
+                                specification: materialData.material?.specification || materialData.specification,
+                                purchase_link: materialData.material?.purchase_link || materialData.purchase_link,
+                                quantity: materialData.quantity || 1,
+                                image_url: materialData.material?.image_file?.file_url || materialData.image_url,
+                                image_path: materialData.material?.image_file?.file_key || materialData.image_path,
+                                hasExistingImage: !!(materialData.material?.image_file?.file_url || materialData.image_url)
                                 })) || [],
                                 // Use the transformed validation metric
                                 validation_metric: transformedValidationMetric
@@ -560,17 +673,66 @@ export const useCreateStepsEffects = (state) => {
                     }
                 } else {
                     // Fallback: create a placeholder if we can't get video files
-                    console.warn('Could not fetch steps data, using placeholder');
-                    setUploadedVideos([]);
+                    console.warn('Could not fetch steps data, trying alternative video detection...');
+                    
+                    // Try to get videos from project files even if steps failed
+                    try {
+                        const projectFilesResponse = await fetch(`${getApiUrl()}/projects/${projectId}/files`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                        });
+                        
+                        console.log('Fallback project files response status:', projectFilesResponse.status);
+                        
+                        if (projectFilesResponse.ok) {
+                            const projectFiles = await projectFilesResponse.json();
+                            console.log('Fallback project files response:', projectFiles);
+                            
+                            const videoFiles = projectFiles.filter(file => file.role === 'PRIMARY_VIDEO');
+                            console.log('Fallback video files found:', videoFiles);
+                            
+                            for (const videoFile of videoFiles) {
+                                try {
+                                    const fileRef = storageRef(storage, videoFile.file_key);
+                                    const downloadURL = await getDownloadURL(fileRef);
+                                    
+                                    videosFromAPI.push({
+                                        name: videoFile.original_filename,
+                                        url: downloadURL,
+                                        path: videoFile.file_key
+                                    });
+                                } catch (error) {
+                                    console.error('Error getting download URL for video file:', error);
+                                    // Use file_url as fallback if available
+                                    if (videoFile.file_url) {
+                                        videosFromAPI.push({
+                                            name: videoFile.original_filename,
+                                            url: videoFile.file_url,
+                                            path: videoFile.file_key
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error in fallback video detection:', error);
+                    }
                     
                     // Initialize buy list as empty
                     setProjectBuyList([]);
                 }
                 
+                // Set videos and check if we have any
+                setUploadedVideos(videosFromAPI);
+                
                 if (videosFromAPI.length > 0 && videosFromAPI[0].url) {
                     setActiveVideoUrl(videosFromAPI[0].url);
                     setActiveVideoIndex(0);
+                    console.log('✅ Videos loaded successfully:', videosFromAPI);
                 } else {
+                    console.error('❌ No videos found. videosFromAPI:', videosFromAPI);
                     setErrorMessage("No videos found for this project. Video files may need to be re-uploaded.");
                 }
                 

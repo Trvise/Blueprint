@@ -383,8 +383,54 @@ const MyProjects = () => {
             setError('');
             const data = await createApiCall(`/users/${currentUser.uid}/projects`);
             
-            setPublishedProjects(data.published || []);
-            setDraftProjects(data.unpublished || []);
+            // Check for projects with 0 steps and automatically delete them
+            const allProjects = [...(data.published || []), ...(data.unpublished || [])];
+            const projectsToDelete = [];
+            
+            for (const project of allProjects) {
+                try {
+                    // Check if project has steps
+                    const stepsResponse = await createApiCall(`/projects/${project.project_id}/steps`);
+                    const steps = stepsResponse || [];
+                    
+                    if (steps.length === 0) {
+                        console.log(`Auto-deleting project ${project.project_id} (${project.name}) - no steps found`);
+                        projectsToDelete.push(project.project_id);
+                    }
+                } catch (error) {
+                    console.error(`Error checking steps for project ${project.project_id}:`, error);
+                    // If we can't check steps, assume it has no steps and delete it
+                    projectsToDelete.push(project.project_id);
+                }
+            }
+            
+            // Delete projects with 0 steps
+            for (const projectId of projectsToDelete) {
+                try {
+                    await createApiCall(`/projects/${projectId}?firebase_uid=${currentUser.uid}`, {
+                        method: 'DELETE',
+                    });
+                    console.log(`Successfully auto-deleted project ${projectId}`);
+                } catch (error) {
+                    console.error(`Error auto-deleting project ${projectId}:`, error);
+                }
+            }
+            
+            // If any projects were deleted, fetch the updated list
+            if (projectsToDelete.length > 0) {
+                console.log(`Auto-deleted ${projectsToDelete.length} projects with 0 steps`);
+                const updatedData = await createApiCall(`/users/${currentUser.uid}/projects`);
+                setPublishedProjects(updatedData.published || []);
+                setDraftProjects(updatedData.unpublished || []);
+                
+                // Show a subtle notification that projects were cleaned up
+                setTimeout(() => {
+                    alert(`Cleaned up ${projectsToDelete.length} incomplete project${projectsToDelete.length !== 1 ? 's' : ''} with no steps.`);
+                }, 500);
+            } else {
+                setPublishedProjects(data.published || []);
+                setDraftProjects(data.unpublished || []);
+            }
         } catch (err) {
             console.error('Error fetching projects:', err);
             setError('Failed to load projects');

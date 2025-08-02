@@ -6,7 +6,7 @@ import { useCreateStepsState, useCreateStepsEffects } from './createsteps helper
 import { createStepHandlers } from './createsteps helpers/CreateStepsHandlers';
 import { createStepActions } from './createsteps helpers/CreateStepsActions';
 import { styles } from './createsteps helpers/CreateStepsStyles';
-import { formatTime, navigateFrame, captureFrameForAnnotation } from './createsteps helpers/CreateStepsUtils';
+import { formatTime, navigateFrame, captureFrameForAnnotation, getApiUrl } from './createsteps helpers/CreateStepsUtils';
 import { AnimatedLogo } from './createsteps helpers/CommonComponents';
 
 // Import Tab Components
@@ -299,6 +299,68 @@ const ProjectStepsPage = () => {
         location,
         navigate
     } = state;
+    
+    // Function to delete unsaved project
+    const deleteUnsavedProject = useCallback(async () => {
+        if (!projectId || !currentUser) return;
+        
+        try {
+            console.log('Deleting unsaved project:', projectId);
+            
+            const response = await fetch(`${getApiUrl()}/projects/${projectId}?firebase_uid=${currentUser.uid}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            if (response.ok) {
+                console.log('Unsaved project deleted successfully');
+                // Navigate to projects page
+                navigate('/videos');
+            } else {
+                console.error('Failed to delete unsaved project');
+            }
+        } catch (error) {
+            console.error('Error deleting unsaved project:', error);
+        }
+    }, [projectId, currentUser, navigate]);
+    
+    // Add cleanup effect for unsaved projects
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            // Only show warning if project has no steps (new project)
+            if (projectSteps.length === 0 && projectId) {
+                e.preventDefault();
+                e.returnValue = 'You have an unsaved project. Are you sure you want to leave?';
+                return e.returnValue;
+            }
+        };
+        
+        const handlePopState = (e) => {
+            // Only show warning if project has no steps (new project)
+            if (projectSteps.length === 0 && projectId) {
+                const confirmed = window.confirm('You have an unsaved project. Are you sure you want to leave? This will delete the project.');
+                if (confirmed) {
+                    // Delete the project before navigating away
+                    deleteUnsavedProject();
+                } else {
+                    // Prevent navigation
+                    window.history.pushState(null, '', window.location.href);
+                }
+            }
+        };
+        
+        // Add event listeners
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('popstate', handlePopState);
+        
+        // Cleanup function
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [projectSteps.length, projectId, deleteUnsavedProject]);
 
     // Chrome-specific layout adjustments
     const isChrome = navigator.userAgent.includes('Chrome');
@@ -689,8 +751,27 @@ const ProjectStepsPage = () => {
         minHeight: 400,
         gap: 16,
     }}><AnimatedLogo size={80} /><div style={{ marginTop: 16, fontSize: 20, fontWeight: 600, color: '#D9D9D9', letterSpacing: 1 }}>Loading...</div></div></div>;
-    if (errorMessage && uploadedVideos.length === 0 && !location.state) {
-         return <div style={chromeStyles.pageContainer}><p style={chromeStyles.errorMessage}>{errorMessage} <button onClick={() => navigate(-1)} style={{...chromeStyles.backLink, marginLeft: '10px'}}>Go Back</button></p></div>;
+    if (errorMessage && uploadedVideos.length === 0 && !location.state?.uploadedVideos) {
+         return (
+             <div style={chromeStyles.pageContainer}>
+                 <p style={chromeStyles.errorMessage}>
+                     {errorMessage} 
+                     <button 
+                         onClick={() => {
+                             if (projectSteps.length === 0 && projectId) {
+                                 // Always delete project when going back to home with no steps
+                                 deleteUnsavedProject();
+                             } else {
+                                 navigate(-1);
+                             }
+                         }} 
+                         style={{...chromeStyles.backLink, marginLeft: '10px'}}
+                     >
+                         Go Back
+                     </button>
+                 </p>
+             </div>
+         );
     }
 
     return (

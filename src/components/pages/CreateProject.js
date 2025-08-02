@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/authContext';
 import { storage } from '../../firebase/firebase';
@@ -18,6 +18,10 @@ const PREDEFINED_TAGS = [
 const CreateProjectPage = () => {
     const navigate = useNavigate();
     const { currentUser } = useAuth();
+    
+    // Track if project was created but not yet navigated to annotation
+    const [projectCreated, setProjectCreated] = useState(false);
+    const [createdProjectId, setCreatedProjectId] = useState(null);
 
     const [projectName, setProjectName] = useState('');
     const [projectDescription, setProjectDescription] = useState('');
@@ -28,7 +32,7 @@ const CreateProjectPage = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
-    
+
     // AI Video Breakdown states
     const [isAiProcessing, setIsAiProcessing] = useState(false);
     const [aiProgress, setAiProgress] = useState('');
@@ -128,6 +132,68 @@ const CreateProjectPage = () => {
                 : [...prev, tag]
         );
     };
+    
+    // Function to delete unsaved project
+    const deleteUnsavedProject = useCallback(async () => {
+        if (!createdProjectId || !currentUser) return;
+        
+        try {
+            console.log('Deleting unsaved project:', createdProjectId);
+            
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/projects/${createdProjectId}?firebase_uid=${currentUser.uid}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            if (response.ok) {
+                console.log('Unsaved project deleted successfully');
+                setProjectCreated(false);
+                setCreatedProjectId(null);
+            } else {
+                console.error('Failed to delete unsaved project');
+            }
+        } catch (error) {
+            console.error('Error deleting unsaved project:', error);
+        }
+    }, [createdProjectId, currentUser]);
+    
+    // Cleanup effect for unsaved projects
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            // Only show warning if project was created but not yet navigated
+            if (projectCreated && createdProjectId) {
+                e.preventDefault();
+                e.returnValue = 'You have created a project but not started editing. Are you sure you want to leave?';
+                return e.returnValue;
+            }
+        };
+        
+        const handlePopState = (e) => {
+            // Only show warning if project was created but not yet navigated
+            if (projectCreated && createdProjectId) {
+                const confirmed = window.confirm('You have created a project but not started editing. Are you sure you want to leave? This will delete the project.');
+                if (confirmed) {
+                    // Delete the project before navigating away
+                    deleteUnsavedProject();
+                } else {
+                    // Prevent navigation
+                    window.history.pushState(null, '', window.location.href);
+                }
+            }
+        };
+        
+        // Add event listeners
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('popstate', handlePopState);
+        
+        // Cleanup function
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [projectCreated, createdProjectId, deleteUnsavedProject]);
 
     // Progress tracking function
     const updateProgress = (step, percentage, message) => {
@@ -265,16 +331,24 @@ const CreateProjectPage = () => {
             setSuccessMessage(`Project "${projectName}" created successfully! Preparing next step...`);
             console.log('Project created in backend:', responseData);
             
+            // Set tracking state
+            setProjectCreated(true);
+            setCreatedProjectId(createdProjectId);
+            
             // Small delay to show completion
             setTimeout(() => {
-                navigate(`/annotate`, { 
-                    state: { 
-                        projectName: projectName,
-                        projectId: createdProjectId,
-                        uploadedVideos: uploadedVideoUrls,
+                // Clear tracking state when navigating to annotation
+                setProjectCreated(false);
+                setCreatedProjectId(null);
+                
+            navigate(`/annotate`, { 
+                state: { 
+                    projectName: projectName,
+                    projectId: createdProjectId,
+                    uploadedVideos: uploadedVideoUrls,
                         aiBreakdownData: finalAiBreakdownData,
-                    } 
-                });
+                } 
+            });
             }, 1000);
 
         } catch (error) {
@@ -367,8 +441,16 @@ const CreateProjectPage = () => {
             setSuccessMessage(`Project "${projectName}" created successfully! Preparing next step...`);
             console.log('Project created in backend:', responseData);
             
+            // Set tracking state
+            setProjectCreated(true);
+            setCreatedProjectId(createdProjectId);
+            
             // Small delay to show completion
             setTimeout(() => {
+                // Clear tracking state when navigating to annotation
+                setProjectCreated(false);
+                setCreatedProjectId(null);
+                
                 navigate(`/annotate`, { 
                     state: { 
                         projectName: projectName,
@@ -399,7 +481,7 @@ const CreateProjectPage = () => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-gray-900 p-8 rounded-lg max-w-md w-full mx-4">
                         <div className="flex flex-col items-center space-y-4">
-                            <AnimatedLogo size={80} />
+                    <AnimatedLogo size={80} />
                             <h3 className="text-xl font-semibold text-[#F1C232]">Creating Project</h3>
                             
                             {/* Progress Bar */}
@@ -436,90 +518,90 @@ const CreateProjectPage = () => {
             
             {!isLoading && (
                 <form onSubmit={aiBreakdownData ? handleSubmitWithAiData : handleSubmit} className="space-y-6">
-                    <div>
-                        <label htmlFor="projectName" className="block text-sm font-medium text-[#D9D9D9] mb-1">
-                            Project Name <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            id="projectName"
-                            value={projectName}
-                            onChange={(e) => setProjectName(e.target.value)}
-                            required
-                            className="w-full px-4 py-2 text-[#D9D9D9] bg-black border border-[#D9D9D9] rounded-lg focus:ring-[#0000FF] focus:border-[#0000FF] transition duration-150 ease-in-out"
-                            placeholder="e.g., Assembling a Bookshelf"
-                        />
-                    </div>
+                <div>
+                    <label htmlFor="projectName" className="block text-sm font-medium text-[#D9D9D9] mb-1">
+                        Project Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="projectName"
+                        value={projectName}
+                        onChange={(e) => setProjectName(e.target.value)}
+                        required
+                        className="w-full px-4 py-2 text-[#D9D9D9] bg-black border border-[#D9D9D9] rounded-lg focus:ring-[#0000FF] focus:border-[#0000FF] transition duration-150 ease-in-out"
+                        placeholder="e.g., Assembling a Bookshelf"
+                    />
+                </div>
 
-                    <div>
-                        <label htmlFor="projectDescription" className="block text-sm font-medium text-[#D9D9D9] mb-1">
-                            Description
-                        </label>
-                        <textarea
-                            id="projectDescription"
-                            value={projectDescription}
-                            onChange={(e) => setProjectDescription(e.target.value)}
-                            rows="4"
-                            className="w-full px-4 py-2 text-[#D9D9D9] bg-black border border-[#D9D9D9] rounded-lg focus:ring-[#0000FF] focus:border-[#0000FF] transition duration-150 ease-in-out"
-                            placeholder="Briefly describe your project..."
-                        />
-                    </div>
+                <div>
+                    <label htmlFor="projectDescription" className="block text-sm font-medium text-[#D9D9D9] mb-1">
+                        Description
+                    </label>
+                    <textarea
+                        id="projectDescription"
+                        value={projectDescription}
+                        onChange={(e) => setProjectDescription(e.target.value)}
+                        rows="4"
+                        className="w-full px-4 py-2 text-[#D9D9D9] bg-black border border-[#D9D9D9] rounded-lg focus:ring-[#0000FF] focus:border-[#0000FF] transition duration-150 ease-in-out"
+                        placeholder="Briefly describe your project..."
+                    />
+                </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-[#D9D9D9] mb-1">
-                            Tags (Select one or more)
-                        </label>
-                        <div className="flex flex-wrap gap-2 p-2 border border-[#D9D9D9] rounded-lg bg-black">
-                            {PREDEFINED_TAGS.map((tag) => (
-                                <button
-                                    type="button"
-                                    key={tag}
-                                    onClick={() => toggleTag(tag)}
-                                    className={`px-3 py-1 text-sm font-medium rounded-full transition-colors duration-150 ease-in-out
-                                                ${selectedTags.includes(tag) 
-                                                    ? 'bg-[#0000FF] text-[#D9D9D9]' 
-                                                    : 'bg-[#222222] text-[#D9D9D9] hover:bg-[#0000FF] hover:text-[#D9D9D9]'}`}
-                                >
-                                    {tag}
-                                </button>
-                            ))}
+                <div>
+                    <label className="block text-sm font-medium text-[#D9D9D9] mb-1">
+                        Tags (Select one or more)
+                    </label>
+                    <div className="flex flex-wrap gap-2 p-2 border border-[#D9D9D9] rounded-lg bg-black">
+                        {PREDEFINED_TAGS.map((tag) => (
+                            <button
+                                type="button"
+                                key={tag}
+                                onClick={() => toggleTag(tag)}
+                                className={`px-3 py-1 text-sm font-medium rounded-full transition-colors duration-150 ease-in-out
+                                            ${selectedTags.includes(tag) 
+                                                ? 'bg-[#0000FF] text-[#D9D9D9]' 
+                                                : 'bg-[#222222] text-[#D9D9D9] hover:bg-[#0000FF] hover:text-[#D9D9D9]'}`}
+                            >
+                                {tag}
+                            </button>
+                        ))}
+                    </div>
+                    {selectedTags.length > 0 && (
+                        <p className="text-xs text-[#D9D9D9] mt-1">Selected: {selectedTags.join(', ')}</p>
+                    )}
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-[#D9D9D9] mb-1">
+                        Upload Project Videos <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="file"
+                        accept="video/*"
+                        multiple
+                        onChange={handleVideoChange}
+                        className="w-full text-sm text-[#D9D9D9] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#0000FF] file:text-[#D9D9D9] hover:file:bg-[#0000FF] transition duration-150 ease-in-out"
+                    />
+                    {selectedVideoNames.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                            <p className="text-sm font-medium text-[#D9D9D9]">Selected videos:</p>
+                            <ul className="list-disc list-inside pl-1 space-y-1">
+                                {selectedVideoNames.map((name, index) => (
+                                    <li key={index} className="text-sm text-[#D9D9D9] flex justify-between items-center">
+                                        <span>{name}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeVideo(index)}
+                                            className="ml-2 text-[#0000FF] hover:text-[#0000FF] text-xs font-semibold"
+                                        >
+                                            Remove
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
-                        {selectedTags.length > 0 && (
-                            <p className="text-xs text-[#D9D9D9] mt-1">Selected: {selectedTags.join(', ')}</p>
-                        )}
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-[#D9D9D9] mb-1">
-                            Upload Project Videos <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="file"
-                            accept="video/*"
-                            multiple
-                            onChange={handleVideoChange}
-                            className="w-full text-sm text-[#D9D9D9] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#0000FF] file:text-[#D9D9D9] hover:file:bg-[#0000FF] transition duration-150 ease-in-out"
-                        />
-                        {selectedVideoNames.length > 0 && (
-                            <div className="mt-3 space-y-2">
-                                <p className="text-sm font-medium text-[#D9D9D9]">Selected videos:</p>
-                                <ul className="list-disc list-inside pl-1 space-y-1">
-                                    {selectedVideoNames.map((name, index) => (
-                                        <li key={index} className="text-sm text-[#D9D9D9] flex justify-between items-center">
-                                            <span>{name}</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => removeVideo(index)}
-                                                className="ml-2 text-[#0000FF] hover:text-[#0000FF] text-xs font-semibold"
-                                            >
-                                                Remove
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-                    </div>
+                    )}
+                </div>
 
                     {/* AI Video Breakdown Section */}
                     <div className="border-t border-gray-700 pt-6">
@@ -566,30 +648,49 @@ const CreateProjectPage = () => {
                                 >
                                     Clear AI Analysis
                                 </button>
-                            </div>
-                        )}
+                        </div>
+                    )}
+                </div>
+
+                {errorMessage && (
+                    <div role="alert" className="p-3 bg-red-900 border border-red-700 text-red-200 rounded-md text-sm">
+                        {errorMessage}
                     </div>
+                )}
+                {successMessage && (
+                    <div role="alert" className="p-3 bg-green-900 border border-green-700 text-green-200 rounded-md text-sm">
+                        {successMessage}
+                    </div>
+                )}
 
-                    {errorMessage && (
-                        <div role="alert" className="p-3 bg-red-900 border border-red-700 text-red-200 rounded-md text-sm">
-                            {errorMessage}
-                        </div>
-                    )}
-                    {successMessage && (
-                        <div role="alert" className="p-3 bg-green-900 border border-green-700 text-green-200 rounded-md text-sm">
-                            {successMessage}
-                        </div>
-                    )}
-
+                <div className="flex gap-3">
                     <button
-                        type="submit"
-                        disabled={isLoading}
-                        className={`w-full px-6 py-3 text-black font-semibold rounded-lg transition duration-150 ease-in-out
-                                    ${isLoading ? 'bg-[#222222] cursor-not-allowed text-[#D9D9D9]' : 'bg-[#F1C232] hover:bg-[#0000FF] hover:text-[#D9D9D9] focus:outline-none focus:ring-2 focus:ring-[#F1C232] focus:ring-opacity-50'}`}
+                        type="button"
+                        onClick={() => {
+                            if (projectCreated && createdProjectId) {
+                                const confirmed = window.confirm('You have created a project. Are you sure you want to cancel? This will delete the project.');
+                                if (confirmed) {
+                                    deleteUnsavedProject();
+                                    navigate('/videos');
+                                }
+                            } else {
+                                navigate('/videos');
+                            }
+                        }}
+                        className="flex-1 px-6 py-3 text-[#D9D9D9] font-semibold rounded-lg border border-gray-600 hover:bg-gray-800 transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
                     >
-                        {isLoading ? 'Saving Project...' : aiBreakdownData ? 'Save with AI Data & Continue' : 'Save and Continue to Annotate'}
+                        Cancel
                     </button>
-                </form>
+                <button
+                    type="submit"
+                    disabled={isLoading}
+                        className={`flex-1 px-6 py-3 text-black font-semibold rounded-lg transition duration-150 ease-in-out
+                                ${isLoading ? 'bg-[#222222] cursor-not-allowed text-[#D9D9D9]' : 'bg-[#F1C232] hover:bg-[#0000FF] hover:text-[#D9D9D9] focus:outline-none focus:ring-2 focus:ring-[#F1C232] focus:ring-opacity-50'}`}
+                >
+                        {isLoading ? 'Saving Project...' : aiBreakdownData ? 'Save with AI Data & Continue' : 'Save and Continue to Annotate'}
+                </button>
+                </div>
+            </form>
             )}
         </div>
     );
