@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/authContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { isImageUrl, isVideoUrl, formatDate, createApiCall } from './createsteps helpers/CreateStepsUtils';
 import { LazyImage, VideoThumbnail, AnimatedLogo } from './createsteps helpers/CommonComponents';
+import { AiOutlineCheckCircle, AiOutlineWarning } from 'react-icons/ai';
 
 const responsiveGridCSS = `
 .projects-grid {
@@ -371,6 +372,8 @@ const MyProjects = () => {
     const [error, setError] = useState('');
     const [deleteLoading, setDeleteLoading] = useState(null);
     const [toggleLoading, setToggleLoading] = useState(null);
+    const [showNotification, setShowNotification] = useState(false);
+    const [notificationData, setNotificationData] = useState({ message: '', type: 'success' });
 
     const fetchMyProjects = useCallback(async () => {
         if (!currentUser) {
@@ -425,7 +428,13 @@ const MyProjects = () => {
                 
                 // Show a subtle notification that projects were cleaned up
                 setTimeout(() => {
-                    alert(`Cleaned up ${projectsToDelete.length} incomplete project${projectsToDelete.length !== 1 ? 's' : ''} with no steps.`);
+                    setNotificationData({
+                        message: `Cleaned up ${projectsToDelete.length} incomplete project${projectsToDelete.length !== 1 ? 's' : ''} with no steps.`,
+                        type: 'success'
+                    });
+                    setShowNotification(true);
+                    // Auto-hide after 5 seconds
+                    setTimeout(() => setShowNotification(false), 5000);
                 }, 500);
             } else {
                 setPublishedProjects(data.published || []);
@@ -626,7 +635,8 @@ const MyProjects = () => {
     const projectsToDisplay = activeTab === 'published' ? publishedProjects : draftProjects;
 
     return (
-        <div style={styles.container}>
+        <React.Fragment>
+            <div style={styles.container}>
             <style>{responsiveGridCSS}</style>
             <div style={styles.header}>
                 <h1 style={styles.title}>My Projects</h1>
@@ -692,7 +702,63 @@ const MyProjects = () => {
                     ))}
                 </div>
             )}
+
+            {/* Custom Notification */}
+            {showNotification && (
+                <div style={{
+                    position: 'fixed',
+                    top: '20px',
+                    right: '20px',
+                    backgroundColor: notificationData.type === 'success' ? '#10B981' : '#F59E0B',
+                    color: 'white',
+                    padding: '1rem 1.5rem',
+                    borderRadius: '0.5rem',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                    zIndex: 9999,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    minWidth: '300px',
+                    maxWidth: '400px',
+                    animation: 'slideInRight 0.3s ease-out'
+                }}>
+                    {notificationData.type === 'success' ? (
+                        <AiOutlineCheckCircle size={20} />
+                    ) : (
+                        <AiOutlineWarning size={20} />
+                    )}
+                    <span style={{ flex: 1 }}>{notificationData.message}</span>
+                    <button
+                        onClick={() => setShowNotification(false)}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'white',
+                            cursor: 'pointer',
+                            fontSize: '1.2rem',
+                            padding: '0',
+                            marginLeft: '0.5rem'
+                        }}
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
         </div>
+
+        <style>{`
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `}</style>
+    </React.Fragment>
     );
 };
 

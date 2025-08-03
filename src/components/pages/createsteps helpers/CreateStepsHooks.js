@@ -779,8 +779,8 @@ export const useCreateStepsEffects = (state) => {
                                 description: aiStep.description || '',
                                 estimated_duration: aiStep.estimated_duration || 30,
                                 difficulty_level: aiStep.difficulty_level || 'Beginner',
-                                materials: breakdown.materials || [],
-                                tools: breakdown.tools || [],
+                                materials: [], // Remove AI-generated materials
+                                tools: [], // Remove AI-generated tools
                                 cautions: breakdown.cautions || [],
                                 questions: breakdown.questions || [],
                                 video_index: breakdownIndex,

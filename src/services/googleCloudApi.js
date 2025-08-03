@@ -1,7 +1,7 @@
 // Google Cloud API Service
 // This file contains functions to interact with Google Cloud services
 
-const GOOGLE_CLOUD_API_BASE = process.env.REACT_APP_VIDEO_BREAKDOWN_API_URL || 'http://localhost:8000/video-breakdown';
+const GOOGLE_CLOUD_API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 // Helper function to get video duration from a video file
 const getVideoDuration = (videoFile) => {
