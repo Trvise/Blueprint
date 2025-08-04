@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/authContext';
 import { storage } from '../../firebase/firebase';
@@ -6,8 +6,10 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { v4 as uuidv4 } from "uuid";
 import { createApiCall } from './createsteps helpers/CreateStepsUtils';
 import { AnimatedLogo } from './createsteps helpers/CommonComponents';
+import { googleCloudApi } from '../../services/googleCloudApi';
 
 const MAX_FILENAME_STEM_LENGTH = 25; 
+const MAX_VIDEO_DURATION_SECONDS = 600; // 10 minutes in seconds
 
 const PREDEFINED_TAGS = [
     "Woodworking", "DIY", "Electronics", "Crafts", "Home Improvement", 
@@ -17,87 +19,251 @@ const PREDEFINED_TAGS = [
 const CreateProjectPage = () => {
     const navigate = useNavigate();
     const { currentUser } = useAuth();
+    
+    // Track if project was created but not yet navigated to annotation
+    const [projectCreated, setProjectCreated] = useState(false);
+    const [createdProjectId, setCreatedProjectId] = useState(null);
 
     const [projectName, setProjectName] = useState('');
     const [projectDescription, setProjectDescription] = useState('');
-    const [selectedTags, setSelectedTags] = useState([]); // Array to store selected tag strings
-    const [videoFiles, setVideoFiles] = useState([]); // Array of File objects
+    const [selectedTags, setSelectedTags] = useState([]);
+    const [videoFiles, setVideoFiles] = useState([]);
     const [selectedVideoNames, setSelectedVideoNames] = useState([]);
+    const [videoDurations, setVideoDurations] = useState([]);
+    const [aiDisabledReason, setAiDisabledReason] = useState('');
 
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
 
-    // Snippet for the updated handleVideoChange function
-// in src/pages/ProjectStepsPage.js
+    // AI Video Breakdown states
+    const [isAiProcessing, setIsAiProcessing] = useState(false);
+    const [aiProgress, setAiProgress] = useState('');
+    const [aiBreakdownData, setAiBreakdownData] = useState(null);
+    const [aiEnabled, setAiEnabled] = useState(true);
+    
+    // Progress tracking states
+    const [progressPercentage, setProgressPercentage] = useState(0);
+    const [currentStep, setCurrentStep] = useState('');
+    const [expectedTime, setExpectedTime] = useState('');
+    const [startTime, setStartTime] = useState(null);
+
+    // Add CSS for toggle switch
+    React.useEffect(() => {
+        const style = document.createElement('style');
+        style.textContent = `
+            .toggle {
+                appearance: none;
+                width: 3rem;
+                height: 1.5rem;
+                background-color: #374151;
+                border-radius: 1rem;
+                position: relative;
+                cursor: pointer;
+                transition: background-color 0.3s ease;
+            }
+            
+            .toggle:checked {
+                background-color: #F1C232;
+            }
+            
+            .toggle::before {
+                content: '';
+                position: absolute;
+                width: 1.25rem;
+                height: 1.25rem;
+                border-radius: 50%;
+                background-color: white;
+                top: 0.125rem;
+                left: 0.125rem;
+                transition: transform 0.3s ease;
+            }
+            
+            .toggle:checked::before {
+                transform: translateX(1.5rem);
+            }
+            
+            .toggle:focus {
+                outline: 2px solid #0000FF;
+                outline-offset: 2px;
+            }
+        `;
+        document.head.appendChild(style);
+        return () => document.head.removeChild(style);
+    }, []);
 
     const handleVideoChange = (e) => {
         const originalFiles = Array.from(e.target.files);
-        let processedFiles = []; // To store original or new File objects with potentially truncated names
+        let processedFiles = [];
         let processedFileNamesForDisplay = [];
+        let durationPromises = [];
 
         if (originalFiles.some(file => !file.type.startsWith('video/'))) {
             setErrorMessage("Invalid file type. Please upload video files only.");
             if (e.target) e.target.value = null;
             return;
         }
+
+        originalFiles.forEach((file, index) => {
+            const originalName = file.name;
+            const nameWithoutExtension = originalName.substring(0, originalName.lastIndexOf('.'));
+            const extension = originalName.substring(originalName.lastIndexOf('.'));
+            
+            let processedName = nameWithoutExtension;
+            if (nameWithoutExtension.length > MAX_FILENAME_STEM_LENGTH) {
+                processedName = nameWithoutExtension.substring(0, MAX_FILENAME_STEM_LENGTH);
+            }
+            
+            const finalName = processedName + extension;
+            processedFileNamesForDisplay.push(finalName);
+            processedFiles.push(file);
+
+            // Get video duration
+            const durationPromise = new Promise((resolve) => {
+                const video = document.createElement('video');
+                const url = URL.createObjectURL(file);
+                video.src = url;
+                
+                video.onloadedmetadata = () => {
+                    URL.revokeObjectURL(url);
+                    resolve(video.duration);
+                };
+                
+                video.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    resolve(0); // Default duration if error
+                };
+                
+                // Timeout after 5 seconds
+                setTimeout(() => {
+                    URL.revokeObjectURL(url);
+                    resolve(0);
+                }, 5000);
+            });
+            
+            durationPromises.push(durationPromise);
+        });
+
+        setVideoFiles(processedFiles);
+        setSelectedVideoNames(processedFileNamesForDisplay);
         setErrorMessage('');
+        setAiDisabledReason('');
 
-        for (const originalFile of originalFiles) {
-            const originalName = originalFile.name;
-            let newFileName = originalName; // Assume original name initially
-
-            const lastDotIndex = originalName.lastIndexOf('.');
-            const hasExtension = lastDotIndex !== -1;
-            const stem = hasExtension ? originalName.substring(0, lastDotIndex) : originalName;
-            const extension = hasExtension ? originalName.substring(lastDotIndex) : ""; // e.g., ".mp4" or ""
-
-            if (stem.length > MAX_FILENAME_STEM_LENGTH) {
-                const truncatedStem = stem.substring(0, MAX_FILENAME_STEM_LENGTH);
-                newFileName = truncatedStem + extension;
-            }
-
-            if (newFileName !== originalName) {
-                // Create a new File object with the truncated name
-                try {
-                    const newFile = new File([originalFile], newFileName, {
-                        type: originalFile.type,
-                        lastModified: originalFile.lastModified,
-                    });
-                    processedFiles.push(newFile);
-                    processedFileNamesForDisplay.push(newFileName);
-                } catch (error) {
-                    console.error("Error creating new File object:", error);
-                    // Fallback to original file if new File creation fails (e.g., browser compatibility)
-                    processedFiles.push(originalFile);
-                    processedFileNamesForDisplay.push(originalName); // Or the truncated name logic for display only
-                }
+        // Wait for all durations to be calculated
+        Promise.all(durationPromises).then(durations => {
+            setVideoDurations(durations);
+            
+            // Check if any video exceeds the limit
+            const isAnyVideoTooLong = durations.some(duration => duration > MAX_VIDEO_DURATION_SECONDS);
+            if (isAnyVideoTooLong) {
+                setAiEnabled(false);
+                setAiDisabledReason('One or more videos exceed the 10-minute duration limit. AI analysis has been automatically disabled.');
             } else {
-                // If no truncation was needed, use the original file and its name
-                processedFiles.push(originalFile);
-                processedFileNamesForDisplay.push(originalName);
+                setAiEnabled(true);
+                setAiDisabledReason('');
             }
-        }
-
-        setVideoFiles(prevFiles => [...prevFiles, ...processedFiles]);
-        setSelectedVideoNames(prevNames => [...prevNames, ...processedFileNamesForDisplay]);
-        
-        if (e.target) {
-            e.target.value = null; // Reset file input
-        }
+        });
     };
 
     const removeVideo = (indexToRemove) => {
-        setVideoFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToRemove));
-        setSelectedVideoNames(prevNames => prevNames.filter((_, index) => index !== indexToRemove));
+        setVideoFiles(videoFiles.filter((_, index) => index !== indexToRemove));
+        setSelectedVideoNames(selectedVideoNames.filter((_, index) => index !== indexToRemove));
+        setVideoDurations(videoDurations.filter((_, index) => index !== indexToRemove));        
+        const remainingDurations = videoDurations.filter((_, index) => index !== indexToRemove);
+        const isAnyVideoTooLong = remainingDurations.some(duration => duration > MAX_VIDEO_DURATION_SECONDS);
+        if (isAnyVideoTooLong) {
+            setAiEnabled(false);
+            setAiDisabledReason('One or more videos exceed the 10-minute duration limit. AI analysis has been automatically disabled.');
+        } else {
+            setAiEnabled(true);
+            setAiDisabledReason('');
+        }
     };
 
     const toggleTag = (tag) => {
-        setSelectedTags(prevTags =>
-            prevTags.includes(tag)
-                ? prevTags.filter(t => t !== tag)
-                : [...prevTags, tag]
+        setSelectedTags(prev => 
+            prev.includes(tag) 
+                ? prev.filter(t => t !== tag)
+                : [...prev, tag]
         );
+    };
+    
+    // Function to delete unsaved project
+    const deleteUnsavedProject = useCallback(async () => {
+        if (!createdProjectId || !currentUser) return;
+        
+        try {
+            console.log('Deleting unsaved project:', createdProjectId);
+            
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/projects/${createdProjectId}?firebase_uid=${currentUser.uid}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            if (response.ok) {
+                console.log('Unsaved project deleted successfully');
+                setProjectCreated(false);
+                setCreatedProjectId(null);
+            } else {
+                console.error('Failed to delete unsaved project');
+            }
+        } catch (error) {
+            console.error('Error deleting unsaved project:', error);
+        }
+    }, [createdProjectId, currentUser]);
+    
+    // Cleanup effect for unsaved projects
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            // Only show warning if project was created but not yet navigated
+            if (projectCreated && createdProjectId) {
+                e.preventDefault();
+                e.returnValue = 'You have created a project but not started editing. Are you sure you want to leave?';
+                return e.returnValue;
+            }
+        };
+        
+        const handlePopState = (e) => {
+            // Only show warning if project was created but not yet navigated
+            if (projectCreated && createdProjectId) {
+                const confirmed = window.confirm('You have created a project but not started editing. Are you sure you want to leave? This will delete the project.');
+                if (confirmed) {
+                    // Delete the project before navigating away
+                    deleteUnsavedProject();
+                } else {
+                    // Prevent navigation
+                    window.history.pushState(null, '', window.location.href);
+                }
+            }
+        };
+        
+        // Add event listeners
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('popstate', handlePopState);
+        
+        // Cleanup function
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [projectCreated, createdProjectId, deleteUnsavedProject]);
+
+    // Progress tracking function
+    const updateProgress = (step, percentage, message) => {
+        setCurrentStep(step);
+        setProgressPercentage(percentage);
+        setAiProgress(message);
+        
+        // Calculate expected time based on current progress
+        if (startTime && percentage > 0) {
+            const elapsed = Date.now() - startTime;
+            const totalEstimated = (elapsed / percentage) * 100;
+            const remaining = totalEstimated - elapsed;
+            const remainingMinutes = Math.ceil(remaining / 60000);
+            setExpectedTime(`${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}`);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -119,16 +285,70 @@ const CreateProjectPage = () => {
         }
 
         setIsLoading(true);
+        setStartTime(Date.now());
+        setProgressPercentage(0);
+        setCurrentStep('Starting project creation...');
 
+        // If AI is enabled, process videos with AI first
+        let finalAiBreakdownData = aiBreakdownData;
+        if (aiEnabled && videoFiles.length > 0 && !aiBreakdownData) {
+            try {
+                setIsAiProcessing(true);
+                updateProgress('AI Analysis', 10, 'Starting AI video breakdown...');
+                
+                const projectContext = {
+                    project_name: projectName,
+                    project_description: projectDescription,
+                    tags: selectedTags,
+                };
+
+                // Custom progress callback for AI processing
+                const aiProgressCallback = (message) => {
+                    if (message.includes('Extracting audio')) {
+                        updateProgress('Audio Extraction', 20, message);
+                    } else if (message.includes('Transcribing')) {
+                        updateProgress('Transcription', 40, message);
+                    } else if (message.includes('Analyzing')) {
+                        updateProgress('AI Analysis', 60, message);
+                    } else {
+                        updateProgress('AI Processing', 50, message);
+                    }
+                };
+
+                const breakdownResults = await googleCloudApi.processVideoBreakdown(videoFiles, projectContext, aiProgressCallback);
+                finalAiBreakdownData = breakdownResults;
+                setAiBreakdownData(breakdownResults);
+                updateProgress('AI Complete', 70, 'AI video breakdown completed successfully!');
+                setAiProgress('');
+            } catch (error) {
+                console.error('AI video breakdown error:', error);
+                setErrorMessage(`AI processing failed: ${error.message}`);
+                setAiProgress('');
+                setIsLoading(false);
+                return;
+            } finally {
+                setIsAiProcessing(false);
+            }
+        }
+
+        updateProgress('Uploading Videos', 80, 'Uploading videos to cloud storage...');
         const uploadedVideoUrls = [];
         try {
-            for (const file of videoFiles) {
+            for (let i = 0; i < videoFiles.length; i++) {
+                const file = videoFiles[i];
+                updateProgress('Uploading Videos', 80 + (i * 5), `Uploading ${file.name} (${i + 1}/${videoFiles.length})...`);
+                
                 const videoFileName = `${file.name}_${uuidv4()}`;
                 const videoStoragePath = `users/${currentUser.uid}/videos/${videoFileName}`;
                 const videoStorageRef = ref(storage, videoStoragePath);
                 const snapshot = await uploadBytes(videoStorageRef, file);
                 const downloadURL = await getDownloadURL(snapshot.ref);
-                uploadedVideoUrls.push({ name: file.name, url: downloadURL, path: videoStoragePath });
+                uploadedVideoUrls.push({ 
+                    name: file.name, 
+                    url: downloadURL, 
+                    path: videoStoragePath,
+                    file: file  // Preserve the original file for regeneration
+                });
             }
         } catch (uploadError) {
             console.error("Error uploading videos to Firebase Storage:", uploadError);
@@ -138,17 +358,20 @@ const CreateProjectPage = () => {
         }
         console.log("Uploaded video URLs/paths:", uploadedVideoUrls);
 
+        updateProgress('Creating Project', 95, 'Creating project in database...');
         const projectDataForBackend = {
             name: projectName,
             description: projectDescription,
             tags: selectedTags,
             firebase_uid: currentUser.uid,
             UploadVideos: uploadedVideoUrls,
-            frame_url: uploadedVideoUrls.length > 0 ? uploadedVideoUrls[0].url : null  // Set first video as frame_url for thumbnail
+            frame_url: uploadedVideoUrls.length > 0 ? uploadedVideoUrls[0].url : null,
+            ai_breakdown_data: finalAiBreakdownData,
         };
 
         try {
             const token = currentUser.uid;
+            updateProgress('Finalizing', 98, 'Saving project to database...');
             const responseData = await createApiCall('/projects/', {
                 method: 'POST',
                 headers: {
@@ -158,22 +381,148 @@ const CreateProjectPage = () => {
                 body: JSON.stringify(projectDataForBackend),
             });
 
-            const createdProjectId = responseData.project_id; // Assuming backend returns project_id
+            const createdProjectId = responseData.project_id;
+            updateProgress('Complete', 100, 'Project created successfully! Redirecting...');
             setSuccessMessage(`Project "${projectName}" created successfully! Preparing next step...`);
             console.log('Project created in backend:', responseData);
-            navigate(`/annotate`, { 
+            
+            // Set tracking state
+            setProjectCreated(true);
+            setCreatedProjectId(createdProjectId);
+            
+            // Small delay to show completion
+            setTimeout(() => {
+                // Clear tracking state when navigating to annotation
+                setProjectCreated(false);
+                setCreatedProjectId(null);
+                
+            navigate(`/annotate/${createdProjectId}`, { 
                 state: { 
                     projectName: projectName,
-                    projectId: createdProjectId,
                     uploadedVideos: uploadedVideoUrls,
+                    aiBreakdownData: finalAiBreakdownData,
                 } 
             });
+            }, 1000);
 
         } catch (error) {
             console.error('Project creation error:', error);
             setErrorMessage(error.message || "An unexpected error occurred while creating the project.");
         } finally {
             setIsLoading(false);
+            setProgressPercentage(0);
+            setCurrentStep('');
+            setExpectedTime('');
+            setStartTime(null);
+        }
+    };
+
+    const handleSubmitWithAiData = async (e) => {
+        e.preventDefault();
+        setErrorMessage('');
+        setSuccessMessage('');
+
+        if (!currentUser) {
+            setErrorMessage("You must be logged in to create a project.");
+            return;
+        }
+        if (!projectName.trim()) {
+            setErrorMessage("Project name is required.");
+            return;
+        }
+        if (videoFiles.length === 0) {
+            setErrorMessage("Please upload at least one video for the project.");
+            return;
+        }
+
+        setIsLoading(true);
+        setStartTime(Date.now());
+        setProgressPercentage(0);
+        setCurrentStep('Starting project creation with AI data...');
+
+        updateProgress('Uploading Videos', 80, 'Uploading videos to cloud storage...');
+        const uploadedVideoUrls = [];
+        try {
+            for (let i = 0; i < videoFiles.length; i++) {
+                const file = videoFiles[i];
+                updateProgress('Uploading Videos', 80 + (i * 5), `Uploading ${file.name} (${i + 1}/${videoFiles.length})...`);
+                
+                const videoFileName = `${file.name}_${uuidv4()}`;
+                const videoStoragePath = `users/${currentUser.uid}/videos/${videoFileName}`;
+                const videoStorageRef = ref(storage, videoStoragePath);
+                const snapshot = await uploadBytes(videoStorageRef, file);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                uploadedVideoUrls.push({ 
+                    name: file.name, 
+                    url: downloadURL, 
+                    path: videoStoragePath,
+                    file: file  // Preserve the original file for regeneration
+                });
+            }
+        } catch (uploadError) {
+            console.error("Error uploading videos to Firebase Storage:", uploadError);
+            setErrorMessage(`Failed to upload videos: ${uploadError.message}`);
+            setIsLoading(false);
+            return;
+        }
+        console.log("Uploaded video URLs/paths:", uploadedVideoUrls);
+
+        updateProgress('Creating Project', 95, 'Creating project in database...');
+        const projectDataForBackend = {
+            name: projectName,
+            description: projectDescription,
+            tags: selectedTags,
+            firebase_uid: currentUser.uid,
+            UploadVideos: uploadedVideoUrls,
+            frame_url: uploadedVideoUrls.length > 0 ? uploadedVideoUrls[0].url : null,
+            ai_breakdown_data: aiBreakdownData,
+        };
+
+        try {
+            const token = currentUser.uid;
+            updateProgress('Finalizing', 98, 'Saving project to database...');
+            const responseData = await createApiCall('/projects/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(projectDataForBackend),
+            });
+
+            const createdProjectId = responseData.project_id;
+            updateProgress('Complete', 100, 'Project created successfully! Redirecting...');
+            setSuccessMessage(`Project "${projectName}" created successfully! Preparing next step...`);
+            console.log('Project created in backend:', responseData);
+            
+            // Set tracking state
+            setProjectCreated(true);
+            setCreatedProjectId(createdProjectId);
+            
+            // Small delay to show completion
+            setTimeout(() => {
+                // Clear tracking state when navigating to annotation
+                setProjectCreated(false);
+                setCreatedProjectId(null);
+                
+                navigate(`/annotate/${createdProjectId}`, { 
+                    state: { 
+                        projectName: projectName,
+                        uploadedVideos: uploadedVideoUrls,
+                        aiBreakdownData: aiBreakdownData,
+                    } 
+                });
+            }, 1000);
+
+        } catch (error) {
+            console.error('Project creation error:', error);
+            setErrorMessage(error.message || "An unexpected error occurred while creating the project.");
+        } finally {
+            setIsLoading(false);
+            setProgressPercentage(0);
+            setCurrentStep('');
+            setExpectedTime('');
+            setStartTime(null);
         }
     };
 
@@ -182,22 +531,46 @@ const CreateProjectPage = () => {
             <h1 className="text-3xl font-bold text-[#F1C232] mb-8 text-center">Create New Project</h1>
 
             {isLoading && (
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minHeight: 200,
-                    gap: 16,
-                }}>
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-gray-900 p-8 rounded-lg max-w-md w-full mx-4">
+                        <div className="flex flex-col items-center space-y-4" style={{ paddingTop: '1rem' }}>
                     <AnimatedLogo size={80} />
-                    <div style={{ marginTop: 16, fontSize: 20, fontWeight: 600, color: '#D9D9D9', letterSpacing: 1 }}>
-                        Saving Project...
+                            <h3 className="text-xl font-semibold text-[#F1C232]">Creating Project</h3>
+                            
+                            {/* Progress Bar */}
+                            <div className="w-full">
+                                <div className="flex justify-between text-sm text-[#D9D9D9] mb-2">
+                                    <span>{currentStep}</span>
+                                    <span>{progressPercentage}%</span>
+                                </div>
+                                <div className="w-full bg-gray-700 rounded-full h-3">
+                                    <div 
+                                        className="bg-gradient-to-r from-[#0000FF] to-[#F1C232] h-3 rounded-full transition-all duration-300 ease-out"
+                                        style={{ width: `${progressPercentage}%` }}
+                                    ></div>
+                                </div>
+                                
+                                {/* Status Message */}
+                                {aiProgress && (
+                                    <div className="text-sm text-[#D9D9D9] mt-2 text-center">
+                                        {aiProgress}
+                                    </div>
+                                )}
+                                
+                                {/* Expected Time */}
+                                {expectedTime && (
+                                    <div className="text-xs text-[#6b7280] mt-1">
+                                        Expected time remaining: {expectedTime}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
+            
             {!isLoading && (
-            <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={aiBreakdownData ? handleSubmitWithAiData : handleSubmit} className="space-y-6">
                 <div>
                     <label htmlFor="projectName" className="block text-sm font-medium text-[#D9D9D9] mb-1">
                         Project Name <span className="text-red-500">*</span>
@@ -269,6 +642,11 @@ const CreateProjectPage = () => {
                                 {selectedVideoNames.map((name, index) => (
                                     <li key={index} className="text-sm text-[#D9D9D9] flex justify-between items-center">
                                         <span>{name}</span>
+                                        <span className="text-xs text-[#6b7280]">
+                                            ({videoDurations[index] ? 
+                                                `${Math.floor(videoDurations[index] / 60)}:${Math.floor(videoDurations[index] % 60).toString().padStart(2, '0')}` : 
+                                                'N/A'})
+                                        </span>
                                         <button
                                             type="button"
                                             onClick={() => removeVideo(index)}
@@ -279,6 +657,75 @@ const CreateProjectPage = () => {
                                     </li>
                                 ))}
                             </ul>
+                        </div>
+                    )}
+                </div>
+
+                    {/* AI Video Breakdown Section */}
+                    <div className="border-t border-gray-700 pt-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-[#F1C232]">AI Video Analysis</h3>
+                            <div className="flex items-center space-x-2">
+                                <label htmlFor="aiEnabled" className="text-sm text-[#D9D9D9]">AI Enabled</label>
+                                <input
+                                    type="checkbox"
+                                    id="aiEnabled"
+                                    checked={aiEnabled}
+                                    onChange={(e) => setAiEnabled(e.target.checked)}
+                                    disabled={aiDisabledReason !== ''}
+                                    className={`toggle ${aiDisabledReason !== '' ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+                                />
+                            </div>
+                        </div>
+                        
+                        {/* AI Duration Disclaimer */}
+                        <div className="bg-blue-900/20 border border-blue-700 p-3 rounded-lg mb-4">
+                            <p className="text-sm text-[#D9D9D9]">
+                                <span className="text-blue-400 font-semibold">Note:</span> AI analysis is limited to videos under 10 minutes in duration. 
+                                Videos exceeding this limit will automatically disable AI analysis.
+                            </p>
+                        </div>
+                        
+                        {aiDisabledReason && (
+                            <div className="bg-red-900/20 border border-red-700 p-3 rounded-lg mb-4">
+                                <div className="flex items-center space-x-2">
+                                    <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                    <span className="text-red-400 font-semibold">{aiDisabledReason}</span>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {isAiProcessing && (
+                            <div className="bg-gray-800 p-4 rounded-lg">
+                                <div className="flex items-center space-x-3">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#F1C232]"></div>
+                                    <span className="text-[#D9D9D9]">{aiProgress}</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {aiBreakdownData && (
+                            <div className="bg-green-900/20 border border-green-700 p-4 rounded-lg">
+                                <h4 className="text-green-400 font-semibold mb-2">AI Analysis Results</h4>
+                                <div className="space-y-2 text-sm text-[#D9D9D9]">
+                                    {aiBreakdownData.map((result, index) => (
+                                        <div key={index} className="border-l-2 border-green-500 pl-3">
+                                            <p className="font-medium">{result.videoName}</p>
+                                            <p>Steps detected: {result.steps?.length || 0}</p>
+                                            <p>Materials found: {result.materials?.length || 0}</p>
+                                            <p>Tools identified: {result.tools?.length || 0}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setAiBreakdownData(null)}
+                                    className="mt-3 text-sm text-red-400 hover:text-red-300"
+                                >
+                                    Clear AI Analysis
+                                </button>
                         </div>
                     )}
                 </div>
@@ -294,14 +741,33 @@ const CreateProjectPage = () => {
                     </div>
                 )}
 
+                <div className="flex gap-3">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (projectCreated && createdProjectId) {
+                                const confirmed = window.confirm('You have created a project. Are you sure you want to cancel? This will delete the project.');
+                                if (confirmed) {
+                                    deleteUnsavedProject();
+                                    navigate('/videos');
+                                }
+                            } else {
+                                navigate('/videos');
+                            }
+                        }}
+                        className="flex-1 px-6 py-3 text-[#D9D9D9] font-semibold rounded-lg border border-gray-600 hover:bg-gray-800 transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
+                    >
+                        Cancel
+                    </button>
                 <button
                     type="submit"
                     disabled={isLoading}
-                    className={`w-full px-6 py-3 text-black font-semibold rounded-lg transition duration-150 ease-in-out
+                        className={`flex-1 px-6 py-3 text-black font-semibold rounded-lg transition duration-150 ease-in-out
                                 ${isLoading ? 'bg-[#222222] cursor-not-allowed text-[#D9D9D9]' : 'bg-[#F1C232] hover:bg-[#0000FF] hover:text-[#D9D9D9] focus:outline-none focus:ring-2 focus:ring-[#F1C232] focus:ring-opacity-50'}`}
                 >
-                    {isLoading ? 'Saving Project...' : 'Save and Continue to Annotate'}
+                        {isLoading ? 'Saving Project...' : aiBreakdownData ? 'Save with AI Data & Continue' : 'Save and Continue to Annotate'}
                 </button>
+                </div>
             </form>
             )}
         </div>

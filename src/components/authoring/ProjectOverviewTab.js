@@ -730,11 +730,11 @@ const ProjectOverviewTab = ({
                                 <div style={overviewStyles.detailCard}>
                                     <div style={overviewStyles.detailHeader}>
                                         <span style={overviewStyles.detailTitle}>Files</span>
-                                        <span style={overviewStyles.detailCount}>{step.supplementary_files.length}</span>
+                                        <span style={overviewStyles.detailCount}>{step.supplementary_files?.length || 0}</span>
                                     </div>
                                     <div style={overviewStyles.detailContent}>
                                         <ul style={overviewStyles.detailList}>
-                                            {step.supplementary_files.map((file, fileIndex) => {
+                                            {(step.supplementary_files || []).map((file, fileIndex) => {
                                                 const fileUrl = file.file?.file_url || file.file_url;
                                                 const fileName = file.display_name || file.displayName || 'File';
                                                 const isImage = fileUrl && /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(fileUrl);
@@ -743,7 +743,7 @@ const ProjectOverviewTab = ({
                                                         key={file.id || `file-${fileIndex}`}
                                                         style={{
                                                             ...overviewStyles.detailItem,
-                                                            ...(fileIndex === step.supplementary_files.length - 1 ? overviewStyles.detailItemLast : {})
+                                                            ...(fileIndex === (step.supplementary_files || []).length - 1 ? overviewStyles.detailItemLast : {})
                                                         }}
                                                     >
                                                         {isImage && fileUrl ? (

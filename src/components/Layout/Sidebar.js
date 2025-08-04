@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/authContext';
 import { doSignOut } from '../../firebase/auth';
-import { AiOutlineMenu, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineEye, AiOutlineArrowLeft, AiOutlineCheck, AiOutlineUser, AiOutlineDatabase, AiOutlineFolder, AiOutlineBarChart, AiOutlineSend } from 'react-icons/ai';
+import { AiOutlineMenu, AiOutlineLogout, AiFillTool, AiOutlineVideoCamera as AiOutlineVideo, AiOutlineEye, AiOutlineArrowLeft, AiOutlineCheck, AiOutlineUser, AiOutlineDatabase, AiOutlineFolder, AiOutlineBarChart, AiOutlineSend, AiOutlineRobot, AiOutlineWarning } from 'react-icons/ai';
 import logo from '../../assets/trvise_logo.png';
 import { getApiUrl } from '../pages/createsteps helpers/CreateStepsUtils';
 
@@ -14,6 +14,8 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
     const [isAnimating, setIsAnimating] = useState(false);
     const [profileData, setProfileData] = useState(null);
     const [, forceUpdate] = useState(0);
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+    const [confirmDialogData, setConfirmDialogData] = useState({ message: '', action: '', onConfirm: null });
 
     // Add CSS animation for gradient
     useEffect(() => {
@@ -81,6 +83,80 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
         return () => window.removeEventListener('stepIndexChanged', handler);
     }, []);
 
+    // Listen for global activeTab changes from CreateSteps component
+    useEffect(() => {
+        const handleGlobalActiveTabChange = () => {
+            if (window.globalActiveTab && window.globalActiveTab !== activeTab) {
+                setActiveTab(window.globalActiveTab);
+            }
+        };
+
+        // Check for global activeTab changes periodically
+        const interval = setInterval(handleGlobalActiveTabChange, 100);
+        
+        return () => clearInterval(interval);
+    }, [activeTab]);
+
+    // Helper function to check for unsaved changes
+    const checkUnsavedChanges = (action, onConfirm) => {
+        if (isCreateStepsPage) {
+            const hasCurrentStepData = window.currentStepName || window.currentStepDescription || 
+                                     window.currentStepStartTime !== null || window.currentStepEndTime !== null;
+            
+            const isEditingStep = window.currentStepIndex !== undefined && window.currentStepIndex >= 0;
+            const hasUnsavedChanges = isEditingStep && hasCurrentStepData;
+            
+            const hasNoSteps = !window.projectSteps || window.projectSteps.length === 0;
+            
+            const isCreatingNewStep = window.currentStepIndex === -1 && hasCurrentStepData;
+            
+            const hasUnfinalizedAiSteps = window.projectSteps && window.projectSteps.some(step => 
+                step.is_ai_generated && !step.is_finalized
+            );
+            
+            const hasAnyUnsavedChanges = hasUnsavedChanges || isCreatingNewStep || hasNoSteps || hasUnfinalizedAiSteps;
+            
+            // Debug logging
+            console.log('Unsaved changes check:', {
+                isCreateStepsPage,
+                isEditingStep,
+                hasCurrentStepData,
+                hasUnsavedChanges,
+                isCreatingNewStep,
+                hasNoSteps,
+                hasUnfinalizedAiSteps,
+                hasAnyUnsavedChanges,
+                currentStepIndex: window.currentStepIndex,
+                currentStepName: window.currentStepName,
+                currentStepDescription: window.currentStepDescription,
+                currentStepStartTime: window.currentStepStartTime,
+                currentStepEndTime: window.currentStepEndTime,
+                projectStepsLength: window.projectSteps ? window.projectSteps.length : 0,
+                aiStepsCount: window.projectSteps ? window.projectSteps.filter(step => step.is_ai_generated).length : 0,
+                unfinalizedAiStepsCount: window.projectSteps ? window.projectSteps.filter(step => step.is_ai_generated && !step.is_finalized).length : 0
+            });
+            
+            if (hasAnyUnsavedChanges) {
+                let message = `You have unsaved changes. Are you sure you want to ${action}? Your changes will not be saved.`;
+                
+                // Provide more specific messaging for AI-generated steps
+                if (hasUnfinalizedAiSteps) {
+                    const unfinalizedCount = window.projectSteps.filter(step => step.is_ai_generated && !step.is_finalized).length;
+                    message = `You have ${unfinalizedCount} AI-generated step${unfinalizedCount > 1 ? 's' : ''} that haven't been finalized yet. Are you sure you want to ${action}? Your AI-generated steps will not be saved.`;
+                }
+                
+                setConfirmDialogData({
+                    message: message,
+                    action: action,
+                    onConfirm: onConfirm
+                });
+                setShowConfirmDialog(true);
+                return false; // Don't proceed immediately
+            }
+        }
+        return true; // No unsaved changes or not on CreateSteps page
+    };
+
     const handleTabClick = (tabName) => {
         setActiveTab(tabName);
         if (window.setActiveTab) {
@@ -93,7 +169,8 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
     const sidebarWidth = isChrome ? (isCollapsed ? 'w-12' : 'w-48') : (isCollapsed ? 'w-16' : 'w-64');
     
     return (
-        <div className={`h-screen bg-black text-[#D9D9D9] fixed top-0 transition-all duration-300 z-50 ${sidebarWidth}`}>
+        <React.Fragment>
+            <div className={`h-screen bg-black text-[#D9D9D9] fixed top-0 transition-all duration-300 z-50 ${sidebarWidth}`}>
             <div className="flex flex-col h-full relative">
                 {/* Toggle Button */}
                 <div className={`flex items-center justify-between ${isChrome ? 'h-16' : 'h-20'} border-b border-gray-800 ${isChrome ? 'px-3' : 'px-5'}`}>
@@ -107,7 +184,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                             <h1 className={`${isChrome ? 'text-xl' : 'text-2xl'} font-semibold whitespace-nowrap`} style={{
                                 // Chrome-specific fix: use plain white text instead of gradient
                                 color: isAnimating ? '#ffffff' : '#ffffff',
-                                background: isAnimating 
+                                backgroundImage: isAnimating 
                                     ? 'linear-gradient(45deg, #0000FF 0%, #F1C232 40%, #0000FF 80%, #F1C232 90%, #0000FF 100%)'
                                     : 'linear-gradient(45deg, #0000FF 0%, #F1C232 100%)',
                                 backgroundSize: isAnimating ? '200% 200%' : '100% 100%',
@@ -119,7 +196,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                                 ...(navigator.userAgent.includes('Chrome') && {
                                     color: '#ffffff',
                                     WebkitTextFillColor: 'initial',
-                                    background: 'none'
+                                    backgroundImage: 'none'
                                 })
                             }}>
                                 Blueprint
@@ -261,6 +338,28 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                                                     </span>
                                                 )}
                                             </button>
+                                            
+                                            {/* Regenerate Step Button - Show for all steps */}
+                                            {window.currentStepIndex !== undefined && window.currentStepIndex >= 0 && window.projectSteps && window.projectSteps[window.currentStepIndex] && (
+                                                <button
+                                                    onClick={() => {
+                                                        if (window.handleRegenerateStep) {
+                                                            window.handleRegenerateStep(window.currentStepIndex);
+                                                        }
+                                                    }}
+                                                    className={
+                                                        `w-full flex items-center justify-center ${isCollapsed ? 'py-2 px-2' : 'py-3 px-4'} text-base font-medium transition-all duration-200 rounded-lg bg-[#3B82F6] text-white hover:bg-[#2563EB] hover:scale-105 mt-2`
+                                                    }
+                                                    title={isCollapsed ? (window.isStepLoading ? 'Regenerating...' : 'Regenerate Step with AI') : ''}
+                                                >
+                                                    <AiOutlineRobot size={isCollapsed ? 16 : 18} />
+                                                    {!isCollapsed && (
+                                                        <span className="ml-2">
+                                                            {window.isStepLoading ? 'Regenerating...' : 'Regenerate Step'}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -290,7 +389,11 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                 <div className="border-t border-gray-700">
                     {isCreateStepsPage && (
                         <button 
-                            onClick={() => navigate('/')} 
+                            onClick={() => {
+                                if (checkUnsavedChanges('leave', () => navigate('/'))) {
+                                    navigate('/');
+                                }
+                            }} 
                             className={`w-full flex items-center justify-center ${isCollapsed ? 'py-3 px-2' : 'py-4 px-5'} text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors`}
                             title={isCollapsed ? "Back to Home" : ""}
                         >
@@ -318,9 +421,15 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                             </Link>
                             <button
                                 onClick={() => {
-                                    doSignOut().then(() => {
-                                        navigate('/login');
-                                    });
+                                    if (checkUnsavedChanges('logout', () => {
+                                        doSignOut().then(() => {
+                                            navigate('/login');
+                                        });
+                                    })) {
+                                        doSignOut().then(() => {
+                                            navigate('/login');
+                                        });
+                                    }
                                 }}
                                 className={`w-full flex items-center justify-center ${isCollapsed ? 'py-3 px-2' : 'py-4 px-5'} text-base font-medium text-red-400 hover:bg-gray-700 hover:text-red-300 transition-colors`}
                                 title={isCollapsed ? "Logout" : ""}
@@ -340,6 +449,46 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                 )}
             </div>
         </div>
+
+        {/* Custom Confirmation Dialog */}
+        {showConfirmDialog && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+                <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+                    {/* Header */}
+                    <div className="flex items-center mb-4">
+                        <AiOutlineWarning className="text-yellow-400 mr-3" size={24} />
+                        <h3 className="text-lg font-semibold text-white">Unsaved Changes</h3>
+                    </div>
+                    
+                    {/* Message */}
+                    <p className="text-gray-300 mb-6">
+                        {confirmDialogData.message}
+                    </p>
+                    
+                    {/* Buttons */}
+                    <div className="flex gap-3 justify-end">
+                        <button
+                            onClick={() => setShowConfirmDialog(false)}
+                            className="px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-md transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={() => {
+                                setShowConfirmDialog(false);
+                                if (confirmDialogData.onConfirm) {
+                                    confirmDialogData.onConfirm();
+                                }
+                            }}
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors font-medium"
+                        >
+                            Continue
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+    </React.Fragment>
     );
 };
 

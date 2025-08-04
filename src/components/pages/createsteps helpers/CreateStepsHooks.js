@@ -1,6 +1,6 @@
 // CreateStepsHooks.js - Custom hooks and state management for CreateSteps component
 import { useState, useEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../../contexts/authContext';
 import { storage } from '../../../firebase/firebase';
 import { ref as storageRef, getDownloadURL } from 'firebase/storage';
@@ -9,9 +9,10 @@ import { reconstructCapturedAnnotationFrames, getApiUrl } from './CreateStepsUti
 export const useCreateStepsState = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const params = useParams();
     const { currentUser } = useAuth();
     
-    const projectId = location.state?.projectId;
+    const projectId = params.projectId || location.state?.projectId;
     
     // Tab and UI state
     const [activeTab, setActiveTab] = useState('details');
@@ -340,6 +341,7 @@ export const useCreateStepsEffects = (state) => {
         videoRef,
         setVideoDimensions,
         setActiveTab,
+        activeTab,
         activeVideoUrl
     } = state;
 
@@ -350,6 +352,14 @@ export const useCreateStepsEffects = (state) => {
             delete window.setActiveTab;
         };
     }, [setActiveTab]);
+
+    // Expose activeTab globally for sidebar synchronization
+    useEffect(() => {
+        window.globalActiveTab = activeTab;
+        return () => {
+            delete window.globalActiveTab;
+        };
+    }, [activeTab]);
 
     // Handle screen resize
     useEffect(() => {
@@ -365,9 +375,17 @@ export const useCreateStepsEffects = (state) => {
             return;
         }
 
+        // Validate projectId format (should be a valid UUID)
+        if (projectId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId)) {
+            setErrorMessage('Invalid project ID format.');
+            navigate('/my-projects');
+            return;
+        }
+
         const fetchProjectData = async () => {
             try {
-                const response = await fetch(`${getApiUrl()}/projects/${projectId}`, {
+                // Add authorization check - only allow access to own projects
+                const response = await fetch(`${getApiUrl()}/projects/${projectId}?firebase_uid=${currentUser.uid}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -375,10 +393,21 @@ export const useCreateStepsEffects = (state) => {
                 });
 
                 if (!response.ok) {
-                    throw new Error('Failed to fetch project data');
+                    if (response.status === 403) {
+                        setErrorMessage('Access denied. You can only edit your own projects.');
+                        navigate('/my-projects');
+                        return;
+                    } else if (response.status === 404) {
+                        setErrorMessage('Project not found.');
+                        navigate('/my-projects');
+                        return;
+                    } else {
+                        throw new Error('Failed to fetch project data');
+                    }
                 }
 
                 const projectData = await response.json();
+                console.log('Project data received:', projectData);
                 
                 setProjectName(projectData.name || `Project ${projectId}`);
                 
@@ -391,7 +420,7 @@ export const useCreateStepsEffects = (state) => {
                 const savedBuyListState = localStorage.getItem(`buyListState_${projectId}`);
                 
                 // Now fetch the project's primary video files
-                const stepsResponse = await fetch(`${getApiUrl()}/projects/${projectId}/steps`, {
+                const stepsResponse = await fetch(`${getApiUrl()}/projects/${projectId}/steps?firebase_uid=${currentUser.uid}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -405,6 +434,73 @@ export const useCreateStepsEffects = (state) => {
                     
                     // Check if this is an existing project (has steps) or a new project
                     const isExistingProject = stepsData && stepsData.length > 0;
+                    
+                    // If this is a new project (no steps yet), try to get videos from location.state
+                    if (!isExistingProject && location.state?.uploadedVideos) {
+                        console.log('New project detected, using videos from location.state:', location.state.uploadedVideos);
+                        videosFromAPI = location.state.uploadedVideos;
+                        setUploadedVideos(videosFromAPI);
+                    } else if (!isExistingProject) {
+                        // If no location.state videos, try to fetch from project data
+                        console.log('No location.state videos, trying to fetch from project data...');
+                        console.log('Project ID:', projectId);
+                        console.log('Location state:', location.state);
+                        
+                        try {
+                            const projectFilesResponse = await fetch(`${getApiUrl()}/projects/${projectId}/files?firebase_uid=${currentUser.uid}`, {
+                                method: 'GET',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                            });
+                            
+                            console.log('Project files response status:', projectFilesResponse.status);
+                            
+                            if (projectFilesResponse.ok) {
+                                const projectFiles = await projectFilesResponse.json();
+                                console.log('Project files response:', projectFiles);
+                                
+                                const videoFiles = projectFiles.filter(file => file.role === 'PRIMARY_VIDEO');
+                                console.log('Video files found:', videoFiles);
+                                
+                                for (const videoFile of videoFiles) {
+                                    try {
+                                        const fileRef = storageRef(storage, videoFile.file_key);
+                                        const downloadURL = await getDownloadURL(fileRef);
+                                        
+                                        videosFromAPI.push({
+                                            name: videoFile.original_filename,
+                                            url: downloadURL,
+                                            path: videoFile.file_key
+                                        });
+                                    } catch (error) {
+                                        console.error('Error getting download URL for video file:', error);
+                                        // Use file_url as fallback if available
+                                        if (videoFile.file_url) {
+                                            videosFromAPI.push({
+                                                name: videoFile.original_filename,
+                                                url: videoFile.file_url,
+                                                path: videoFile.file_key
+                                            });
+                                        }
+                                    }
+                                }
+                                
+                                if (videosFromAPI.length > 0) {
+                                    console.log('Found videos from project files:', videosFromAPI);
+                                    setUploadedVideos(videosFromAPI);
+                                } else {
+                                    console.log('No videos found in project files');
+                                }
+                            } else {
+                                console.error('Project files response not ok:', projectFilesResponse.status, projectFilesResponse.statusText);
+                                const errorText = await projectFilesResponse.text();
+                                console.error('Error response:', errorText);
+                            }
+                        } catch (error) {
+                            console.error('Error fetching project files:', error);
+                        }
+                    }
                     
                     if (savedBuyListState) {
                         // If there's a saved state, use it (handles both cleared and modified states)
@@ -423,7 +519,7 @@ export const useCreateStepsEffects = (state) => {
                     } else if (isExistingProject) {
                         // For existing projects without saved state, load from database
                         try {
-                            const buyListResponse = await fetch(`${getApiUrl()}/projects/${projectId}/buy_list`, {
+                            const buyListResponse = await fetch(`${getApiUrl()}/projects/${projectId}/buy_list?firebase_uid=${currentUser.uid}`, {
                                 method: 'GET',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -503,14 +599,73 @@ export const useCreateStepsEffects = (state) => {
                         }
                     }
                     
-                    videosFromAPI = Array.from(videoFilesMap.values());
-                    setUploadedVideos(videosFromAPI);
+                    // If we have videos from steps, use them
+                    if (videoFilesMap.size > 0) {
+                        videosFromAPI = Array.from(videoFilesMap.values());
+                        setUploadedVideos(videosFromAPI);
+                    } else if (isExistingProject) {
+                        // If no videos from steps but project exists, try to fetch from project files
+                        try {
+                            const projectFilesResponse = await fetch(`${getApiUrl()}/projects/${projectId}/files?firebase_uid=${currentUser.uid}`, {
+                                method: 'GET',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                            });
+                            
+                            if (projectFilesResponse.ok) {
+                                const projectFiles = await projectFilesResponse.json();
+                                const videoFiles = projectFiles.filter(file => file.role === 'PRIMARY_VIDEO');
+                                
+                                for (const videoFile of videoFiles) {
+                                    try {
+                                        const fileRef = storageRef(storage, videoFile.file_key);
+                                        const downloadURL = await getDownloadURL(fileRef);
+                                        
+                                        videosFromAPI.push({
+                                            name: videoFile.original_filename,
+                                            url: downloadURL,
+                                            path: videoFile.file_key
+                                        });
+                                    } catch (error) {
+                                        console.error('Error getting download URL for video file:', error);
+                                        // Use file_url as fallback if available
+                                        if (videoFile.file_url) {
+                                            videosFromAPI.push({
+                                                name: videoFile.original_filename,
+                                                url: videoFile.file_url,
+                                                path: videoFile.file_key
+                                            });
+                                        }
+                                    }
+                                }
+                                
+                                setUploadedVideos(videosFromAPI);
+                            }
+                        } catch (error) {
+                            console.error('Error fetching project files:', error);
+                        }
+                    }
                     
                     // Also load the existing steps for editing
                     if (stepsData.length > 0) {
                         
                         // Transform the steps data to match frontend expectations
-                        const transformedSteps = stepsData.map(step => ({
+                        const transformedSteps = stepsData.map(step => {
+                            // Transform validation data from backend format to frontend format
+                            const transformedValidationMetric = step.validation_metric ? {
+                                question: step.validation_metric.validation_data?.question || step.validation_metric.question || '',
+                                expected_answer: step.validation_metric.validation_data?.expected_answer || step.validation_metric.expected_answer || ''
+                            } : null;
+                            
+                            // Debug logging for validation data transformation
+                            console.log('Transforming step validation data:', {
+                                stepName: step.name,
+                                originalValidationMetric: step.validation_metric,
+                                transformedValidationMetric: transformedValidationMetric
+                            });
+                            
+                            return {
                             ...step,
                             // Transform tools from nested format to flat format for frontend
                             tools: step.tools?.map(toolData => ({
@@ -533,8 +688,11 @@ export const useCreateStepsEffects = (state) => {
                                 image_url: materialData.material?.image_file?.file_url || materialData.image_url,
                                 image_path: materialData.material?.image_file?.file_key || materialData.image_path,
                                 hasExistingImage: !!(materialData.material?.image_file?.file_url || materialData.image_url)
-                            })) || []
-                        }));
+                                })) || [],
+                                // Use the transformed validation metric
+                                validation_metric: transformedValidationMetric
+                            };
+                        });
                         
                         setProjectSteps(transformedSteps);
                         
@@ -553,17 +711,66 @@ export const useCreateStepsEffects = (state) => {
                     }
                 } else {
                     // Fallback: create a placeholder if we can't get video files
-                    console.warn('Could not fetch steps data, using placeholder');
-                    setUploadedVideos([]);
+                    console.warn('Could not fetch steps data, trying alternative video detection...');
+                    
+                    // Try to get videos from project files even if steps failed
+                    try {
+                        const projectFilesResponse = await fetch(`${getApiUrl()}/projects/${projectId}/files`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                        });
+                        
+                        console.log('Fallback project files response status:', projectFilesResponse.status);
+                        
+                        if (projectFilesResponse.ok) {
+                            const projectFiles = await projectFilesResponse.json();
+                            console.log('Fallback project files response:', projectFiles);
+                            
+                            const videoFiles = projectFiles.filter(file => file.role === 'PRIMARY_VIDEO');
+                            console.log('Fallback video files found:', videoFiles);
+                            
+                            for (const videoFile of videoFiles) {
+                                try {
+                                    const fileRef = storageRef(storage, videoFile.file_key);
+                                    const downloadURL = await getDownloadURL(fileRef);
+                                    
+                                    videosFromAPI.push({
+                                        name: videoFile.original_filename,
+                                        url: downloadURL,
+                                        path: videoFile.file_key
+                                    });
+                                } catch (error) {
+                                    console.error('Error getting download URL for video file:', error);
+                                    // Use file_url as fallback if available
+                                    if (videoFile.file_url) {
+                                        videosFromAPI.push({
+                                            name: videoFile.original_filename,
+                                            url: videoFile.file_url,
+                                            path: videoFile.file_key
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error in fallback video detection:', error);
+                    }
                     
                     // Initialize buy list as empty
                     setProjectBuyList([]);
                 }
                 
+                // Set videos and check if we have any
+                setUploadedVideos(videosFromAPI);
+                
                 if (videosFromAPI.length > 0 && videosFromAPI[0].url) {
                     setActiveVideoUrl(videosFromAPI[0].url);
                     setActiveVideoIndex(0);
+                    console.log('✅ Videos loaded successfully:', videosFromAPI);
                 } else {
+                    console.error('❌ No videos found. videosFromAPI:', videosFromAPI);
                     setErrorMessage("No videos found for this project. Video files may need to be re-uploaded.");
                 }
                 
@@ -587,6 +794,63 @@ export const useCreateStepsEffects = (state) => {
             } else if (videosFromState.length > 0) {
                  console.warn("First video from state is missing a URL:", videosFromState[0]);
                  setErrorMessage("A primary video URL is missing. Please re-upload.");
+            }
+            
+            // Handle AI breakdown data if available
+            if (location.state.aiBreakdownData && location.state.aiBreakdownData.length > 0) {
+                console.log('🎯 Processing AI breakdown data:', location.state.aiBreakdownData);
+                
+                // Process AI breakdown data to create steps
+                const aiSteps = [];
+                let stepIndex = 0;
+                
+                location.state.aiBreakdownData.forEach((breakdown, breakdownIndex) => {
+                    if (breakdown.steps && breakdown.steps.length > 0) {
+                        breakdown.steps.forEach((aiStep, stepIndexInBreakdown) => {
+                            // Use the timestamps provided by the backend if available
+                            const startTimeMs = aiStep.video_start_time_ms || 0;
+                            const endTimeMs = aiStep.video_end_time_ms || 0;
+                            
+                            const newStep = {
+                                id: `ai-step-${stepIndex}`,
+                                name: aiStep.name || `Step ${stepIndex + 1}`,
+                                description: aiStep.description || '',
+                                estimated_duration: aiStep.estimated_duration || 30,
+                                difficulty_level: aiStep.difficulty_level || 'Beginner',
+                                materials: [], // Remove AI-generated materials
+                                tools: [], // Remove AI-generated tools
+                                cautions: breakdown.cautions || [],
+                                questions: breakdown.questions || [],
+                                video_index: breakdownIndex,
+                                // Use backend-provided timestamps
+                                video_start_time_ms: startTimeMs,
+                                video_end_time_ms: endTimeMs,
+                                // Use backend-provided timestamp data
+                                timestamps: aiStep.timestamps || {
+                                    start: aiStep.timestamps?.start || "00:00.000",
+                                    end: aiStep.timestamps?.end || "00:00.000",
+                                    start_seconds: startTimeMs / 1000,
+                                    end_seconds: endTimeMs / 1000,
+                                    duration_seconds: (endTimeMs - startTimeMs) / 1000
+                                },
+                                timestamp_display: aiStep.timestamp_display || "00:00.000 - 00:00.000",
+                                thumbnail_url: null,
+                                annotation_frames: [],
+                                is_ai_generated: true, // Flag to identify AI-generated steps
+                                step_order: stepIndex + 1, // Add step_order based on timestamp order
+                            };
+                            aiSteps.push(newStep);
+                            stepIndex++;
+                        });
+                    }
+                });
+                
+                if (aiSteps.length > 0) {
+                    console.log(`✅ Auto-populated ${aiSteps.length} steps from AI analysis`);
+                    setProjectSteps(aiSteps);
+                    setSuccessMessage(`AI analysis completed! ${aiSteps.length} steps have been auto-populated. You can now review and edit them.`);
+                    setTimeout(() => setSuccessMessage(''), 5000);
+                }
             }
         } else if (projectId) {
             // If no navigation state or no videos, fetch from API

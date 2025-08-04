@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/authContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { isImageUrl, isVideoUrl, formatDate, createApiCall } from './createsteps helpers/CreateStepsUtils';
 import { LazyImage, VideoThumbnail, AnimatedLogo } from './createsteps helpers/CommonComponents';
+import { AiOutlineCheckCircle, AiOutlineWarning } from 'react-icons/ai';
 
 const responsiveGridCSS = `
 .projects-grid {
@@ -371,6 +372,8 @@ const MyProjects = () => {
     const [error, setError] = useState('');
     const [deleteLoading, setDeleteLoading] = useState(null);
     const [toggleLoading, setToggleLoading] = useState(null);
+    const [showNotification, setShowNotification] = useState(false);
+    const [notificationData, setNotificationData] = useState({ message: '', type: 'success' });
 
     const fetchMyProjects = useCallback(async () => {
         if (!currentUser) {
@@ -383,8 +386,60 @@ const MyProjects = () => {
             setError('');
             const data = await createApiCall(`/users/${currentUser.uid}/projects`);
             
-            setPublishedProjects(data.published || []);
-            setDraftProjects(data.unpublished || []);
+            // Check for projects with 0 steps and automatically delete them
+            const allProjects = [...(data.published || []), ...(data.unpublished || [])];
+            const projectsToDelete = [];
+            
+            for (const project of allProjects) {
+                try {
+                    // Check if project has steps
+                    const stepsResponse = await createApiCall(`/projects/${project.project_id}/steps`);
+                    const steps = stepsResponse || [];
+                    
+                    if (steps.length === 0) {
+                        console.log(`Auto-deleting project ${project.project_id} (${project.name}) - no steps found`);
+                        projectsToDelete.push(project.project_id);
+                    }
+                } catch (error) {
+                    console.error(`Error checking steps for project ${project.project_id}:`, error);
+                    // If we can't check steps, assume it has no steps and delete it
+                    projectsToDelete.push(project.project_id);
+                }
+            }
+            
+            // Delete projects with 0 steps
+            for (const projectId of projectsToDelete) {
+                try {
+                    await createApiCall(`/projects/${projectId}?firebase_uid=${currentUser.uid}`, {
+                        method: 'DELETE',
+                    });
+                    console.log(`Successfully auto-deleted project ${projectId}`);
+                } catch (error) {
+                    console.error(`Error auto-deleting project ${projectId}:`, error);
+                }
+            }
+            
+            // If any projects were deleted, fetch the updated list
+            if (projectsToDelete.length > 0) {
+                console.log(`Auto-deleted ${projectsToDelete.length} projects with 0 steps`);
+                const updatedData = await createApiCall(`/users/${currentUser.uid}/projects`);
+                setPublishedProjects(updatedData.published || []);
+                setDraftProjects(updatedData.unpublished || []);
+                
+                // Show a subtle notification that projects were cleaned up
+                setTimeout(() => {
+                    setNotificationData({
+                        message: `Cleaned up ${projectsToDelete.length} incomplete project${projectsToDelete.length !== 1 ? 's' : ''} with no steps.`,
+                        type: 'success'
+                    });
+                    setShowNotification(true);
+                    // Auto-hide after 5 seconds
+                    setTimeout(() => setShowNotification(false), 5000);
+                }, 500);
+            } else {
+                setPublishedProjects(data.published || []);
+                setDraftProjects(data.unpublished || []);
+            }
         } catch (err) {
             console.error('Error fetching projects:', err);
             setError('Failed to load projects');
@@ -461,7 +516,7 @@ const MyProjects = () => {
     };
 
     const handleEditProject = (projectId) => {
-        navigate(`/annotate`, { state: { projectId } });
+        navigate(`/annotate/${projectId}`);
     };
 
     const handleGenerateThumbnail = async (projectId) => {
@@ -580,7 +635,8 @@ const MyProjects = () => {
     const projectsToDisplay = activeTab === 'published' ? publishedProjects : draftProjects;
 
     return (
-        <div style={styles.container}>
+        <React.Fragment>
+            <div style={styles.container}>
             <style>{responsiveGridCSS}</style>
             <div style={styles.header}>
                 <h1 style={styles.title}>My Projects</h1>
@@ -646,7 +702,63 @@ const MyProjects = () => {
                     ))}
                 </div>
             )}
+
+            {/* Custom Notification */}
+            {showNotification && (
+                <div style={{
+                    position: 'fixed',
+                    top: '20px',
+                    right: '20px',
+                    backgroundColor: notificationData.type === 'success' ? '#10B981' : '#F59E0B',
+                    color: 'white',
+                    padding: '1rem 1.5rem',
+                    borderRadius: '0.5rem',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                    zIndex: 9999,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    minWidth: '300px',
+                    maxWidth: '400px',
+                    animation: 'slideInRight 0.3s ease-out'
+                }}>
+                    {notificationData.type === 'success' ? (
+                        <AiOutlineCheckCircle size={20} />
+                    ) : (
+                        <AiOutlineWarning size={20} />
+                    )}
+                    <span style={{ flex: 1 }}>{notificationData.message}</span>
+                    <button
+                        onClick={() => setShowNotification(false)}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'white',
+                            cursor: 'pointer',
+                            fontSize: '1.2rem',
+                            padding: '0',
+                            marginLeft: '0.5rem'
+                        }}
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
         </div>
+
+        <style>{`
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `}</style>
+    </React.Fragment>
     );
 };
 
