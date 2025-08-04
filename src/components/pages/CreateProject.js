@@ -533,7 +533,7 @@ const CreateProjectPage = () => {
             {isLoading && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-gray-900 p-8 rounded-lg max-w-md w-full mx-4">
-                        <div className="flex flex-col items-center space-y-4">
+                        <div className="flex flex-col items-center space-y-4" style={{ paddingTop: '1rem' }}>
                     <AnimatedLogo size={80} />
                             <h3 className="text-xl font-semibold text-[#F1C232]">Creating Project</h3>
                             

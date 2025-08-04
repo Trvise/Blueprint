@@ -110,8 +110,11 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
             
             const isCreatingNewStep = window.currentStepIndex === -1 && hasCurrentStepData;
             
-            // Check for any unsaved changes: editing existing step, creating new step, or incomplete project
-            const hasAnyUnsavedChanges = hasUnsavedChanges || isCreatingNewStep || hasNoSteps;
+            const hasUnfinalizedAiSteps = window.projectSteps && window.projectSteps.some(step => 
+                step.is_ai_generated && !step.is_finalized
+            );
+            
+            const hasAnyUnsavedChanges = hasUnsavedChanges || isCreatingNewStep || hasNoSteps || hasUnfinalizedAiSteps;
             
             // Debug logging
             console.log('Unsaved changes check:', {
@@ -121,18 +124,29 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                 hasUnsavedChanges,
                 isCreatingNewStep,
                 hasNoSteps,
+                hasUnfinalizedAiSteps,
                 hasAnyUnsavedChanges,
                 currentStepIndex: window.currentStepIndex,
                 currentStepName: window.currentStepName,
                 currentStepDescription: window.currentStepDescription,
                 currentStepStartTime: window.currentStepStartTime,
                 currentStepEndTime: window.currentStepEndTime,
-                projectStepsLength: window.projectSteps ? window.projectSteps.length : 0
+                projectStepsLength: window.projectSteps ? window.projectSteps.length : 0,
+                aiStepsCount: window.projectSteps ? window.projectSteps.filter(step => step.is_ai_generated).length : 0,
+                unfinalizedAiStepsCount: window.projectSteps ? window.projectSteps.filter(step => step.is_ai_generated && !step.is_finalized).length : 0
             });
             
             if (hasAnyUnsavedChanges) {
+                let message = `You have unsaved changes. Are you sure you want to ${action}? Your changes will not be saved.`;
+                
+                // Provide more specific messaging for AI-generated steps
+                if (hasUnfinalizedAiSteps) {
+                    const unfinalizedCount = window.projectSteps.filter(step => step.is_ai_generated && !step.is_finalized).length;
+                    message = `You have ${unfinalizedCount} AI-generated step${unfinalizedCount > 1 ? 's' : ''} that haven't been finalized yet. Are you sure you want to ${action}? Your AI-generated steps will not be saved.`;
+                }
+                
                 setConfirmDialogData({
-                    message: `You have unsaved changes. Are you sure you want to ${action}? Your changes will not be saved.`,
+                    message: message,
                     action: action,
                     onConfirm: onConfirm
                 });

@@ -334,7 +334,10 @@ export const createStepActions = (state) => {
                 
                 // Keep existing URLs for items without new files
                 result_image_url: currentStepResultImageFile && !(currentStepResultImageFile instanceof File) ? currentStepResultImageFile.image_url : null,
-                result_image_path: currentStepResultImageFile && !(currentStepResultImageFile instanceof File) ? currentStepResultImageFile.image_path : null
+                result_image_path: currentStepResultImageFile && !(currentStepResultImageFile instanceof File) ? currentStepResultImageFile.image_path : null,
+                
+                // Mark step as finalized when saved
+                is_finalized: true
         };
 
         // Debug logging for validation data
