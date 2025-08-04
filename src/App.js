@@ -84,16 +84,17 @@ function App() {
   const [showSplash, setShowSplash] = useState(true);
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
 
-  const routesArray = [
-    { path: "*", element:  <ProtectedRoute><MyProjects /></ProtectedRoute> },
-    { path: "/login", element: <ProtectedLogin /> },
-    { path: "/register", element: <Register /> },
-    { path: "/my-projects", element: (<ProtectedRoute><MyProjects /></ProtectedRoute>)},
-    { path: "/repository", element: (<ProtectedRoute><Repository /></ProtectedRoute>)},
-    { path: "/create", element: (<ProtectedRoute><CreateProjectPage /></ProtectedRoute>)},
-    { path: "/annotate", element: (<ProtectedRoute><ProjectStepsPage /></ProtectedRoute>)},
-    { path: "/profile", element: (<ProtectedRoute><MyProfile /></ProtectedRoute>)},
-  ];
+      const routesArray = [
+        { path: "*", element:  <ProtectedRoute><MyProjects /></ProtectedRoute> },
+        { path: "/login", element: <ProtectedLogin /> },
+        { path: "/register", element: <Register /> },
+        { path: "/my-projects", element: (<ProtectedRoute><MyProjects /></ProtectedRoute>)},
+        { path: "/repository", element: (<ProtectedRoute><Repository /></ProtectedRoute>)},
+        { path: "/create", element: (<ProtectedRoute><CreateProjectPage /></ProtectedRoute>)},
+        { path: "/annotate/:projectId", element: (<ProtectedRoute><ProjectStepsPage /></ProtectedRoute>)},
+        { path: "/annotate", element: (<ProtectedRoute><ProjectStepsPage /></ProtectedRoute>)},
+        { path: "/profile", element: (<ProtectedRoute><MyProfile /></ProtectedRoute>)},
+    ];
 
   const routesElement = useRoutes(routesArray);
 

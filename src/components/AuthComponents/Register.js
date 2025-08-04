@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Navigate, Link} from 'react-router-dom';
 import { useAuth } from '../../contexts/authContext';
-import { doCreateUserWithEmailAndPassword, doSignInWithGoogle } from '../../firebase/auth';
+import { doCreateUserWithEmailAndPassword } from '../../firebase/auth';
 import { getApiUrl } from '../pages/createsteps helpers/CreateStepsUtils';
 
 const Register = () => {
-    const { userLoggedIn, currentUser } = useAuth();
+    const { userLoggedIn } = useAuth();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');

@@ -1,6 +1,6 @@
 // CreateStepsHooks.js - Custom hooks and state management for CreateSteps component
 import { useState, useEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../../contexts/authContext';
 import { storage } from '../../../firebase/firebase';
 import { ref as storageRef, getDownloadURL } from 'firebase/storage';
@@ -9,9 +9,10 @@ import { reconstructCapturedAnnotationFrames, getApiUrl } from './CreateStepsUti
 export const useCreateStepsState = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const params = useParams();
     const { currentUser } = useAuth();
     
-    const projectId = location.state?.projectId;
+    const projectId = params.projectId || location.state?.projectId;
     
     // Tab and UI state
     const [activeTab, setActiveTab] = useState('details');
@@ -362,9 +363,17 @@ export const useCreateStepsEffects = (state) => {
             return;
         }
 
+        // Validate projectId format (should be a valid UUID)
+        if (projectId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId)) {
+            setErrorMessage('Invalid project ID format.');
+            navigate('/my-projects');
+            return;
+        }
+
         const fetchProjectData = async () => {
             try {
-                const response = await fetch(`${getApiUrl()}/projects/${projectId}`, {
+                // Add authorization check - only allow access to own projects
+                const response = await fetch(`${getApiUrl()}/projects/${projectId}?firebase_uid=${currentUser.uid}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -372,7 +381,17 @@ export const useCreateStepsEffects = (state) => {
                 });
 
                 if (!response.ok) {
-                    throw new Error('Failed to fetch project data');
+                    if (response.status === 403) {
+                        setErrorMessage('Access denied. You can only edit your own projects.');
+                        navigate('/my-projects');
+                        return;
+                    } else if (response.status === 404) {
+                        setErrorMessage('Project not found.');
+                        navigate('/my-projects');
+                        return;
+                    } else {
+                        throw new Error('Failed to fetch project data');
+                    }
                 }
 
                 const projectData = await response.json();
@@ -389,7 +408,7 @@ export const useCreateStepsEffects = (state) => {
                 const savedBuyListState = localStorage.getItem(`buyListState_${projectId}`);
                 
                 // Now fetch the project's primary video files
-                const stepsResponse = await fetch(`${getApiUrl()}/projects/${projectId}/steps`, {
+                const stepsResponse = await fetch(`${getApiUrl()}/projects/${projectId}/steps?firebase_uid=${currentUser.uid}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -416,7 +435,7 @@ export const useCreateStepsEffects = (state) => {
                         console.log('Location state:', location.state);
                         
                         try {
-                            const projectFilesResponse = await fetch(`${getApiUrl()}/projects/${projectId}/files`, {
+                            const projectFilesResponse = await fetch(`${getApiUrl()}/projects/${projectId}/files?firebase_uid=${currentUser.uid}`, {
                                 method: 'GET',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -488,7 +507,7 @@ export const useCreateStepsEffects = (state) => {
                     } else if (isExistingProject) {
                         // For existing projects without saved state, load from database
                         try {
-                            const buyListResponse = await fetch(`${getApiUrl()}/projects/${projectId}/buy_list`, {
+                            const buyListResponse = await fetch(`${getApiUrl()}/projects/${projectId}/buy_list?firebase_uid=${currentUser.uid}`, {
                                 method: 'GET',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -575,7 +594,7 @@ export const useCreateStepsEffects = (state) => {
                     } else if (isExistingProject) {
                         // If no videos from steps but project exists, try to fetch from project files
                         try {
-                            const projectFilesResponse = await fetch(`${getApiUrl()}/projects/${projectId}/files`, {
+                            const projectFilesResponse = await fetch(`${getApiUrl()}/projects/${projectId}/files?firebase_uid=${currentUser.uid}`, {
                                 method: 'GET',
                                 headers: {
                                     'Content-Type': 'application/json',

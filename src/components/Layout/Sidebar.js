@@ -170,7 +170,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                             <h1 className={`${isChrome ? 'text-xl' : 'text-2xl'} font-semibold whitespace-nowrap`} style={{
                                 // Chrome-specific fix: use plain white text instead of gradient
                                 color: isAnimating ? '#ffffff' : '#ffffff',
-                                background: isAnimating 
+                                backgroundImage: isAnimating 
                                     ? 'linear-gradient(45deg, #0000FF 0%, #F1C232 40%, #0000FF 80%, #F1C232 90%, #0000FF 100%)'
                                     : 'linear-gradient(45deg, #0000FF 0%, #F1C232 100%)',
                                 backgroundSize: isAnimating ? '200% 200%' : '100% 100%',
@@ -182,7 +182,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                                 ...(navigator.userAgent.includes('Chrome') && {
                                     color: '#ffffff',
                                     WebkitTextFillColor: 'initial',
-                                    background: 'none'
+                                    backgroundImage: 'none'
                                 })
                             }}>
                                 Blueprint

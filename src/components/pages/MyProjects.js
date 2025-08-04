@@ -516,7 +516,7 @@ const MyProjects = () => {
     };
 
     const handleEditProject = (projectId) => {
-        navigate(`/annotate`, { state: { projectId } });
+        navigate(`/annotate/${projectId}`);
     };
 
     const handleGenerateThumbnail = async (projectId) => {
