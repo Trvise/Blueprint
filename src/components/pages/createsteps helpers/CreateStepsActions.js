@@ -615,7 +615,7 @@ export const createStepActions = (state) => {
             console.error('Error regenerating step:', error);
             setErrorMessage(`Error regenerating step: ${error.message}`);
         } finally {
-            setIsStepLoading(false);
+        setIsStepLoading(false);
         }
     };
 
