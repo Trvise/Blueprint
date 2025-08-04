@@ -9,7 +9,7 @@ import { AnimatedLogo } from './createsteps helpers/CommonComponents';
 import { googleCloudApi } from '../../services/googleCloudApi';
 
 const MAX_FILENAME_STEM_LENGTH = 25; 
-const MAX_VIDEO_DURATION_SECONDS = 600; // 10 minutes in seconds
+const MAX_VIDEO_DURATION_SECONDS = 300; // 5 minutes in seconds
 
 const PREDEFINED_TAGS = [
     "Woodworking", "DIY", "Electronics", "Crafts", "Home Improvement", 
@@ -157,7 +157,7 @@ const CreateProjectPage = () => {
             const isAnyVideoTooLong = durations.some(duration => duration > MAX_VIDEO_DURATION_SECONDS);
             if (isAnyVideoTooLong) {
                 setAiEnabled(false);
-                setAiDisabledReason('One or more videos exceed the 10-minute duration limit. AI analysis has been automatically disabled.');
+                setAiDisabledReason('One or more videos exceed the 5-minute duration limit. AI analysis has been automatically disabled.');
             } else {
                 setAiEnabled(true);
                 setAiDisabledReason('');
@@ -173,7 +173,7 @@ const CreateProjectPage = () => {
         const isAnyVideoTooLong = remainingDurations.some(duration => duration > MAX_VIDEO_DURATION_SECONDS);
         if (isAnyVideoTooLong) {
             setAiEnabled(false);
-            setAiDisabledReason('One or more videos exceed the 10-minute duration limit. AI analysis has been automatically disabled.');
+            setAiDisabledReason('One or more videos exceed the 5-minute duration limit. AI analysis has been automatically disabled.');
         } else {
             setAiEnabled(true);
             setAiDisabledReason('');
@@ -681,7 +681,7 @@ const CreateProjectPage = () => {
                         {/* AI Duration Disclaimer */}
                         <div className="bg-blue-900/20 border border-blue-700 p-3 rounded-lg mb-4">
                             <p className="text-sm text-[#D9D9D9]">
-                                <span className="text-blue-400 font-semibold">Note:</span> AI analysis is limited to videos under 10 minutes in duration. 
+                                <span className="text-blue-400 font-semibold">Note:</span> AI analysis is limited to videos under 5 minutes in duration. 
                                 Videos exceeding this limit will automatically disable AI analysis.
                             </p>
                         </div>
