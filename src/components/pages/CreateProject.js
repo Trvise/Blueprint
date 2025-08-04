@@ -9,6 +9,7 @@ import { AnimatedLogo } from './createsteps helpers/CommonComponents';
 import { googleCloudApi } from '../../services/googleCloudApi';
 
 const MAX_FILENAME_STEM_LENGTH = 25; 
+const MAX_VIDEO_DURATION_SECONDS = 600; // 10 minutes in seconds
 
 const PREDEFINED_TAGS = [
     "Woodworking", "DIY", "Electronics", "Crafts", "Home Improvement", 
@@ -28,6 +29,8 @@ const CreateProjectPage = () => {
     const [selectedTags, setSelectedTags] = useState([]);
     const [videoFiles, setVideoFiles] = useState([]);
     const [selectedVideoNames, setSelectedVideoNames] = useState([]);
+    const [videoDurations, setVideoDurations] = useState([]);
+    const [aiDisabledReason, setAiDisabledReason] = useState('');
 
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
@@ -93,6 +96,7 @@ const CreateProjectPage = () => {
         const originalFiles = Array.from(e.target.files);
         let processedFiles = [];
         let processedFileNamesForDisplay = [];
+        let durationPromises = [];
 
         if (originalFiles.some(file => !file.type.startsWith('video/'))) {
             setErrorMessage("Invalid file type. Please upload video files only.");
@@ -100,7 +104,7 @@ const CreateProjectPage = () => {
             return;
         }
 
-        originalFiles.forEach(file => {
+        originalFiles.forEach((file, index) => {
             const originalName = file.name;
             const nameWithoutExtension = originalName.substring(0, originalName.lastIndexOf('.'));
             const extension = originalName.substring(originalName.lastIndexOf('.'));
@@ -113,16 +117,67 @@ const CreateProjectPage = () => {
             const finalName = processedName + extension;
             processedFileNamesForDisplay.push(finalName);
             processedFiles.push(file);
+
+            // Get video duration
+            const durationPromise = new Promise((resolve) => {
+                const video = document.createElement('video');
+                const url = URL.createObjectURL(file);
+                video.src = url;
+                
+                video.onloadedmetadata = () => {
+                    URL.revokeObjectURL(url);
+                    resolve(video.duration);
+                };
+                
+                video.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    resolve(0); // Default duration if error
+                };
+                
+                // Timeout after 5 seconds
+                setTimeout(() => {
+                    URL.revokeObjectURL(url);
+                    resolve(0);
+                }, 5000);
+            });
+            
+            durationPromises.push(durationPromise);
         });
 
         setVideoFiles(processedFiles);
         setSelectedVideoNames(processedFileNamesForDisplay);
         setErrorMessage('');
+        setAiDisabledReason('');
+
+        // Wait for all durations to be calculated
+        Promise.all(durationPromises).then(durations => {
+            setVideoDurations(durations);
+            
+            // Check if any video exceeds the limit
+            const isAnyVideoTooLong = durations.some(duration => duration > MAX_VIDEO_DURATION_SECONDS);
+            if (isAnyVideoTooLong) {
+                setAiEnabled(false);
+                setAiDisabledReason('One or more videos exceed the 10-minute duration limit. AI analysis has been automatically disabled.');
+            } else {
+                setAiEnabled(true);
+                setAiDisabledReason('');
+            }
+        });
     };
 
     const removeVideo = (indexToRemove) => {
         setVideoFiles(videoFiles.filter((_, index) => index !== indexToRemove));
         setSelectedVideoNames(selectedVideoNames.filter((_, index) => index !== indexToRemove));
+        setVideoDurations(videoDurations.filter((_, index) => index !== indexToRemove));        
+        const remainingDurations = videoDurations.filter((_, index) => index !== indexToRemove);
+        const isAnyVideoTooLong = remainingDurations.some(duration => duration > MAX_VIDEO_DURATION_SECONDS);
+        if (isAnyVideoTooLong) {
+            setAiEnabled(false);
+            setAiDisabledReason('One or more videos exceed the 10-minute duration limit. AI analysis has been automatically disabled.');
+        } else {
+            setAiEnabled(true);
+            setAiDisabledReason('');
+        }
     };
 
     const toggleTag = (tag) => {
@@ -341,12 +396,11 @@ const CreateProjectPage = () => {
                 setProjectCreated(false);
                 setCreatedProjectId(null);
                 
-            navigate(`/annotate`, { 
+            navigate(`/annotate/${createdProjectId}`, { 
                 state: { 
                     projectName: projectName,
-                    projectId: createdProjectId,
                     uploadedVideos: uploadedVideoUrls,
-                        aiBreakdownData: finalAiBreakdownData,
+                    aiBreakdownData: finalAiBreakdownData,
                 } 
             });
             }, 1000);
@@ -451,10 +505,9 @@ const CreateProjectPage = () => {
                 setProjectCreated(false);
                 setCreatedProjectId(null);
                 
-                navigate(`/annotate`, { 
+                navigate(`/annotate/${createdProjectId}`, { 
                     state: { 
                         projectName: projectName,
-                        projectId: createdProjectId,
                         uploadedVideos: uploadedVideoUrls,
                         aiBreakdownData: aiBreakdownData,
                     } 
@@ -589,6 +642,11 @@ const CreateProjectPage = () => {
                                 {selectedVideoNames.map((name, index) => (
                                     <li key={index} className="text-sm text-[#D9D9D9] flex justify-between items-center">
                                         <span>{name}</span>
+                                        <span className="text-xs text-[#6b7280]">
+                                            ({videoDurations[index] ? 
+                                                `${Math.floor(videoDurations[index] / 60)}:${Math.floor(videoDurations[index] % 60).toString().padStart(2, '0')}` : 
+                                                'N/A'})
+                                        </span>
                                         <button
                                             type="button"
                                             onClick={() => removeVideo(index)}
@@ -614,10 +672,30 @@ const CreateProjectPage = () => {
                                     id="aiEnabled"
                                     checked={aiEnabled}
                                     onChange={(e) => setAiEnabled(e.target.checked)}
-                                    className="toggle"
+                                    disabled={aiDisabledReason !== ''}
+                                    className={`toggle ${aiDisabledReason !== '' ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
                                 />
                             </div>
                         </div>
+                        
+                        {/* AI Duration Disclaimer */}
+                        <div className="bg-blue-900/20 border border-blue-700 p-3 rounded-lg mb-4">
+                            <p className="text-sm text-[#D9D9D9]">
+                                <span className="text-blue-400 font-semibold">Note:</span> AI analysis is limited to videos under 10 minutes in duration. 
+                                Videos exceeding this limit will automatically disable AI analysis.
+                            </p>
+                        </div>
+                        
+                        {aiDisabledReason && (
+                            <div className="bg-red-900/20 border border-red-700 p-3 rounded-lg mb-4">
+                                <div className="flex items-center space-x-2">
+                                    <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                    <span className="text-red-400 font-semibold">{aiDisabledReason}</span>
+                                </div>
+                            </div>
+                        )}
                         
                         {isAiProcessing && (
                             <div className="bg-gray-800 p-4 rounded-lg">
