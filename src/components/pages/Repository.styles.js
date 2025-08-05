@@ -17,7 +17,7 @@ export const repositoryStyles = {
     tabsWrapper: "flex border-b border-[#D9D9D9]",
     tab: {
       base: "px-6 py-4 font-medium transition-colors text-[#D9D9D9]",
-      active: "text-[#0f0f0f] border-b-2 border-[#F1C232] bg-[#F1C232] font-bold shadow-sm",
+      active: "text-[#000000] !text-[#000000] border-b-2 border-[#F1C232] bg-[#F1C232] font-bold shadow-sm",
       inactive: "text-[#D9D9D9] hover:text-[#F1C232]"
     },
     content: "p-6"
@@ -57,7 +57,7 @@ export const repositoryStyles = {
       imageWrapper: "relative w-full h-32 mb-3 rounded-lg overflow-hidden",
       image: "w-full h-full object-cover rounded-lg",
       imageOverlay: "absolute inset-0 bg-black bg-opacity-60 rounded-lg pointer-events-none",
-      title: "font-semibold text-white mb-2 drop-shadow",
+      title: "font-semibold text-[#F1C232] mb-2 drop-shadow",
       specification: "text-sm text-[#E5E5E5] mb-2",
       purchaseLink: "text-[#F1C232] text-sm hover:underline block mb-2 font-medium",
       actionsContainer: "flex justify-end space-x-2 pt-2 border-t border-[#D9D9D9] mt-2",

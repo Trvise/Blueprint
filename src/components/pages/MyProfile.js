@@ -198,12 +198,122 @@ const MyProfile = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [hoveredCard, setHoveredCard] = useState(null);
+    
+    const [isDataLoading, setIsDataLoading] = useState(false);
+
+    // Function to check for unsaved changes (exact copy from Sidebar)
+    const checkUnsavedChanges = (action, onConfirm) => {
+        const isCreateStepsPage = window.location.pathname.includes('/create-steps') || window.location.pathname.includes('/steps') || window.location.pathname.includes('/annotate');
+        
+        if (isCreateStepsPage) {
+            const hasCurrentStepData = window.currentStepName || window.currentStepDescription || 
+                                     window.currentStepStartTime !== null || window.currentStepEndTime !== null;
+            
+            const isEditingStep = window.currentStepIndex !== undefined && window.currentStepIndex >= 0;
+            const hasUnsavedChanges = isEditingStep && hasCurrentStepData;
+            
+            const hasNoSteps = !window.projectSteps || window.projectSteps.length === 0;
+            
+            const isCreatingNewStep = window.currentStepIndex === -1 && hasCurrentStepData;
+            
+            const hasUnfinalizedAiSteps = window.projectSteps && window.projectSteps.some(step => 
+                step.is_ai_generated && !step.is_finalized
+            );
+            
+            const hasAnyUnsavedChanges = hasUnsavedChanges || isCreatingNewStep || hasNoSteps || hasUnfinalizedAiSteps;
+            
+            // Debug logging
+            console.log('MyProfile unsaved changes check:', {
+                isCreateStepsPage,
+                isEditingStep,
+                hasCurrentStepData,
+                hasUnsavedChanges,
+                isCreatingNewStep,
+                hasNoSteps,
+                hasUnfinalizedAiSteps,
+                hasAnyUnsavedChanges,
+                currentStepIndex: window.currentStepIndex,
+                currentStepName: window.currentStepName,
+                currentStepDescription: window.currentStepDescription,
+                currentStepStartTime: window.currentStepStartTime,
+                currentStepEndTime: window.currentStepEndTime,
+                projectStepsLength: window.projectSteps ? window.projectSteps.length : 0,
+                aiStepsCount: window.projectSteps ? window.projectSteps.filter(step => step.is_ai_generated).length : 0,
+                unfinalizedAiStepsCount: window.projectSteps ? window.projectSteps.filter(step => step.is_ai_generated && !step.is_finalized).length : 0
+            });
+            
+            if (hasAnyUnsavedChanges) {
+                let message = `You have unsaved changes. Are you sure you want to ${action}? Your changes will not be saved.`;
+                
+                // Provide more specific messaging for AI-generated steps
+                if (hasUnfinalizedAiSteps) {
+                    const unfinalizedCount = window.projectSteps.filter(step => step.is_ai_generated && !step.is_finalized).length;
+                    message = `You have ${unfinalizedCount} AI-generated step${unfinalizedCount > 1 ? 's' : ''} that haven't been finalized yet. Are you sure you want to ${action}? Your AI-generated steps will not be saved.`;
+                }
+                
+                return window.confirm(message);
+            }
+        }
+        return true; // No unsaved changes or not on CreateSteps page
+    };
+
+    // Navigation protection for unsaved changes
+    useEffect(() => {
+
+        const handleBeforeUnload = (e) => {
+            if (isDataLoading) {
+                e.preventDefault();
+                e.returnValue = 'Data is still loading. Are you sure you want to leave?';
+                return e.returnValue;
+            }
+            
+            const canProceed = checkUnsavedChanges('leave', () => {});
+            if (!canProceed) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                return e.returnValue;
+            }
+        };
+        
+        const handlePopState = (e) => {
+            if (isDataLoading) {
+                const confirmed = window.confirm('Data is still loading. Are you sure you want to leave?');
+                if (!confirmed) {
+                    window.history.pushState(null, '', window.location.href);
+                }
+                return;
+            }
+            
+            const canProceed = checkUnsavedChanges('leave', () => {});
+            if (!canProceed) {
+                // Prevent navigation
+                window.history.pushState(null, '', window.location.href);
+            }
+        };
+        
+        // Add event listeners
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('popstate', handlePopState);
+        
+        // Debug: Log sessionStorage on mount
+        console.log('MyProfile: SessionStorage on mount:', {
+            hasUnsavedChanges: sessionStorage.getItem('hasUnsavedChanges'),
+            unsavedStepData: sessionStorage.getItem('unsavedStepData')
+        });
+        
+        // Cleanup function
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [isDataLoading]);
 
     const fetchProfileData = useCallback(async () => {
         if (!currentUser?.uid) return;
 
         try {
             setLoading(true);
+            setIsDataLoading(true);
             setError('');
 
             // Fetch all data in parallel
@@ -280,12 +390,15 @@ const MyProfile = () => {
             setError('Failed to load profile data');
         } finally {
             setLoading(false);
+            setIsDataLoading(false);
         }
     }, [currentUser?.uid]);
 
     useEffect(() => {
         fetchProfileData();
     }, [fetchProfileData]);
+    
+
 
     const formatDate = (dateString) => {
         return new Date(dateString).toLocaleDateString('en-US', {

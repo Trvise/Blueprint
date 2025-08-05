@@ -45,6 +45,9 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
 
     // Check if we're on the CreateSteps page
     const isCreateStepsPage = location.pathname.includes('/create-steps') || location.pathname.includes('/steps') || location.pathname.includes('/annotate');
+    
+    // Check if we should hide profile and logout buttons (on annotate page)
+    const shouldHideProfileLogout = location.pathname.includes('/annotate');
 
     // Fetch profile data for consistent profile picture
     useEffect(() => {
@@ -394,15 +397,15 @@ const Sidebar = ({ isCollapsed, toggleSidebar, animateLogo }) => {
                                     navigate('/');
                                 }
                             }} 
-                            className={`w-full flex items-center justify-center ${isCollapsed ? 'py-3 px-2' : 'py-4 px-5'} text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors`}
+                            className={`w-full flex items-center justify-center ${isCollapsed ? 'py-4 px-3' : 'py-6 px-6'} text-lg font-semibold text-blue-400 hover:bg-blue-900 hover:text-blue-300 transition-colors border border-blue-600 rounded-lg mx-2 mb-2`}
                             title={isCollapsed ? "Back to Home" : ""}
                         >
-                            <AiOutlineArrowLeft size={isCollapsed ? 18 : 20} />
+                            <AiOutlineArrowLeft size={isCollapsed ? 22 : 24} />
                             {!isCollapsed && <span className="ml-3">Back to Home</span>}
                         </button>
                     )}
                     
-                    {userLoggedIn && (
+                    {userLoggedIn && !shouldHideProfileLogout && (
                         <>
                             <Link
                                 to="/profile"
