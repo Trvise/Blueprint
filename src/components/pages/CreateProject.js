@@ -47,6 +47,8 @@ const CreateProjectPage = () => {
     const [currentStep, setCurrentStep] = useState('');
     const [expectedTime, setExpectedTime] = useState('');
     const [startTime, setStartTime] = useState(null);
+    const [shortFormVideo, setShortFormVideo] = useState(null);
+    const [shortFormVideoName, setShortFormVideoName] = useState('');
 
     // Add CSS for toggle switch
     React.useEffect(() => {
@@ -333,7 +335,10 @@ const CreateProjectPage = () => {
 
         updateProgress('Uploading Videos', 80, 'Uploading videos to cloud storage...');
         const uploadedVideoUrls = [];
+        let uploadedShortFormVideo = null;
+        
         try {
+            // Upload regular videos
             for (let i = 0; i < videoFiles.length; i++) {
                 const file = videoFiles[i];
                 updateProgress('Uploading Videos', 80 + (i * 5), `Uploading ${file.name} (${i + 1}/${videoFiles.length})...`);
@@ -350,6 +355,24 @@ const CreateProjectPage = () => {
                     file: file  // Preserve the original file for regeneration
                 });
             }
+            
+            // Upload short-form video if provided
+            if (shortFormVideo) {
+                updateProgress('Uploading Short-Form Video', 85, `Uploading ${shortFormVideo.name}...`);
+                
+                const shortFormFileName = `${shortFormVideo.name}_${uuidv4()}`;
+                const shortFormStoragePath = `users/${currentUser.uid}/shortform/${shortFormFileName}`;
+                const shortFormStorageRef = ref(storage, shortFormStoragePath);
+                const snapshot = await uploadBytes(shortFormStorageRef, shortFormVideo);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                uploadedShortFormVideo = {
+                    name: shortFormVideo.name,
+                    url: downloadURL,
+                    path: shortFormStoragePath,
+                    mime_type: shortFormVideo.type,
+                    file_size_bytes: shortFormVideo.size
+                };
+            }
         } catch (uploadError) {
             console.error("Error uploading videos to Firebase Storage:", uploadError);
             setErrorMessage(`Failed to upload videos: ${uploadError.message}`);
@@ -357,6 +380,9 @@ const CreateProjectPage = () => {
             return;
         }
         console.log("Uploaded video URLs/paths:", uploadedVideoUrls);
+        if (uploadedShortFormVideo) {
+            console.log("Uploaded short-form video:", uploadedShortFormVideo);
+        }
 
         updateProgress('Creating Project', 95, 'Creating project in database...');
         const projectDataForBackend = {
@@ -367,6 +393,7 @@ const CreateProjectPage = () => {
             UploadVideos: uploadedVideoUrls,
             frame_url: uploadedVideoUrls.length > 0 ? uploadedVideoUrls[0].url : null,
             ai_breakdown_data: finalAiBreakdownData,
+            ShortFormVideo: uploadedShortFormVideo,
         };
 
         try {
@@ -401,6 +428,7 @@ const CreateProjectPage = () => {
                     projectName: projectName,
                     uploadedVideos: uploadedVideoUrls,
                     aiBreakdownData: finalAiBreakdownData,
+                    shortFormVideo: uploadedShortFormVideo,
                 } 
             });
             }, 1000);
@@ -414,6 +442,38 @@ const CreateProjectPage = () => {
             setCurrentStep('');
             setExpectedTime('');
             setStartTime(null);
+        }
+    };
+    
+    const handleShortFormVideoChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (!file.type.startsWith('video/')) {
+                setErrorMessage("Invalid file type for short-form video.");
+                return;
+            }
+            
+            // Check file size (should be under 1GB)
+            const maxSizeBytes = 1024 * 1024 * 1024; // 1GB in bytes
+            if (file.size > maxSizeBytes) {
+                setErrorMessage("Short-form video must be under 1GB.");
+                return;
+            }
+            
+            // If validation passes
+            setShortFormVideo(file);
+            setShortFormVideoName(file.name);
+            setErrorMessage(''); // Clear any previous error messages
+        }
+    };
+
+    const removeShortFormVideo = () => {
+        setShortFormVideo(null);
+        setShortFormVideoName('');
+        // Clear the file input by finding it and resetting its value
+        const fileInput = document.querySelector('input[type="file"][accept="video/*"]:not([multiple])');
+        if (fileInput) {
+            fileInput.value = '';
         }
     };
 
@@ -442,7 +502,10 @@ const CreateProjectPage = () => {
 
         updateProgress('Uploading Videos', 80, 'Uploading videos to cloud storage...');
         const uploadedVideoUrls = [];
+        let uploadedShortFormVideo = null;
+        
         try {
+            // Upload regular videos
             for (let i = 0; i < videoFiles.length; i++) {
                 const file = videoFiles[i];
                 updateProgress('Uploading Videos', 80 + (i * 5), `Uploading ${file.name} (${i + 1}/${videoFiles.length})...`);
@@ -459,6 +522,24 @@ const CreateProjectPage = () => {
                     file: file  // Preserve the original file for regeneration
                 });
             }
+            
+            // Upload short-form video if provided
+            if (shortFormVideo) {
+                updateProgress('Uploading Short-Form Video', 85, `Uploading ${shortFormVideo.name}...`);
+                
+                const shortFormFileName = `${shortFormVideo.name}_${uuidv4()}`;
+                const shortFormStoragePath = `users/${currentUser.uid}/shortform/${shortFormFileName}`;
+                const shortFormStorageRef = ref(storage, shortFormStoragePath);
+                const snapshot = await uploadBytes(shortFormStorageRef, shortFormVideo);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                uploadedShortFormVideo = {
+                    name: shortFormVideo.name,
+                    url: downloadURL,
+                    path: shortFormStoragePath,
+                    mime_type: shortFormVideo.type,
+                    file_size_bytes: shortFormVideo.size
+                };
+            }
         } catch (uploadError) {
             console.error("Error uploading videos to Firebase Storage:", uploadError);
             setErrorMessage(`Failed to upload videos: ${uploadError.message}`);
@@ -466,6 +547,9 @@ const CreateProjectPage = () => {
             return;
         }
         console.log("Uploaded video URLs/paths:", uploadedVideoUrls);
+        if (uploadedShortFormVideo) {
+            console.log("Uploaded short-form video:", uploadedShortFormVideo);
+        }
 
         updateProgress('Creating Project', 95, 'Creating project in database...');
         const projectDataForBackend = {
@@ -476,6 +560,7 @@ const CreateProjectPage = () => {
             UploadVideos: uploadedVideoUrls,
             frame_url: uploadedVideoUrls.length > 0 ? uploadedVideoUrls[0].url : null,
             ai_breakdown_data: aiBreakdownData,
+            ShortFormVideo: uploadedShortFormVideo,
         };
 
         try {
@@ -510,6 +595,7 @@ const CreateProjectPage = () => {
                         projectName: projectName,
                         uploadedVideos: uploadedVideoUrls,
                         aiBreakdownData: aiBreakdownData,
+                        shortFormVideo: uploadedShortFormVideo,
                     } 
                 });
             }, 1000);
@@ -621,6 +707,31 @@ const CreateProjectPage = () => {
                     </div>
                     {selectedTags.length > 0 && (
                         <p className="text-xs text-[#D9D9D9] mt-1">Selected: {selectedTags.join(', ')}</p>
+                    )}
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-[#D9D9D9] mb-1">
+                        Upload Short-Form Video (Optional)
+                    </label>
+                    <p className="text-xs text-gray-400 mb-2">A short-form video for promotional content (under 1GB).</p>
+                    <input
+                        type="file"
+                        accept="video/*"
+                        onChange={handleShortFormVideoChange} // We will create this function next
+                        className="w-full text-sm text-[#D9D9D9] file:mr-4 file:py-2 file:px-4 ..."
+                    />
+                    {shortFormVideoName && (
+                        <div className="mt-2 text-sm text-[#D9D9D9] flex justify-between items-center">
+                            <span>Selected: {shortFormVideoName}</span>
+                            <button
+                                type="button"
+                                onClick={removeShortFormVideo}
+                                className="text-[#0000FF] hover:text-[#0000FF] text-xs font-semibold"
+                            >
+                                Remove
+                            </button>
+                        </div>
                     )}
                 </div>
 
