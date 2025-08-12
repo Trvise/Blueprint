@@ -718,8 +718,8 @@ const CreateProjectPage = () => {
                     <input
                         type="file"
                         accept="video/*"
-                        onChange={handleShortFormVideoChange} // We will create this function next
-                        className="w-full text-sm text-[#D9D9D9] file:mr-4 file:py-2 file:px-4 ..."
+                        onChange={handleShortFormVideoChange}
+                        className="w-full text-sm text-[#D9D9D9] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#0000FF] file:text-[#D9D9D9] hover:file:bg-[#0000FF] transition duration-150 ease-in-out"
                     />
                     {shortFormVideoName && (
                         <div className="mt-2 text-sm text-[#D9D9D9] flex justify-between items-center">
