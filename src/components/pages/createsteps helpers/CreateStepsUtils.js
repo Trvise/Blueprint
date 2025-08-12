@@ -84,26 +84,38 @@ export const uploadFileToFirebase = async (file, pathPrefix, currentUser) => {
     return { url: downloadURL, path: filePath, name: file.name, type: file.type, size: file.size };
 };
 
-export const navigateFrame = (videoRef, direction) => {
-    if (videoRef.current && videoRef.current.duration) {
-        videoRef.current.pause();
-        const frameDuration = 1 / 30; 
-        let newTime = videoRef.current.currentTime + (direction === 'forward' ? frameDuration : -frameDuration);
-        newTime = Math.max(0, Math.min(newTime, videoRef.current.duration));
-        videoRef.current.currentTime = newTime;
+export const navigateFrame = (videoRef, direction, setPlaying) => {
+    const player = videoRef.current;
+    if (player) {
+        // Explicitly pause the player
+        setPlaying(false);
+
+        const frameDuration = 1 / 30; // Assuming 30 FPS
+        const currentTime = player.getCurrentTime();
+        let newTime = currentTime + (direction === 'forward' ? frameDuration : -frameDuration);
+        
+        // Ensure the new time is within video bounds
+        const duration = player.getDuration();
+        if (duration) {
+            newTime = Math.max(0, Math.min(newTime, duration));
+        }
+
+        player.seekTo(newTime, 'seconds');
     }
 };
 
 export const captureFrameForAnnotation = (videoRef, setFrameForAnnotation, setFrameTimestampMs, setCurrentStepAnnotations, setCurrentAnnotationTool, setErrorMessage, setCapturedAnnotationFrames, setSuccessMessage, formatTime, setIsAnnotationPopupOpen) => {
-    if (videoRef.current) {
-        const video = videoRef.current;
-        if (video.readyState < video.HAVE_METADATA || video.videoWidth === 0) { 
-            alert("Video is not ready. Please wait a moment and try again."); return;
+    const player = videoRef.current;
+    if (player) {
+        const video = player.getInternalPlayer(); // Get the underlying <video> element
+        if (!video || video.readyState < video.HAVE_METADATA || video.videoWidth === 0) {
+            alert("Video is not ready. Please wait a moment and try again.");
+            return;
         }
-        if (!video.paused) { video.pause(); }
-        const timestamp = Math.round(video.currentTime * 1000); 
         
-        console.log('Capturing frame - video currentTime:', video.currentTime);
+        const timestamp = Math.round(player.getCurrentTime() * 1000);
+        
+        console.log('Capturing frame - video currentTime:', player.getCurrentTime());
         console.log('Capturing frame - calculated timestamp (ms):', timestamp);
         
         const canvas = document.createElement("canvas");

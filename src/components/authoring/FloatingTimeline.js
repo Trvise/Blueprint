@@ -6,6 +6,7 @@ const isChrome = typeof window !== 'undefined' && /Chrome/.test(navigator.userAg
 const FloatingTimeline = ({
     videoRef,
     projectSteps,
+    currentVideoTime,
     currentStepStartTime,
     currentStepEndTime,
     setCurrentStepStartTime,
@@ -21,14 +22,19 @@ const FloatingTimeline = ({
     const [isDragging, setIsDragging] = useState(false);
     const [dragType, setDragType] = useState(null); // 'start', 'end', 'playhead'
     const [isCollapsed, setIsCollapsed] = useState(false);
-    const [currentTime, setCurrentTime] = useState(0);
+    const [videoDuration, setVideoDuration] = useState(0);
     
     const timelineRef = useRef(null);
     const scrollContainerRef = useRef(null);
     const animationFrameRef = useRef(null);
     const lastUpdateTimeRef = useRef(0);
     
-    const videoDuration = videoRef?.current?.duration || 0;
+    useEffect(() => {
+        const player = videoRef.current;
+        if (player) {
+            setVideoDuration(player.getDuration() || 0);
+        }
+    }, [videoRef, videoRef.current?.getDuration()]);
     
     // Chrome-specific throttling for smoother animation
     const updateInterval = isChrome ? 50 : 16; // 20fps for Chrome, 60fps for others
@@ -59,7 +65,7 @@ const FloatingTimeline = ({
         const clickPercent = clickX / timelineWidth;
         const newTime = clickPercent * videoDuration;
         
-        videoRef.current.currentTime = Math.max(0, Math.min(newTime, videoDuration));
+        videoRef.current.seekTo(Math.max(0, Math.min(newTime, videoDuration)), 'seconds');
     };
     
     // Handle marker dragging
@@ -89,7 +95,7 @@ const FloatingTimeline = ({
                     setCurrentStepEndTime(clampedTime);
                 }
             } else if (dragType === 'playhead') {
-                videoRef.current.currentTime = clampedTime;
+                videoRef.current.seekTo(clampedTime, 'seconds');
             }
         };
         
@@ -131,33 +137,25 @@ const FloatingTimeline = ({
     
     // Optimized video time tracking with throttling for Chrome
     useEffect(() => {
-        let running = true;
-        function update(timestamp) {
-            if (!running) return;
-            
-            // Throttle updates for Chrome
-            if (isChrome && (timestamp - lastUpdateTimeRef.current) < updateInterval) {
-                animationFrameRef.current = requestAnimationFrame(update);
-                return;
+        const player = videoRef.current;
+        if (!player) return;
+
+        const handleProgress = ({ playedSeconds }) => {
+            if (!isDragging) {
+                // setCurrentTime(playedSeconds); // This line is removed
             }
-            
-            if (videoRef.current && !isDragging) {
-                const newTime = videoRef.current.currentTime;
-                // Only update if time has changed significantly (reduce unnecessary re-renders)
-                if (Math.abs(newTime - currentTime) > 0.05) {
-                    setCurrentTime(newTime);
-                }
-                lastUpdateTimeRef.current = timestamp;
-            }
-            
-            animationFrameRef.current = requestAnimationFrame(update);
-        }
-        animationFrameRef.current = requestAnimationFrame(update);
-        return () => {
-            running = false;
-            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         };
-    }, [videoRef, isDragging, currentTime, updateInterval]);
+
+        // The onProgress prop on ReactPlayer is the primary way to get time updates.
+        // This effect is now simplified to just ensure the duration is set.
+        const duration = player.getDuration();
+        if (duration) {
+            setVideoDuration(duration);
+        }
+        
+        // No need for requestAnimationFrame loop as onProgress handles updates.
+
+    }, [videoRef, isDragging]);
     
     // Optimized auto-scroll with throttling
     useEffect(() => {
@@ -165,7 +163,7 @@ const FloatingTimeline = ({
         
         // Throttle auto-scroll for Chrome
         const scrollTimeout = setTimeout(() => {
-            const currentTimePercent = currentTime / videoDuration;
+            const currentTimePercent = currentVideoTime / videoDuration;
             const scrollTo = (currentTimePercent * timelineWidth) - (scrollContainerRef.current.clientWidth / 2);
             
             scrollContainerRef.current.scrollTo({
@@ -175,7 +173,7 @@ const FloatingTimeline = ({
         }, isChrome ? 100 : 0);
         
         return () => clearTimeout(scrollTimeout);
-    }, [currentTime, videoDuration, timelineWidth, videoRef, zoomLevel, projectSteps.length, shouldEnableScrolling]);
+    }, [currentVideoTime, videoDuration, timelineWidth, videoRef, zoomLevel, projectSteps.length, shouldEnableScrolling]);
     
     if (!isVisible) return null;
     
@@ -269,7 +267,7 @@ const FloatingTimeline = ({
                                 <div 
                                     style={{
                                         ...styles.currentTimeIndicator,
-                                        left: `${(currentTime / videoDuration) * 100}%`,
+                                        left: `${(currentVideoTime / videoDuration) * 100}%`,
                                         transition: isDragging ? 'none' : (isChrome ? 'none' : 'left 0.1s linear')
                                     }}
                                     onMouseDown={(e) => handleMarkerMouseDown(e, 'playhead')}
@@ -290,7 +288,7 @@ const FloatingTimeline = ({
                                             // Move playhead to the start of the clicked step
                                             const stepStartTime = step.video_start_time_ms / 1000;
                                             if (videoRef.current) {
-                                                videoRef.current.currentTime = stepStartTime;
+                                                videoRef.current.seekTo(stepStartTime, 'seconds');
                                             }
                                             // Call onStepClick to edit the step
                                             if (onStepClick) {
@@ -337,7 +335,7 @@ const FloatingTimeline = ({
                                                     // Move playhead to the annotation timestamp
                                                     const annotationTime = annotationTimestamp / 1000;
                                                     if (videoRef.current) {
-                                                        videoRef.current.currentTime = annotationTime;
+                                                        videoRef.current.seekTo(annotationTime, 'seconds');
                                                     }
                                                 }}
                                             />
@@ -397,7 +395,7 @@ const FloatingTimeline = ({
                             <button
                                 onClick={() => {
                                     if (videoRef.current) {
-                                        const currentTime = videoRef.current.currentTime;
+                                        const currentTime = videoRef.current.getCurrentTime();
                                         setCurrentStepStartTime(currentTime);
                                     }
                                 }}
@@ -413,7 +411,7 @@ const FloatingTimeline = ({
                             <button
                                 onClick={() => {
                                     if (videoRef.current) {
-                                        const currentTime = videoRef.current.currentTime;
+                                        const currentTime = videoRef.current.getCurrentTime();
                                         if (currentStepStartTime !== null && currentTime <= currentStepStartTime) {
                                             return; // End time must be after start time
                                         }

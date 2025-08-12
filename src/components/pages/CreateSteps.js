@@ -22,6 +22,7 @@ import ProjectRepositoryTab from '../authoring/ProjectRepositoryTab';
 import AnnotationPopup from '../authoring/AnnotationPopup';
 import FloatingTimeline from '../authoring/FloatingTimeline';
 import StepsSidebar from '../authoring/StepsSidebar';
+import ReactPlayer from 'react-player';
 
 // Chrome detection
 const isChrome = typeof window !== 'undefined' && /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
@@ -298,7 +299,9 @@ const ProjectStepsPage = () => {
         isAnnotationPopupOpen,
         setIsAnnotationPopupOpen,
         location,
-        navigate
+        navigate,
+        playing,
+        setPlaying
     } = state;
     
     // Function to delete unsaved project
@@ -533,96 +536,39 @@ const ProjectStepsPage = () => {
 
     // Update current video time with smooth cross-browser updates
     useEffect(() => {
-        const video = videoRef.current;
-        if (!video) return;
+        const player = videoRef.current;
+        if (!player) return;
 
-        // Wait for video to be ready
-        const setupTimeListeners = () => {
-            // All browsers - use smooth animation frame updates
-            let animationFrameId = null;
-            let lastUpdateTime = 0;
-            const updateInterval = 16; // ~60fps for smooth updates
-
-            const smoothUpdate = (timestamp) => {
-                if (timestamp - lastUpdateTime >= updateInterval) {
-                    setCurrentVideoTime(video.currentTime);
-                    lastUpdateTime = timestamp;
-                }
-                animationFrameId = requestAnimationFrame(smoothUpdate);
-            };
-
-            const handleTimeUpdate = () => {
-                setCurrentVideoTime(video.currentTime);
-            };
-
-            const handleSeeked = () => {
-                setCurrentVideoTime(video.currentTime);
-            };
-
-            const handleLoadedMetadata = () => {
-                setCurrentVideoTime(video.currentTime);
-            };
-
-            const handlePlay = () => {
-                if (animationFrameId) {
-                    cancelAnimationFrame(animationFrameId);
-                }
-                animationFrameId = requestAnimationFrame(smoothUpdate);
-            };
-
-            const handlePause = () => {
-                if (animationFrameId) {
-                    cancelAnimationFrame(animationFrameId);
-                    animationFrameId = null;
-                }
-                setCurrentVideoTime(video.currentTime);
-            };
-
-            video.addEventListener('timeupdate', handleTimeUpdate);
-            video.addEventListener('seeked', handleSeeked);
-            video.addEventListener('loadedmetadata', handleLoadedMetadata);
-            video.addEventListener('play', handlePlay);
-            video.addEventListener('pause', handlePause);
-
-            setCurrentVideoTime(video.currentTime);
-
-            if (!video.paused) {
-                animationFrameId = requestAnimationFrame(smoothUpdate);
-            }
-
-            return () => {
-                if (animationFrameId) {
-                    cancelAnimationFrame(animationFrameId);
-                }
-                video.removeEventListener('timeupdate', handleTimeUpdate);
-                video.removeEventListener('seeked', handleSeeked);
-                video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-                video.removeEventListener('play', handlePlay);
-                video.removeEventListener('pause', handlePause);
-            };
+        // The onProgress prop of ReactPlayer handles time updates.
+        // We can keep this effect for other potential interactions if needed,
+        // but the core time update logic is now handled by onProgress.
+        
+        // Example of how you might handle other events if necessary in the future:
+        const handlePlay = () => {
+            console.log('Video started playing');
         };
 
-        // Setup listeners immediately if video is ready
-        let cleanup = setupTimeListeners();
-
-        // Also setup when video becomes ready
-        const handleCanPlay = () => {
-            if (cleanup) cleanup();
-            cleanup = setupTimeListeners();
+        const handlePause = () => {
+            console.log('Video paused');
         };
 
-        video.addEventListener('canplay', handleCanPlay);
+        // ReactPlayer doesn't directly expose event listeners on the component itself.
+        // Instead, you pass callbacks as props, like onPlay, onPause, onEnded, etc.
+        // For this reason, the old addEventListener logic is no longer needed.
+        
+        // If you need to add listeners for specific events, you would pass them to ReactPlayer:
+        // <ReactPlayer 
+        //   ...
+        //   onPlay={handlePlay}
+        //   onPause={handlePause} 
+        // />
 
-        return () => {
-            if (cleanup) cleanup();
-            video.removeEventListener('canplay', handleCanPlay);
-        };
     }, [videoRef, activeVideoUrl]);
 
     // Enhanced handlers with utilities
     const enhancedHandlers = {
         ...handlers,
-        navigateFrame: (direction) => navigateFrame(videoRef, direction),
+        navigateFrame: (direction) => navigateFrame(videoRef, direction, setPlaying),
         captureFrameForAnnotation: () => captureFrameForAnnotation(
             videoRef,
             state.setFrameForAnnotation,
@@ -1241,24 +1187,29 @@ const ProjectStepsPage = () => {
                                     )}
                                     
                                     {/* Video player */}
-                                    <div>
-                                        <video
+                                    <div className="player-wrapper">
+                                        <ReactPlayer
                                             ref={videoRef}
-                                            key={activeVideoUrl}
+                                            className="react-player"
+                                            url={activeVideoUrl}
+                                            width="100%"
+                                            height="100%"
                                             controls
-                                            src={activeVideoUrl}
-                                            crossOrigin="anonymous"
-                                            className="w-full max-w-4xl rounded-lg bg-black"
-                                            style={isChrome ? { aspectRatio: '16 / 9', maxWidth: '90vw', margin: 0 } : { aspectRatio: '16 / 9' }}
+                                            playing={playing}
+                                            onPlay={() => setPlaying(true)}
+                                            onPause={() => setPlaying(false)}
+                                            config={{
+                                                file: {
+                                                    attributes: {
+                                                        crossOrigin: 'anonymous'
+                                                    }
+                                                }
+                                            }}
+                                            onProgress={({ played, playedSeconds }) => setCurrentVideoTime(playedSeconds)}
                                             onError={(e) => {
                                                 console.error("Video Error:", e);
                                                 console.error("Failed video URL:", activeVideoUrl);
                                                 setErrorMessage(`Error loading video: ${uploadedVideos[activeVideoIndex]?.name || 'Unknown video'}`);
-                                            }}
-                                            onTimeUpdate={(e) => {
-                                                if (videoRef.current) {
-                                                    console.log('Video currentTime:', videoRef.current.currentTime);
-                                                }
                                             }}
                                         />
                                     </div>
@@ -1287,7 +1238,7 @@ const ProjectStepsPage = () => {
                                             <button
                                                 onClick={() => {
                                                     if (videoRef.current) {
-                                                        const currentTime = videoRef.current.currentTime;
+                                                        const currentTime = videoRef.current.getCurrentTime();
                                                         state.setCurrentStepStartTime(currentTime);
                                                     }
                                                 }}
@@ -1298,7 +1249,7 @@ const ProjectStepsPage = () => {
                                             <button
                                                 onClick={() => {
                                                     if (videoRef.current) {
-                                                        const currentTime = videoRef.current.currentTime;
+                                                        const currentTime = videoRef.current.getCurrentTime();
                                                         if (state.currentStepStartTime !== null && currentTime <= state.currentStepStartTime) {
                                                             return;
                                                         }
@@ -1429,6 +1380,7 @@ const ProjectStepsPage = () => {
                 <FloatingTimeline
                     videoRef={videoRef}
                     projectSteps={projectSteps}
+                    currentVideoTime={currentVideoTime}
                     currentStepStartTime={currentStepStartTime}
                     currentStepEndTime={currentStepEndTime}
                     setCurrentStepStartTime={state.setCurrentStepStartTime}
