@@ -68,6 +68,13 @@ export const useCreateStepsState = () => {
     const [currentStepResultImageFile, setCurrentStepResultImageFile] = useState(null);
     const [currentStepResultImage, setCurrentStepResultImage] = useState(null); // For displaying image URL
     
+    // Result frame capture state
+    const [resultFrameForCapture, setResultFrameForCapture] = useState(null);
+    const [resultFrameTimestamp, setResultFrameTimestamp] = useState(null);
+    const [resultAnnotations, setResultAnnotations] = useState([]);
+    const [resultAnnotationTool, setResultAnnotationTool] = useState({});
+    const [isResultAnnotationPopupOpen, setIsResultAnnotationPopupOpen] = useState(false);
+    
     // Buy list state
     const [projectBuyList, setProjectBuyList] = useState([]);
     
@@ -259,6 +266,18 @@ export const useCreateStepsState = () => {
         setCurrentStepResultImageFile,
         currentStepResultImage,
         setCurrentStepResultImage,
+        
+        // Result frame capture state
+        resultFrameForCapture,
+        setResultFrameForCapture,
+        resultFrameTimestamp,
+        setResultFrameTimestamp,
+        resultAnnotations,
+        setResultAnnotations,
+        resultAnnotationTool,
+        setResultAnnotationTool,
+        isResultAnnotationPopupOpen,
+        setIsResultAnnotationPopupOpen,
         
         // Buy list state
         projectBuyList,

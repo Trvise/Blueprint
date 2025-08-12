@@ -192,7 +192,7 @@ const RepositoryTab = () => {
                     onClick={() => setActiveRepo('tools')}
                     className={`px-6 py-3 font-medium transition-colors ${
                         activeRepo === 'tools'
-                            ? 'text-[#000000] border-b-2 border-[#F1C232] bg-[#F1C232]'
+                            ? 'text-[#000000] !text-[#000000] border-b-2 border-[#F1C232] bg-[#F1C232] font-bold'
                             : 'text-[#D9D9D9] hover:text-[#F1C232]'
                     }`}
                 >
@@ -202,7 +202,7 @@ const RepositoryTab = () => {
                     onClick={() => setActiveRepo('materials')}
                     className={`px-6 py-3 font-medium transition-colors ${
                         activeRepo === 'materials'
-                            ? 'text-[#000000] border-b-2 border-[#F1C232] bg-[#F1C232]'
+                            ? 'text-[#000000] !text-[#000000] border-b-2 border-[#F1C232] bg-[#F1C232] font-bold'
                             : 'text-[#D9D9D9] hover:text-[#F1C232]'
                     }`}
                 >

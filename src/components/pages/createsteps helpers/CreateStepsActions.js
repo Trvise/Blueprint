@@ -367,6 +367,10 @@ export const createStepActions = (state) => {
             });
             setSuccessMessage(`Step "${currentStepName}" updated successfully!`);
             // Keep the step in edit mode after update
+            
+            // Clear unsaved changes flag since step was saved
+            sessionStorage.removeItem('hasUnsavedChanges');
+            sessionStorage.removeItem('unsavedStepData');
         } else {
             // Add new step
             setProjectSteps(prev => {
@@ -380,6 +384,10 @@ export const createStepActions = (state) => {
             setSuccessMessage(`Step "${currentStepName}" added successfully!`);
             // Clear form after adding new step, but preserve the step data in the array
             clearCurrentStepForm();
+            
+            // Clear unsaved changes flag since step was saved
+            sessionStorage.removeItem('hasUnsavedChanges');
+            sessionStorage.removeItem('unsavedStepData');
         }
 
         } catch (error) {

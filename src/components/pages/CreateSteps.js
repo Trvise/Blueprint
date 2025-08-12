@@ -14,6 +14,7 @@ import StepDetailsTab from '../authoring/StepDetailsTab';
 import MaterialsAndToolsTab from '../authoring/MaterialsAndFilesTab';
 import FilesTab from '../authoring/FilesTab';
 import ResultTab from '../authoring/ResultTab';
+import ResultAnnotationPopup from '../authoring/ResultAnnotationPopup';
 import ProjectOverviewTab from '../authoring/ProjectOverviewTab';
 import SignOffTab from '../authoring/SignOffTab';
 import FinalizeTab from '../authoring/FinalizeTab';
@@ -331,23 +332,64 @@ const ProjectStepsPage = () => {
     
     // Add cleanup effect for unsaved projects
     useEffect(() => {
+        // Function to check for unsaved changes
+        const checkForUnsavedChanges = () => {
+            const hasCurrentStepData = currentStepName || currentStepDescription || 
+                                     currentStepStartTime !== null || currentStepEndTime !== null;
+            
+            const isEditingStep = currentStepIndex >= 0;
+            const hasUnsavedChanges = isEditingStep && hasCurrentStepData;
+            
+            const hasNoSteps = projectSteps.length === 0;
+            
+            const isCreatingNewStep = currentStepIndex === -1 && hasCurrentStepData;
+            
+            // Check for AI-generated steps that haven't been finalized
+            const hasUnfinalizedAiSteps = projectSteps.some(step => 
+                step.is_ai_generated && !step.is_finalized
+            );
+            
+            return hasUnsavedChanges || isCreatingNewStep || hasNoSteps || hasUnfinalizedAiSteps;
+        };
+
+        // Function to set sessionStorage flags
+        const setUnsavedChangesFlag = () => {
+            const hasChanges = checkForUnsavedChanges();
+            if (hasChanges) {
+                sessionStorage.setItem('hasUnsavedChanges', 'true');
+                // Store step data for reference
+                const stepData = {
+                    name: currentStepName,
+                    description: currentStepDescription,
+                    startTime: currentStepStartTime,
+                    endTime: currentStepEndTime,
+                    index: currentStepIndex
+                };
+                sessionStorage.setItem('unsavedStepData', JSON.stringify(stepData));
+                console.log('CreateSteps: Set unsaved changes flag');
+            } else {
+                sessionStorage.removeItem('hasUnsavedChanges');
+                sessionStorage.removeItem('unsavedStepData');
+                console.log('CreateSteps: Cleared unsaved changes flag');
+            }
+        };
+
         const handleBeforeUnload = (e) => {
-            // Only show warning if project has no steps (new project)
-            if (projectSteps.length === 0 && projectId) {
+            const hasChanges = checkForUnsavedChanges();
+            if (hasChanges) {
+                setUnsavedChangesFlag(); // Set flag before leaving
                 e.preventDefault();
-                e.returnValue = 'You have an unsaved project. Are you sure you want to leave?';
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
                 return e.returnValue;
             }
         };
         
         const handlePopState = (e) => {
-            // Only show warning if project has no steps (new project)
-            if (projectSteps.length === 0 && projectId) {
-                const confirmed = window.confirm('You have an unsaved project. Are you sure you want to leave? This will delete the project.');
-                if (confirmed) {
-                    // Delete the project before navigating away
-                    deleteUnsavedProject();
-                } else {
+            const hasChanges = checkForUnsavedChanges();
+            if (hasChanges) {
+                setUnsavedChangesFlag(); // Set flag before leaving
+                const confirmed = window.confirm('You have unsaved changes. Are you sure you want to leave?');
+                if (!confirmed) {
                     // Prevent navigation
                     window.history.pushState(null, '', window.location.href);
                 }
@@ -358,12 +400,15 @@ const ProjectStepsPage = () => {
         window.addEventListener('beforeunload', handleBeforeUnload);
         window.addEventListener('popstate', handlePopState);
         
+        // Update sessionStorage flags whenever step data changes
+        setUnsavedChangesFlag();
+        
         // Cleanup function
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
             window.removeEventListener('popstate', handlePopState);
         };
-    }, [projectSteps.length, projectId, deleteUnsavedProject]);
+    }, [projectSteps.length, projectId, deleteUnsavedProject, currentStepName, currentStepDescription, currentStepStartTime, currentStepEndTime, currentStepIndex]);
 
     // Chrome-specific layout adjustments
     const isChrome = navigator.userAgent.includes('Chrome');
@@ -1066,6 +1111,13 @@ const ProjectStepsPage = () => {
                                     handleResultImageChange={enhancedHandlers.handleResultImageChange}
                                     resultImageInputRef={resultImageInputRef}
                                     styles={chromeStyles}
+                                    // Video frame capture props
+                                    videoRef={videoRef}
+                                    activeVideoUrl={activeVideoUrl}
+                                    state={state}
+                                    formatTime={formatTime}
+                                    setSuccessMessage={setSuccessMessageState}
+                                    setErrorMessage={setErrorMessage}
                                 />
                             )}
 
@@ -1302,9 +1354,29 @@ const ProjectStepsPage = () => {
                 formatTime={formatTime}
                 styles={chromeStyles}
             />
+
+            {/* Result Annotation Popup */}
+            <ResultAnnotationPopup
+                isOpen={state.isResultAnnotationPopupOpen}
+                onClose={() => state.setIsResultAnnotationPopupOpen(false)}
+                resultFrameForCapture={state.resultFrameForCapture}
+                resultFrameTimestamp={state.resultFrameTimestamp}
+                resultAnnotations={state.resultAnnotations}
+                resultAnnotationTool={state.resultAnnotationTool}
+                setResultAnnotationTool={state.setResultAnnotationTool}
+                handleResultAnnotationSubmit={handlers.handleResultAnnotationSubmit}
+                removeResultAnnotation={handlers.removeResultAnnotation}
+                handleClearResultAnnotations={handlers.handleClearResultAnnotations}
+                formatTime={formatTime}
+                styles={chromeStyles}
+                // Additional props for generating final image
+                setCurrentStepResultImageFile={state.setCurrentStepResultImageFile}
+                setCurrentStepResultImage={state.setCurrentStepResultImage}
+                setSuccessMessage={setSuccessMessageState}
+            />
             
             {/* Floating Timeline - always visible on video steps page */}
-            {activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' && !isAnnotationPopupOpen && (
+            {activeTab !== 'repository' && activeTab !== 'finalize' && activeTab !== 'overview' && !isAnnotationPopupOpen && !state.isResultAnnotationPopupOpen && (
                 <FloatingTimeline
                     videoRef={videoRef}
                     projectSteps={projectSteps}

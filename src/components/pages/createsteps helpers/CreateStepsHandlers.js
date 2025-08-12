@@ -66,7 +66,12 @@ export const createStepHandlers = (
         currentStepIndex,
         projectId,
         currentUser,
-        navigate
+        navigate,
+        // Result annotation state
+        resultFrameTimestamp,
+        resultAnnotations,
+        setResultAnnotations,
+        setResultAnnotationTool
     }
 ) => {
 
@@ -212,6 +217,55 @@ export const createStepHandlers = (
             setCurrentStepResultImageFile(null);
             setCurrentStepResultImage(null);
         }
+    };
+
+    // Result annotation handlers
+    const handleResultAnnotationSubmit = (annotationData) => {
+        if (!annotationData || !annotationData.geometry) {
+            console.warn('Invalid annotation data for result:', annotationData);
+            return;
+        }
+
+        const { v4: uuidv4 } = require('uuid');
+        const newAnnotation = {
+            geometry: annotationData.geometry,
+            data: {
+                text: annotationData.data?.text || 'Result annotation',
+                id: `result_annotation_${uuidv4()}`,
+                frame_timestamp_ms: resultFrameTimestamp,
+            }
+        };
+        
+        console.log('Creating result annotation:', newAnnotation);
+        setResultAnnotations(prev => [...prev, newAnnotation]);
+        
+        // Clear the annotation tool after successful submission
+        setResultAnnotationTool({});
+    };
+
+    const handleClearResultAnnotations = () => {
+        if (resultAnnotations.length === 0) {
+            setSuccessMessage('No result annotations to clear.');
+            setTimeout(() => setSuccessMessage(''), 2000);
+            return;
+        }
+
+        const confirmed = window.confirm(`Are you sure you want to clear all ${resultAnnotations.length} result annotations? This action cannot be undone.`);
+        if (confirmed) {
+            setResultAnnotations([]);
+            setResultAnnotationTool({});
+            setSuccessMessage('All result annotations cleared successfully.');
+            setTimeout(() => setSuccessMessage(''), 3000);
+        }
+    };
+
+    const removeResultAnnotation = (annotationId) => {
+        setResultAnnotations(prev => 
+            prev.filter(ann => {
+                const id = ann.annotation_id || ann.data?.id;
+                return id !== annotationId;
+            })
+        );
     };
 
     const handleFinishProject = async (projectName) => {
@@ -430,6 +484,9 @@ export const createStepHandlers = (
         handleSupFileChange,
         removeSupFileFromCurrentStep,
         handleResultImageChange,
+        handleResultAnnotationSubmit,
+        handleClearResultAnnotations,
+        removeResultAnnotation,
         handleFinishProject
     };
 }; 

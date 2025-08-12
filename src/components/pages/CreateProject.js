@@ -9,7 +9,8 @@ import { AnimatedLogo } from './createsteps helpers/CommonComponents';
 import { googleCloudApi } from '../../services/googleCloudApi';
 
 const MAX_FILENAME_STEM_LENGTH = 25; 
-const MAX_VIDEO_DURATION_SECONDS = 600; // 10 minutes in seconds
+const MAX_VIDEO_DURATION_SECONDS = 300; // 5 minutes in seconds
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 * 1024; // 5GB in bytes
 
 const PREDEFINED_TAGS = [
     "Woodworking", "DIY", "Electronics", "Crafts", "Home Improvement", 
@@ -100,8 +101,18 @@ const CreateProjectPage = () => {
         let processedFileNamesForDisplay = [];
         let durationPromises = [];
 
+        // Check for invalid file types
         if (originalFiles.some(file => !file.type.startsWith('video/'))) {
             setErrorMessage("Invalid file type. Please upload video files only.");
+            if (e.target) e.target.value = null;
+            return;
+        }
+
+        // Check for files that exceed 5GB
+        const oversizedFiles = originalFiles.filter(file => file.size > MAX_FILE_SIZE_BYTES);
+        if (oversizedFiles.length > 0) {
+            const fileNames = oversizedFiles.map(file => file.name).join(', ');
+            setErrorMessage(`The following files exceed the 5GB size limit: ${fileNames}. Please compress your videos or choose smaller files.`);
             if (e.target) e.target.value = null;
             return;
         }
@@ -159,7 +170,7 @@ const CreateProjectPage = () => {
             const isAnyVideoTooLong = durations.some(duration => duration > MAX_VIDEO_DURATION_SECONDS);
             if (isAnyVideoTooLong) {
                 setAiEnabled(false);
-                setAiDisabledReason('One or more videos exceed the 10-minute duration limit. AI analysis has been automatically disabled.');
+                setAiDisabledReason('One or more videos exceed the 5-minute duration limit. AI analysis has been automatically disabled.');
             } else {
                 setAiEnabled(true);
                 setAiDisabledReason('');
@@ -175,7 +186,7 @@ const CreateProjectPage = () => {
         const isAnyVideoTooLong = remainingDurations.some(duration => duration > MAX_VIDEO_DURATION_SECONDS);
         if (isAnyVideoTooLong) {
             setAiEnabled(false);
-            setAiDisabledReason('One or more videos exceed the 10-minute duration limit. AI analysis has been automatically disabled.');
+            setAiDisabledReason('One or more videos exceed the 5-minute duration limit. AI analysis has been automatically disabled.');
         } else {
             setAiEnabled(true);
             setAiDisabledReason('');
@@ -216,24 +227,42 @@ const CreateProjectPage = () => {
         }
     }, [createdProjectId, currentUser]);
     
-    // Cleanup effect for unsaved projects
+    // Cleanup effect for unsaved projects and form changes
     useEffect(() => {
+        // Function to check for unsaved changes
+        const checkForUnsavedChanges = () => {
+            return projectName.trim() !== '' || 
+                   projectDescription.trim() !== '' || 
+                   selectedTags.length > 0 || 
+                   videoFiles.length > 0 ||
+                   (aiBreakdownData && aiBreakdownData.length > 0);
+        };
+
         const handleBeforeUnload = (e) => {
-            // Only show warning if project was created but not yet navigated
-            if (projectCreated && createdProjectId) {
+            const hasChanges = checkForUnsavedChanges();
+            // Show warning if project was created or if there are unsaved form changes
+            if ((projectCreated && createdProjectId) || hasChanges) {
                 e.preventDefault();
-                e.returnValue = 'You have created a project but not started editing. Are you sure you want to leave?';
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
                 return e.returnValue;
             }
         };
         
         const handlePopState = (e) => {
-            // Only show warning if project was created but not yet navigated
-            if (projectCreated && createdProjectId) {
-                const confirmed = window.confirm('You have created a project but not started editing. Are you sure you want to leave? This will delete the project.');
+            const hasChanges = checkForUnsavedChanges();
+            // Show warning if project was created or if there are unsaved form changes
+            if ((projectCreated && createdProjectId) || hasChanges) {
+                const message = projectCreated && createdProjectId 
+                    ? 'You have created a project but not started editing. Are you sure you want to leave? This will delete the project.'
+                    : 'You have unsaved changes. Are you sure you want to leave?';
+                
+                const confirmed = window.confirm(message);
                 if (confirmed) {
-                    // Delete the project before navigating away
-                    deleteUnsavedProject();
+                    if (projectCreated && createdProjectId) {
+                        // Delete the project before navigating away
+                        deleteUnsavedProject();
+                    }
+                    // Allow navigation
                 } else {
                     // Prevent navigation
                     window.history.pushState(null, '', window.location.href);
@@ -250,7 +279,7 @@ const CreateProjectPage = () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
             window.removeEventListener('popstate', handlePopState);
         };
-    }, [projectCreated, createdProjectId, deleteUnsavedProject]);
+    }, [projectCreated, createdProjectId, deleteUnsavedProject, projectName, projectDescription, selectedTags, videoFiles, aiBreakdownData]);
 
     // Progress tracking function
     const updateProgress = (step, percentage, message) => {
@@ -617,9 +646,9 @@ const CreateProjectPage = () => {
             <h1 className="text-3xl font-bold text-[#F1C232] mb-8 text-center">Create New Project</h1>
 
             {isLoading && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50" style={{ paddingTop: '20vh' }}>
                     <div className="bg-gray-900 p-8 rounded-lg max-w-md w-full mx-4">
-                        <div className="flex flex-col items-center space-y-4" style={{ paddingTop: '1rem' }}>
+                        <div className="flex flex-col items-center space-y-4">
                     <AnimatedLogo size={80} />
                             <h3 className="text-xl font-semibold text-[#F1C232]">Creating Project</h3>
                             
@@ -746,6 +775,12 @@ const CreateProjectPage = () => {
                         onChange={handleVideoChange}
                         className="w-full text-sm text-[#D9D9D9] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#0000FF] file:text-[#D9D9D9] hover:file:bg-[#0000FF] transition duration-150 ease-in-out"
                     />
+                    <div className="mt-2 bg-blue-900/20 border border-blue-700 p-3 rounded-lg">
+                        <p className="text-sm text-[#D9D9D9]">
+                            <span className="text-blue-400 font-semibold">File Size Limit:</span> Each video file must be under 5GB. 
+                            Larger files will be rejected. Please compress your videos if needed.
+                        </p>
+                    </div>
                     {selectedVideoNames.length > 0 && (
                         <div className="mt-3 space-y-2">
                             <p className="text-sm font-medium text-[#D9D9D9]">Selected videos:</p>
@@ -792,8 +827,9 @@ const CreateProjectPage = () => {
                         {/* AI Duration Disclaimer */}
                         <div className="bg-blue-900/20 border border-blue-700 p-3 rounded-lg mb-4">
                             <p className="text-sm text-[#D9D9D9]">
-                                <span className="text-blue-400 font-semibold">Note:</span> AI analysis is limited to videos under 10 minutes in duration. 
-                                Videos exceeding this limit will automatically disable AI analysis.
+                                <span className="text-blue-400 font-semibold">Note:</span> AI analysis is limited to videos under 5 minutes in duration. 
+                                Videos exceeding this limit will automatically disable AI analysis. 
+                                <span className="text-yellow-400 font-medium"> We anticipate increasing this limit to 1 hour in the near future.</span>
                             </p>
                         </div>
                         
@@ -810,9 +846,9 @@ const CreateProjectPage = () => {
                         
                         {isAiProcessing && (
                             <div className="bg-gray-800 p-4 rounded-lg">
-                                <div className="flex items-center space-x-3">
-                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#F1C232]"></div>
-                                    <span className="text-[#D9D9D9]">{aiProgress}</span>
+                                <div className="flex flex-col items-center space-y-4" style={{ paddingTop: '1rem' }}>
+                                    <AnimatedLogo size={60} />
+                                    <span className="text-[#D9D9D9] text-center">{aiProgress}</span>
                                 </div>
                             </div>
                         )}
@@ -856,10 +892,21 @@ const CreateProjectPage = () => {
                     <button
                         type="button"
                         onClick={() => {
+                            const hasChanges = projectName.trim() !== '' || 
+                                             projectDescription.trim() !== '' || 
+                                             selectedTags.length > 0 || 
+                                             videoFiles.length > 0 ||
+                                             (aiBreakdownData && aiBreakdownData.length > 0);
+                            
                             if (projectCreated && createdProjectId) {
                                 const confirmed = window.confirm('You have created a project. Are you sure you want to cancel? This will delete the project.');
                                 if (confirmed) {
                                     deleteUnsavedProject();
+                                    navigate('/videos');
+                                }
+                            } else if (hasChanges) {
+                                const confirmed = window.confirm('You have unsaved changes. Are you sure you want to cancel?');
+                                if (confirmed) {
                                     navigate('/videos');
                                 }
                             } else {

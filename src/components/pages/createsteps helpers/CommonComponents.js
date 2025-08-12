@@ -146,7 +146,7 @@ export function AnimatedLogo({ size = 120, style = {} }) {
     function animate() {
       if (!running) return;
       frame++;
-      const t = frame / 10; // Increased speed: 30 frames per rotation instead of 60
+      const t = frame / 30; // Increased speed: 30 frames per rotation instead of 60
       if (arc1Ref.current) arc1Ref.current.style.transform = `translate(-50%, -50%) rotate(${t * 360}deg)`;
       if (arc2Ref.current) arc2Ref.current.style.transform = `translate(-50%, -50%) rotate(${120 + t * 360}deg)`;
       if (arc3Ref.current) arc3Ref.current.style.transform = `translate(-50%, -50%) rotate(${240 + t * 360}deg)`;

@@ -154,6 +154,133 @@ export const captureFrameForAnnotation = (videoRef, setFrameForAnnotation, setFr
     }
 };
 
+// New function for capturing frames for result images
+export const captureFrameForResult = (videoRef, setResultFrameForCapture, setResultFrameTimestamp, setResultAnnotations, setResultAnnotationTool, setErrorMessage, setCurrentStepResultImageFile, setCurrentStepResultImage, setSuccessMessage, formatTime, setIsResultAnnotationPopupOpen) => {
+    if (videoRef.current) {
+        const video = videoRef.current;
+        if (video.readyState < video.HAVE_METADATA || video.videoWidth === 0) { 
+            alert("Video is not ready. Please wait a moment and try again."); 
+            return;
+        }
+        if (!video.paused) { video.pause(); }
+        const timestamp = Math.round(video.currentTime * 1000); 
+        
+        console.log('Capturing result frame - video currentTime:', video.currentTime);
+        console.log('Capturing result frame - calculated timestamp (ms):', timestamp);
+        
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        
+        try {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataURL = canvas.toDataURL("image/jpeg");
+            const filename = `result_frame_${timestamp}.jpg`;
+            const frameFile = dataURLtoFile(dataURL, filename);
+
+            if(frameFile){
+                // Set the captured frame as the result image file
+                setCurrentStepResultImageFile(frameFile);
+                setCurrentStepResultImage(URL.createObjectURL(frameFile));
+                setSuccessMessage(`Result frame captured at ${formatTime(timestamp / 1000)}. Add annotations and close the popup to finalize.`);
+            }
+
+            // Set up the annotation UI
+            setResultFrameForCapture(dataURL);
+            setResultFrameTimestamp(timestamp);
+            console.log('Setting resultFrameTimestamp to:', timestamp);
+            
+            // Clear existing result annotations and annotation tool
+            setResultAnnotations([]);
+            setResultAnnotationTool({});
+            
+            // Open the result annotation popup
+            if (setIsResultAnnotationPopupOpen) {
+                setIsResultAnnotationPopupOpen(true);
+            }
+        } catch (e) {
+            console.error("Error capturing result frame:", e);
+            setErrorMessage("Could not capture result frame. Check browser permissions or video source.");
+        }
+    }
+};
+
+// Function to generate final result image with annotations baked in
+export const generateResultImageWithAnnotations = (resultFrameForCapture, resultAnnotations, setCurrentStepResultImageFile, setCurrentStepResultImage, setSuccessMessage) => {
+    if (!resultFrameForCapture || resultAnnotations.length === 0) {
+        // If no annotations, just use the frame as-is
+        setSuccessMessage('Result frame saved without annotations.');
+        return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        
+        try {
+            // Draw the original frame
+            ctx.drawImage(img, 0, 0);
+            
+            // Draw annotations on top
+            ctx.strokeStyle = '#F1C232';
+            ctx.fillStyle = 'rgba(241, 194, 50, 0.2)';
+            ctx.lineWidth = 3;
+            ctx.font = '16px Arial';
+            
+            resultAnnotations.forEach((annotation, index) => {
+                if (annotation.geometry && annotation.geometry.type === 'RECTANGLE') {
+                    const rect = annotation.geometry;
+                    const x = rect.x * canvas.width / 100;
+                    const y = rect.y * canvas.height / 100;
+                    const width = rect.width * canvas.width / 100;
+                    const height = rect.height * canvas.height / 100;
+                    
+                    // Draw rectangle
+                    ctx.fillRect(x, y, width, height);
+                    ctx.strokeRect(x, y, width, height);
+                    
+                    // Draw annotation text
+                    const text = annotation.data?.text || annotation.component_name || `Annotation ${index + 1}`;
+                    const textX = x + 5;
+                    const textY = y - 5;
+                    
+                    // Text background
+                    ctx.fillStyle = '#F1C232';
+                    const textMetrics = ctx.measureText(text);
+                    ctx.fillRect(textX - 2, textY - 18, textMetrics.width + 4, 20);
+                    
+                    // Text
+                    ctx.fillStyle = '#000000';
+                    ctx.fillText(text, textX, textY - 2);
+                    
+                    // Reset fill style for next annotation
+                    ctx.fillStyle = 'rgba(241, 194, 50, 0.2)';
+                }
+            });
+            
+            // Convert to file
+            const dataURL = canvas.toDataURL("image/jpeg", 0.9);
+            const filename = `result_with_annotations_${Date.now()}.jpg`;
+            const annotatedFile = dataURLtoFile(dataURL, filename);
+            
+            if (annotatedFile) {
+                setCurrentStepResultImageFile(annotatedFile);
+                setCurrentStepResultImage(URL.createObjectURL(annotatedFile));
+                setSuccessMessage(`Result image with ${resultAnnotations.length} annotation${resultAnnotations.length !== 1 ? 's' : ''} saved successfully.`);
+            }
+        } catch (e) {
+            console.error("Error generating annotated result image:", e);
+            setSuccessMessage('Result frame saved. Could not overlay annotations.');
+        }
+    };
+    
+    img.src = resultFrameForCapture;
+};
+
 export const dataURLtoFile = (dataurl, filename) => {
     // This function is necessary because Firebase Storage works with File/Blob objects,
     // not base64 data URLs.
