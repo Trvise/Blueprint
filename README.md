@@ -2,6 +2,8 @@
 
 **Blueprint** is a next-generation project management platform designed for creators, educators, and makers to **build, organize, and share instructional projects** — complete with materials, tools, and step-by-step video guidance.
 
+Hosted webapp: https://blueprint-trvise.web.app
+
 ---
 
 ## Key Features
