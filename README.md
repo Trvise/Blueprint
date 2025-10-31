@@ -1,95 +1,71 @@
-# VortexHub - Project Management Platform
+# Blueprint — Intelligent Project Management for Instructional Content
 
-A comprehensive project management platform for creating, organizing, and sharing instructional content with tools and materials management.
+**Blueprint** is a next-generation project management platform designed for creators, educators, and makers to **build, organize, and share instructional projects** — complete with materials, tools, and step-by-step video guidance.
 
-## Features
+---
+
+## Key Features
 
 ### Project Management
-- Create and manage instructional projects
-- Step-by-step video authoring with annotations
-- Materials and tools tracking per project
-- Project finalization with buy lists
+
+* Create, organize, and track instructional projects from start to finish
+* Author **step-by-step video tutorials** with **interactive annotations**
+* Manage all **materials and tools** required per project
+* Auto-generate **buy lists** upon project finalization for easy procurement
 
 ### Repository Management
-- **Global Repository**: Access from the main navigation to manage all tools and materials
-- **Project Repository Tab**: Add tools and materials directly from within any project
-- Search and filter repository items
-- Upload images for tools and materials
-- Add purchase links for easy procurement
+
+* **Global Repository** — manage all tools and materials across projects
+* **Project Repository Tab** — add or modify items directly within a project
+* **Smart Search & Filters** — find what you need instantly
+* **Media Support** — upload images and add purchase links for quick access
 
 ### User Experience
-- Dark theme with gold and blue accent colors
-- Responsive design for desktop and mobile
-- Real-time search and filtering
-- Intuitive tab-based navigation
+
+* Sleek **dark mode** with elegant gold and blue accents
+* Fully **responsive** design for desktop, tablet, and mobile
+* **Real-time filtering and live search** for smooth navigation
+* Clean, intuitive **tab-based interface** for easy workflow management
+
+---
 
 ## Getting Started
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project is built with [**Create React App**](https://github.com/facebook/create-react-app).
 
-## Available Scripts
+### Development
 
-In the project directory, you can run:
+```bash
+npm start
+```
 
-### `npm start`
+Runs the app in development mode.
+Visit **[http://localhost:3000](http://localhost:3000)** to preview it in your browser.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Testing
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```bash
+npm test
+```
 
-### `npm test`
+Launches the test runner in interactive watch mode.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Production Build
 
-### `npm run build`
+```bash
+npm run build
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Builds the app for production with optimized bundles and hashed filenames.
+Your app is ready for deployment!
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+---
 
 ## Learn More
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+* [React Documentation](https://reactjs.org/)
+* [Create React App Guide](https://facebook.github.io/create-react-app/docs/getting-started)
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+---
 
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+**Blueprint** brings structure and clarity to the creative process — combining the power of project management, materials tracking, and instructional design into one unified workspace.
